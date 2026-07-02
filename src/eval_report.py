@@ -172,6 +172,30 @@ def render_significance(stats: Dict[str, Any]) -> str:
     )
 
 
+def render_decomposition(decomp: Dict[str, Any]) -> str:
+    """Gap decomposition + multi-seed banner from src.eval_decompose output (results/eval_decompose.json).
+
+    Shows WHERE the headline gain comes from (contributions that sum to the total) and, if present, the
+    across-seed mean ± std — the two artifacts that turn "+X pp" from lucky-looking into believable.
+    """
+    if not decomp:
+        return ""
+    from .eval_decompose import to_html as _dec_html, seeds_to_markdown as _seeds_md
+
+    out = []
+    ms = decomp.get("multiseed")
+    if ms:
+        out.append(f'<div class="sig" style="border-color:#0ea5e955;background:#0ea5e912">'
+                   f'<span>{_seeds_md(ms).replace("**", "")}</span></div>')
+    dec = decomp.get("decomposition")
+    if dec and dec.get("by_condition"):
+        ok = "✓ contributions sum to the total" if dec.get("identity_ok") else "✗ identity broken"
+        out.append("<h2>Where the gain comes from (decomposition)</h2>"
+                   f'<p class="muted">The overall gap split by condition — {ok}.</p>'
+                   + _dec_html(dec))
+    return "\n".join(out)
+
+
 def render_radar(bfcl: Dict[str, Any], size: int = 300) -> str:
     """Inline-SVG radar of per-category accuracy (dependency-free)."""
     import math
@@ -211,6 +235,7 @@ def render_html(
     bfcl: Dict[str, Any],
     preds: List[Dict[str, Any]],
     stats: Optional[Dict[str, Any]] = None,
+    decomp: Optional[Dict[str, Any]] = None,
 ) -> str:
     improvement = ""
     b, f = base.get("overall_accuracy"), ft.get("overall_accuracy")
@@ -221,6 +246,7 @@ def render_html(
 <h1>AutoScientist Tool-Caller — Evaluation Report</h1>
 {improvement}
 {render_significance(stats or {})}
+{render_decomposition(decomp or {})}
 <h2>Base vs. fine-tuned</h2>
 <p class="muted">Identical greedy decoding for both. Lower is better for hallucination.</p>
 {render_metric_table(base, ft)}
@@ -238,12 +264,13 @@ def main() -> None:
     ap.add_argument("--bfcl", default="results/eval_bfcl.json")
     ap.add_argument("--predictions", default="results/predictions.jsonl")
     ap.add_argument("--stats", default="results/eval_stats.json")
+    ap.add_argument("--decomp", default="results/eval_decompose.json")
     ap.add_argument("--out", default="results/report.html")
     args = ap.parse_args()
 
     html = render_html(
         _load(args.baseline), _load(args.finetuned), _load(args.bfcl),
-        _load_jsonl(args.predictions), _load(args.stats),
+        _load_jsonl(args.predictions), _load(args.stats), _load(args.decomp),
     )
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     open(args.out, "w", encoding="utf-8").write(html)

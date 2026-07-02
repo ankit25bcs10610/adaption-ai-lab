@@ -258,6 +258,30 @@ def main() -> int:
     ok &= check("robustness computes drops", r["mean_base_drop"] is not None and r["mean_ft_drop"] is not None)
     ok &= check("ft more robust (smaller drop)", r["mean_ft_drop"] < r["mean_base_drop"])
 
+    print("eval_decompose (gap decomposition):")
+    from src.eval_decompose import decompose, aggregate_seeds, to_html as dec_html
+    drows = ([{"category": "simple", "base": 1, "ft": 1}] * 8 + [{"category": "simple", "base": 0, "ft": 1}] * 2
+             + [{"category": "irrelevance", "base": 0, "ft": 1}] * 6 + [{"category": "irrelevance", "base": 0, "ft": 0}] * 4
+             + [{"category": "multi_turn", "base": 1, "ft": 1}] * 3 + [{"category": "multi_turn", "base": 0, "ft": 1}] * 5)
+    dec = decompose(drows, n_boot=300)
+    ok &= check("decomposition identity holds (Σ contrib == gap)", dec["identity_ok"])
+    ok &= check("sum contributions == overall gap", abs(dec["sum_contributions"] - dec["overall"]["gap"]) < 1e-9)
+    ok &= check("per-condition contributions present", len(dec["by_condition"]) == 3)
+    ok &= check("irrelevance carries positive contribution", any(c["condition"] == "irrelevance" and c["contribution"] > 0 for c in dec["by_condition"]))
+    ok &= check("decomposition html renders", "<table>" in dec_html(dec))
+    # multi-seed aggregation: 3 identical seeds -> zero std
+    import tempfile, os as _os
+    _paths = []
+    for s in range(3):
+        bp = _os.path.join(tempfile.gettempdir(), f"_dec_base_{s}.jsonl")
+        fp = _os.path.join(tempfile.gettempdir(), f"_dec_ft_{s}.jsonl")
+        open(bp, "w").write("\n".join(json.dumps({"category": r2["category"], "correct": bool(r2["base"])}) for r2 in drows))
+        open(fp, "w").write("\n".join(json.dumps({"category": r2["category"], "correct": bool(r2["ft"])}) for r2 in drows))
+        _paths.append((bp, fp))
+    agg = aggregate_seeds(_paths, n_boot=100)
+    ok &= check("multiseed aggregates 3 seeds", agg["seeds"] == 3)
+    ok &= check("identical seeds -> zero gap std", agg["gap"]["std"] < 1e-9)
+
     print("envs (execution-verified):")
     from src.envs import CalendarEnv, CartEnv
     from src.envs import generate as env_gen, generate_dpo as env_dpo
