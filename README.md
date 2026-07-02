@@ -24,6 +24,17 @@ The AutoScientist Challenge automates the model training loop, so the competitiv
 
 Both tracks ship an evaluation harness, model/dataset cards, an open-release path (Hugging Face + Kaggle), and a live demo. Everything is offline-testable: heavy dependencies (`torch`, `transformers`, `datasets`, the Adaption SDK) are lazily imported so the correctness-critical logic runs with only stdlib + `numpy`.
 
+### Live artifacts (published, open)
+
+| | Hugging Face | Kaggle |
+|---|---|---|
+| Tool-calling dataset | [dataset](https://huggingface.co/datasets/pandeyankit84/autoscientist-toolcaller-dataset) · [model card](https://huggingface.co/pandeyankit84/autoscientist-toolcaller) | [dataset](https://www.kaggle.com/datasets/pandeyankit99/autoscientist-toolcaller-dataset) |
+| Chart-QA dataset | [dataset](https://huggingface.co/datasets/pandeyankit84/autoscientist-chartqa-dataset) | [dataset](https://www.kaggle.com/datasets/pandeyankit99/autoscientist-chartqa-dataset) |
+
+Submission status + remaining steps: [`SUBMISSION.md`](SUBMISSION.md). Platform usage depth (recipes,
+run IDs, evidence): [`docs/AUTOSCIENTIST_USAGE.md`](docs/AUTOSCIENTIST_USAGE.md). Data-quality audit:
+[`docs/DATA_QUALITY_AUDIT.md`](docs/DATA_QUALITY_AUDIT.md).
+
 ---
 
 ## Table of contents
