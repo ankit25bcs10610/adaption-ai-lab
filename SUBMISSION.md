@@ -6,9 +6,14 @@ criterion to its status and the exact artifact, so nothing is missed at submissi
 **Part 2 window:** July 6 – Aug 3 (form shared before July 6). Categories: Science, Agriculture,
 **Data Visualization**, Math & Code, **All Other Domains**.
 
-**Category:** two complete tracks are ready — pick at submission (you may enter both if allowed):
-- **All Other Domains** → the function-calling / tool-use model + dataset (`src/`).
-- **Data Visualization** → the multimodal chart-QA dataset (`src/viz/`).
+**Category:** two complete tracks are ready **and both datasets are published** — pick at submission
+(you may enter both if allowed):
+- **All Other Domains** → function-calling / tool-use. Dataset on
+  [HF](https://huggingface.co/datasets/pandeyankit84/autoscientist-toolcaller-dataset) +
+  [Kaggle](https://www.kaggle.com/datasets/pandeyankit99/autoscientist-toolcaller-dataset).
+- **Data Visualization** → multimodal chart-QA (Hindi/Devanagari). Dataset on
+  [HF](https://huggingface.co/datasets/pandeyankit84/autoscientist-chartqa-dataset) +
+  [Kaggle](https://www.kaggle.com/datasets/pandeyankit99/autoscientist-chartqa-dataset).
 
 ---
 
