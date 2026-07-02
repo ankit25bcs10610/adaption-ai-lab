@@ -128,6 +128,8 @@ python -m src.fill_model_card --username <you>       # auto-fill MODEL_CARD.md f
 
 Data sources are permissively licensed only: `Salesforce/xlam-function-calling-60k` (CC-BY-4.0), `Team-ACE/ToolACE` (Apache-2.0), optional `Agent-Ark/Toucan-1.5M` (Apache-2.0). Base model: `Qwen/Qwen2.5-Coder-3B-Instruct`. Full strategy in [`docs/WINNING.md`](docs/WINNING.md).
 
+**Data-quality audit.** Because the dataset *is* the product, the build pipeline was adversarially audited before release. It caught the refuse/clarify moat being generated and then silently discarded by dedup — `no_tool` was **8 rows → fixed to 239**, `miss_param` **1 → 36**, `ambiguous` **0 → 133** — plus a slice-mixing undershoot and a DPO poison-pair risk. Full write-up, root causes, and before/after in [`docs/DATA_QUALITY_AUDIT.md`](docs/DATA_QUALITY_AUDIT.md). `stats.json` now carries a `mix` block with intended-vs-realized shares and a `mix_ok` guard.
+
 ---
 
 ## Track 2 — Data visualization

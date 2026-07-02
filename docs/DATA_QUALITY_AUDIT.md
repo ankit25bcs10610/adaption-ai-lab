@@ -1,0 +1,80 @@
+# Data-quality audit — how the moat almost shipped empty
+
+This is a data-centric submission, so the dataset itself is the product. Before the final release we
+ran an adversarial audit of the build pipeline (a fan-out of independent review agents, each grounded
+in the actual code and the emitted `stats.json`). It surfaced a class of bug that is invisible in a
+green test suite but silently guts a data-centric result: **the slices the whole thesis rests on were
+being generated and then thrown away.**
+
+We document it here because *finding and fixing it* is the data-centric methodology, not an aside.
+
+## The finding
+
+The submission's headline claim is a **refuse / clarify moat**: unlike ordinary function-calling data,
+this set teaches the model *when not to call a tool*. The audit read `stats.json` and found the moat
+was almost entirely absent from the shipped data:
+
+| Slice (the moat)                     | Intended | **Before** | **After** |
+|--------------------------------------|:--------:|:----------:|:---------:|
+| `no_tool` (refuse — no tool applies) | ~10% of total | **8 rows** | **239 rows** |
+| `miss_param` (clarify — arg missing across turns) | material | **1 row** | **36 rows** |
+| `ambiguous` (clarify — which tool?)  | material | **0 rows** | **133 rows** |
+
+Eight training rows cannot teach abstention. The claim and the data had diverged.
+
+## Three root causes (all confirmed in-code, all now fixed + regression-tested)
+
+1. **A stop-word overlap guard rejected almost every `no_tool` candidate.**
+   `make_no_tool` keyed its "does a tool already cover this?" guard on the request's *first word*
+   (`req.lower().split()[0]`) — almost always a stop-word like *what / can / write* that appears in
+   some tool description, so nearly every candidate was discarded.
+   *Fix:* a grounded **Hammer construction** — take a real positive and remove the tool it needs from
+   the offered set, so the request is genuinely unsatisfiable → refuse. The guard now compares
+   *content words*, not the first token. (`src/hard_negatives.py`)
+
+2. **Dedup collapsed templated slices because it keyed on the query text alone.**
+   The Hammer `no_tool` reuses a real positive's query (with different tools + a *refuse* answer), and
+   the templated `ambiguous` / `miss_param` slices shared a fixed query across different tool sets.
+   Query-only dedup treated all of these as duplicates and deleted them.
+   *Fix:* dedup on the **full training signature** — `answer-type + tool-set + query`. Two rows are
+   duplicates only when the request, the tools on offer, *and* the required behavior all match.
+   (`src/dedup.py`)
+
+3. **`miss_param` selected tools uniformly, but only tools with a required arg can build one.**
+   Most tools have no required arg to withhold, so `make_miss_param` returned `None` ~99% of the time
+   and the slice starved to a single row.
+   *Fix:* pre-filter the pool to tools with ≥1 required arg before sampling. (`src/multiturn.py`)
+
+## Two more defects the same audit caught
+
+4. **Mixing math undershot every slice.** Each slice was sized as if it were the only additive one
+   (`n = base · r/(1−r)`); with four additive slices, every realized share fell below target
+   (positives drifted to ~62%, hard negatives to ~17% instead of 22%). Replaced with a **shared
+   denominator** so realized ≈ intended, and `stats.json` now records intended-vs-realized shares
+   plus a `mix_ok` guard that fails loudly if the moat drifts out of band. (`src/build_dataset.py`)
+
+5. **DPO could emit poison pairs.** A "corrupted" negative that swapped to a synonym tool, or dropped
+   a merely-*optional* argument, could accidentally still be correct — training the model *toward* the
+   rejected sample. Added a `_confirmed_wrong` gate + rejection sampling: every `rejected` is now
+   provably not the correct answer (different tool, missing *required* arg, or changed required
+   value), and `drop_arg` only ever drops required args. (`src/build_preference.py`)
+
+(Two correctness bugs outside the data path were fixed in the same pass: a `<think>` reasoning block
+could be mis-parsed as the answer JSON during eval — now the parser reads only after `</think>`; and
+the Kaggle release handle mislabelled the model *variation* as a version.)
+
+## Result
+
+After the fixes, on the same config and seed:
+
+- `no_tool` **8 → 239**, `miss_param` **1 → 36**, `ambiguous` **0 → 133**.
+- Realized source shares — positives **57.6%**, hard-negative **18.9%**, multi-turn **14.3%**,
+  schema-drift **9.1%** — now track the intended mix instead of collapsing toward positives.
+- `no_tool` sits at **8.1% of the total set**, inside the ~10% research optimum band; `mix_ok` passes.
+- Total examples: **2,935** across `train / val / test` (+ a novel-tools holdout).
+
+Regression tests were added for each fix (`tests/smoke_test.py`: Hammer construction excludes the
+gold tool, the `<think>` firewall, the DPO poison guard), so the moat can't silently empty out again.
+
+Reproduce: `python -m src.build_dataset --config config.yaml` then inspect `data/out/stats.json`
+(`mix` block).
