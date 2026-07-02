@@ -13,6 +13,7 @@ import argparse
 import json
 import os
 import random
+import re
 from collections import Counter
 from typing import Any, Dict, List
 
@@ -117,6 +118,30 @@ def _toolace_calls(value: str) -> List[Dict[str, Any]]:
     return calls
 
 
+def _clean_toolace_dialog(text: str):
+    """ToolACE flattens the whole multi-turn conversation into the user message, behind an identical
+    'Role definition: ... Historical dialog data is as follows:' scaffold. That boilerplate repeats
+    across hundreds of rows and tanks the intrinsic dataset-quality grade. Parse it into a proper
+    (history, final_query): drop the scaffold, keep the real turns. Returns (history|None, query)."""
+    if not text:
+        return None, text
+    marker = "Historical dialog data is as follows:"
+    if marker not in text:
+        return None, text.strip()
+    body = text.split(marker, 1)[1]
+    parts = re.split(r"\n\s*(Inquirer:|Response assistant:)\s*", "\n" + body)
+    turns = []
+    for i in range(1, len(parts) - 1, 2):
+        role = "user" if parts[i] == "Inquirer:" else "assistant"
+        content = parts[i + 1].strip()
+        if content:
+            turns.append({"role": role, "content": content})
+    last_user = max((i for i, t in enumerate(turns) if t["role"] == "user"), default=None)
+    if last_user is None or len(turns[last_user]["content"]) < 3:
+        return None, text.strip()
+    return (turns[:last_user] or None), turns[last_user]["content"]
+
+
 def load_toolace(repo: str, limit: int) -> List[Dict[str, Any]]:
     from datasets import load_dataset
 
@@ -140,14 +165,16 @@ def load_toolace(repo: str, limit: int) -> List[Dict[str, Any]]:
         calls = _toolace_calls(call_str) if call_str else []
         if not (user_msg and calls):
             continue
-        out.append(
-            {
-                "tools": _normalize_tools(tools),
-                "query": user_msg,
-                "answer": {"type": "tool_call", "calls": calls},
-                "meta": {"source": "toolace", "hn_kind": None},
-            }
-        )
+        history, query = _clean_toolace_dialog(user_msg)  # strip boilerplate, recover real turns
+        ex = {
+            "tools": _normalize_tools(tools),
+            "query": query,
+            "answer": {"type": "tool_call", "calls": calls},
+            "meta": {"source": "toolace", "hn_kind": None},
+        }
+        if history:
+            ex["history"] = history
+        out.append(ex)
         if len(out) >= limit:
             break
     print(f"[build] ToolACE: loaded {len(out)}")
