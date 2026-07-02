@@ -1,4 +1,3 @@
-# HF Spaces (ZeroGPU): do NOT pin gradio / spaces / huggingface_hub — the platform manages them.
-transformers
-accelerate
-sentencepiece
+# The live demo (app.py) is a CPU-only deterministic simulator — no extra deps beyond the Gradio SDK
+# (provided by the Space's sdk_version). To run the REAL model instead, use app_gpu.py on a GPU Space
+# and add: transformers, accelerate, sentencepiece

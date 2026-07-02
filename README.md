@@ -31,6 +31,8 @@ Both tracks ship an evaluation harness, model/dataset cards, an open-release pat
 | Tool-calling dataset | [dataset](https://huggingface.co/datasets/pandeyankit84/autoscientist-toolcaller-dataset) · [model card](https://huggingface.co/pandeyankit84/autoscientist-toolcaller) | [dataset](https://www.kaggle.com/datasets/pandeyankit99/autoscientist-toolcaller-dataset) |
 | Chart-QA dataset | [dataset](https://huggingface.co/datasets/pandeyankit84/autoscientist-chartqa-dataset) | [dataset](https://www.kaggle.com/datasets/pandeyankit99/autoscientist-chartqa-dataset) |
 
+**▶️ Live demo:** https://huggingface.co/spaces/pandeyankit84/autoscientist-toolcaller-demo (call / refuse / clarify, in-browser).
+
 Submission status + remaining steps: [`SUBMISSION.md`](SUBMISSION.md). Platform usage depth (recipes,
 run IDs, evidence): [`docs/AUTOSCIENTIST_USAGE.md`](docs/AUTOSCIENTIST_USAGE.md). Data-quality audit:
 [`docs/DATA_QUALITY_AUDIT.md`](docs/DATA_QUALITY_AUDIT.md).

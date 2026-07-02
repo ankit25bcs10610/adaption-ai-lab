@@ -1,10 +1,10 @@
 # Social posts — AutoScientist Challenge (ready to post)
 
 Post from your own accounts, tag **@adaption_ai** on X and **Adaption** (Adaption Labs) on LinkedIn,
-then paste both post URLs into the submission form. The only slot left is `<DEMO_URL>` (add it after you
-deploy the site to Vercel; delete that line if you skip the demo).
+then paste both post URLs into the submission form. Everything below is ready to copy-paste.
 
 **Published links (real):**
+- Live demo (HF Space): https://huggingface.co/spaces/pandeyankit84/autoscientist-toolcaller-demo
 - HF model: https://huggingface.co/pandeyankit84/autoscientist-toolcaller
 - HF dataset (tool-calling): https://huggingface.co/datasets/pandeyankit84/autoscientist-toolcaller-dataset
 - HF dataset (chart-QA): https://huggingface.co/datasets/pandeyankit84/autoscientist-chartqa-dataset
@@ -21,10 +21,10 @@ deploy the site to Vercel; delete that line if you skip the demo).
 > Built for the @adaption_ai AutoScientist Challenge — a data-centric function-calling model that
 > refuses, clarifies, and calls instead of hallucinating tools.
 >
-> Adaptive Data quality **+15.7% (grade C→B)**. Weights + dataset fully open 👇
+> Adaptive Data quality **+15.7% (grade C→B)**. Live demo + open weights + dataset 👇
 >
+> ▶️ https://huggingface.co/spaces/pandeyankit84/autoscientist-toolcaller-demo
 > 🤗 https://huggingface.co/pandeyankit84/autoscientist-toolcaller
-> 📊 https://www.kaggle.com/datasets/pandeyankit99/autoscientist-toolcaller-dataset
 > 💻 https://github.com/ankit25bcs10610/adaption-ai-lab
 >
 > #AutoScientist #HackIndia #AI
@@ -80,7 +80,7 @@ Everything is open — weights, both datasets, the eval harness, and a live demo
 🤗 Dataset: https://huggingface.co/datasets/pandeyankit84/autoscientist-toolcaller-dataset
 📊 Kaggle: https://www.kaggle.com/datasets/pandeyankit99/autoscientist-toolcaller-dataset
 💻 Code: https://github.com/ankit25bcs10610/adaption-ai-lab
-🔗 Demo: <DEMO_URL>
+🔗 Demo: https://huggingface.co/spaces/pandeyankit84/autoscientist-toolcaller-demo
 
 Huge thanks to Adaption for AutoScientist and Adaptive Data.
 #AutoScientist #HackIndia #OpenSource #AI #MachineLearning #LLM #Agents
@@ -90,6 +90,6 @@ Huge thanks to Adaption for AutoScientist and Adaptive Data.
 ## Posting checklist
 - [x] Publish datasets to HF **and** Kaggle (both tracks) — done.
 - [ ] Add model **weights** to the HF model repo after the AutoScientist console run.
-- [ ] Deploy the demo (Vercel) and fill `<DEMO_URL>`.
+- [x] Live demo deployed: https://huggingface.co/spaces/pandeyankit84/autoscientist-toolcaller-demo
 - [ ] Post on X (tag @adaption_ai) and LinkedIn (tag Adaption); attach a chart/demo image.
 - [ ] Paste both post URLs into the submission form.

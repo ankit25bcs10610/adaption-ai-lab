@@ -27,7 +27,7 @@ criterion to its status and the exact artifact, so nothing is missed at submissi
 | 4 | Train model with **AutoScientist** | ⚠️ **console step** | the Python SDK is dataset-only; the model-training loop + weights are in the **web console** (adaptionlabs.ai/app). Run AutoScientist on the adapted dataset there → produces weights + the official held-out number |
 | 5 | Beat the baseline on the held-out test set | ⚠️ **needs step 4** | the platform reports the held-out improvement when AutoScientist training completes. Adaptive Data already shows **+15.7%** dataset-quality gain (criterion #2); the held-out *model* number comes from step 4 |
 | 6 | Release **weights + dataset** on **HF and Kaggle** | 🟡 **dataset on BOTH done; weights pending** | **Dataset published to both:** HF [dataset](https://huggingface.co/datasets/pandeyankit84/autoscientist-toolcaller-dataset) + [model card](https://huggingface.co/pandeyankit84/autoscientist-toolcaller); Kaggle [dataset](https://www.kaggle.com/datasets/pandeyankit99/autoscientist-toolcaller-dataset) (public). Remaining: **model weights** (from the AutoScientist console run) uploaded to the HF model repo + a Kaggle model |
-| 7 | Post on LinkedIn + X, tag @adaption_ai | ⚠️ **you post** | drafts in `docs/social_posts.md`; add the live-demo URL after deploy (bonus points) |
+| 7 | Post on LinkedIn + X, tag @adaption_ai | ⚠️ **you post** | ready-to-paste drafts in `docs/social_posts.md`; **live demo already deployed** (bonus): https://huggingface.co/spaces/pandeyankit84/autoscientist-toolcaller-demo |
 | 8 | Submit (Part 2 form) | ⚠️ **you submit** | after steps 4–7; form opens before July 6 |
 
 Plus (HackIndia track, necessary): **join the WhatsApp channel** and the **Discord** (`#autoscient-challenge`).
