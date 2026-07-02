@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Cpu, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { cn } from "@/lib/utils";
 
 const links = [
   { href: "#idea", label: "The idea" },
@@ -16,10 +17,23 @@ const links = [
 
 export function Nav() {
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
-    <header className="fixed left-4 right-4 top-4 z-50">
-      <nav className="mx-auto max-w-6xl rounded-2xl glass px-5 py-3">
+    <header className="fixed inset-x-0 top-0 z-50 px-4 pt-4">
+      <nav
+        className={cn(
+          "mx-auto max-w-6xl rounded-2xl px-5 transition-all duration-300 ease-[cubic-bezier(0.2,0.7,0.2,1)]",
+          scrolled ? "glass py-2.5" : "border border-transparent bg-background/20 py-3.5 backdrop-blur-md",
+        )}
+      >
         <div className="flex items-center justify-between">
           <a href="#top" className="flex cursor-pointer items-center gap-2.5 font-display text-lg font-bold tracking-tight">
             <span className="grid h-8 w-8 place-items-center rounded-lg border border-run/40 bg-run/15">

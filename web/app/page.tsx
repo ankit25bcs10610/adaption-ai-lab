@@ -19,6 +19,7 @@ export default function Page() {
       <ScrollProgress />
       <div className="aurora" aria-hidden />
       <div className="grid-fade" aria-hidden />
+      <div className="grain" aria-hidden />
       <Nav />
       <main className="relative min-h-screen overflow-x-hidden">
         <Hero />

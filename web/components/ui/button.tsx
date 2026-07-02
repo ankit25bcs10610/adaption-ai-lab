@@ -4,13 +4,14 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 cursor-pointer",
+  // spring-y press feedback (active:scale) + smooth all-property transition; keeps focus-visible ring.
+  "group relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-all duration-200 ease-[cubic-bezier(0.2,0.7,0.2,1)] focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 active:scale-[0.97] cursor-pointer",
   {
     variants: {
       variant: {
-        primary: "bg-run text-slate-950 hover:bg-run/90 glow-run",
-        ghost: "glass hover:border-cyan/50",
-        outline: "border border-border hover:bg-muted/40",
+        primary: "bg-run text-slate-950 hover:bg-run/90 glow-run hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-8px_rgba(34,197,94,0.6)]",
+        ghost: "glass hover:border-cyan/50 hover:-translate-y-0.5",
+        outline: "border border-border hover:bg-muted/40 hover:border-foreground/30",
       },
       size: {
         default: "h-11 px-5 py-3",

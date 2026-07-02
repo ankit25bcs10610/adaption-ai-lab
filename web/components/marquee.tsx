@@ -1,19 +1,23 @@
 const items = [
   ["Base · Qwen2.5-Coder", "text-run"],
   ["Trained on AutoScientist", "text-cyan"],
-  ["Data · xLAM (CC-BY-4.0)", "text-violet"],
-  ["Data · ToolACE (Apache-2.0)", "text-run"],
-  ["Released · Hugging Face + Kaggle", "text-cyan"],
-  ["Eval · BFCL-aligned", "text-violet"],
+  ["Quality +15.7% · grade C→B", "text-run"],
+  ["Data · ToolACE (Apache-2.0)", "text-violet"],
+  ["Execution-verified envs", "text-cyan"],
+  ["Decontaminated vs BFCL", "text-violet"],
+  ["Released · Hugging Face + Kaggle", "text-run"],
+  ["Eval · BFCL v4-aligned", "text-cyan"],
 ] as const;
 
 function Row({ hidden = false }: { hidden?: boolean }) {
   return (
-    <div className="flex items-center gap-12" aria-hidden={hidden}>
+    <div className="flex items-center gap-10" aria-hidden={hidden}>
       {items.map(([label, color], i) => (
-        <span key={i} className="flex items-center gap-12">
+        <span key={i} className="flex items-center gap-10">
           {label}
-          <span className={color}>◆</span>
+          <span className={color} aria-hidden>
+            ◆
+          </span>
         </span>
       ))}
     </div>
@@ -23,7 +27,14 @@ function Row({ hidden = false }: { hidden?: boolean }) {
 export function Marquee() {
   return (
     <section className="relative z-10 overflow-hidden border-y border-border/40 py-8">
-      <div className="flex w-max animate-scrollx gap-12 font-display text-sm uppercase tracking-widest text-muted-foreground/70">
+      {/* edge fade so the strip dissolves into the page instead of a hard cut */}
+      <div
+        className="flex w-max animate-scrollx gap-10 font-display text-sm uppercase tracking-widest text-muted-foreground/70"
+        style={{
+          maskImage: "linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent)",
+          WebkitMaskImage: "linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent)",
+        }}
+      >
         <Row />
         <Row hidden />
       </div>

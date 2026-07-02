@@ -5,6 +5,7 @@
 @layer base {
   /* Light theme (shadcn/21st.dev tokens, slate base) */
   :root {
+    --ease: cubic-bezier(0.2, 0.7, 0.2, 1); /* shared premium easing */
     --background: 210 40% 98%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
@@ -76,10 +77,39 @@
 }
 
 @layer components {
+  /* Premium glass: translucent surface + a 1px top light highlight + layered elevation shadow so cards
+     read as real, lifted surfaces rather than flat rectangles. */
   .glass {
     @apply border backdrop-blur-xl;
-    background: hsl(var(--card) / 0.6);
+    background: hsl(var(--card) / 0.55);
     border-color: hsl(var(--border) / 0.7);
+    box-shadow:
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.05),
+      0 1px 2px 0 hsl(222 47% 3% / 0.4),
+      0 12px 32px -16px hsl(222 47% 3% / 0.55);
+  }
+
+  /* Interactive lift — pair with `glass` on hoverable cards. */
+  .card-hover {
+    transition: transform 0.3s var(--ease), border-color 0.3s var(--ease), box-shadow 0.3s var(--ease);
+    will-change: transform;
+  }
+  .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.07),
+      0 2px 4px 0 hsl(222 47% 3% / 0.4),
+      0 24px 48px -20px hsl(222 47% 3% / 0.7);
+  }
+
+  /* Subtle film-grain overlay — the detail that makes dark UIs feel "expensive" instead of flat. */
+  .grain {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
   .text-grad {

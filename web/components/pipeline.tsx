@@ -29,7 +29,7 @@ export function Pipeline() {
       <ol className="grid gap-5 md:grid-cols-3">
         {steps.map((s, i) => (
           <Reveal key={s.n} delay={i * 0.05}>
-            <li className="relative h-full rounded-2xl glass p-6 transition-colors hover:border-border">
+            <li className="card-hover relative h-full rounded-2xl glass p-6 hover:border-run/30">
               <span className={`absolute -top-3 left-6 rounded px-2 py-0.5 font-mono text-xs ${badge[s.c]}`}>
                 {s.n}
               </span>
