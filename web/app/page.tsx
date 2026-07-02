@@ -12,12 +12,16 @@ import { ScrollProgress } from "@/components/ui/scroll-progress";
 
 export default function Page() {
   return (
-    <main className="relative min-h-screen overflow-x-hidden">
+    <>
+      <a href="#top" className="skip-link rounded-lg bg-run px-4 py-2 text-sm font-semibold text-slate-950">
+        Skip to content
+      </a>
       <ScrollProgress />
       <div className="aurora" aria-hidden />
       <div className="grid-fade" aria-hidden />
       <Nav />
-      <Hero />
+      <main className="relative min-h-screen overflow-x-hidden">
+        <Hero />
       <Marquee />
       <Behaviors />
       <Playground />
@@ -25,7 +29,8 @@ export default function Page() {
       <Benchmarks />
       <DataViz />
       <CTA />
+      </main>
       <Footer />
-    </main>
+    </>
   );
 }

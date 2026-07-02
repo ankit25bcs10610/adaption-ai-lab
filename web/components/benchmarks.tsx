@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { Reveal } from "@/components/reveal";
+import { Section, SectionHeader } from "@/components/section";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { audit, benchmarks, dataQuality, projected } from "@/lib/results";
 
@@ -26,20 +27,13 @@ function Bar({ base, ft, lowerIsBetter }: { base: number; ft: number; lowerIsBet
 
 export function Benchmarks() {
   return (
-    <section id="bench" className="relative z-10 px-6 py-28">
-      <div className="mx-auto max-w-6xl">
-        <Reveal className="mb-12 max-w-2xl">
-          <p className="mb-3 font-mono text-sm text-violet">{"// results"}</p>
-          <h2 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
-            Measured wins, honest targets.
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            The dataset is the product, so we lead with what the platform actually measured — and clearly
-            mark what still needs a training run.
-          </p>
-        </Reveal>
+    <Section id="bench">
+      <SectionHeader eyebrow="results" title="Measured wins, honest targets." tone="violet" className="mb-12">
+        The dataset is the product, so we lead with what the platform actually measured — and clearly mark
+        what still needs a training run.
+      </SectionHeader>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
           {/* MEASURED — Adaptive Data quality grade */}
           <Reveal>
             <div className="flex h-full flex-col rounded-2xl border-glow glass p-6 sm:p-8">
@@ -140,7 +134,6 @@ export function Benchmarks() {
             )}
           </div>
         </Reveal>
-      </div>
-    </section>
+    </Section>
   );
 }

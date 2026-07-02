@@ -2,6 +2,7 @@
 
 import { Check, CircleSlash, HelpCircle } from "lucide-react";
 import { Reveal } from "@/components/reveal";
+import { Section, SectionHeader } from "@/components/section";
 import { TiltCard } from "@/components/tilt-card";
 
 const behaviors = [
@@ -48,26 +49,21 @@ const hnKinds = [
   { name: "no_tool", color: "text-cyan", desc: "nothing applies → refuse" },
   { name: "missing_arg", color: "text-violet", desc: "required arg absent → clarify" },
   { name: "ambiguous", color: "text-run", desc: "two tools fit → clarify" },
+  { name: "over_refusal", color: "text-run", desc: "hedged but doable → still call" },
+  { name: "partial_parallel", color: "text-cyan", desc: "two intents → two calls" },
 ];
 
 export function Behaviors() {
   return (
-    <section id="idea" className="relative z-10 px-6 py-28">
-      <div className="mx-auto max-w-6xl">
-        <Reveal className="max-w-2xl">
-          <p className="mb-3 font-mono text-sm text-run">{"// the core idea"}</p>
-          <h2 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
-            Three behaviors. One JSON envelope.
-          </h2>
-          <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
-            Most datasets only teach a model to call tools. Ours teaches it to{" "}
-            <span className="text-foreground">call</span>, <span className="text-foreground">refuse</span>, and{" "}
-            <span className="text-foreground">clarify</span> — the decisions that separate a reliable agent from a
-            confident liar.
-          </p>
-        </Reveal>
+    <Section id="idea">
+      <SectionHeader eyebrow="the core idea" title="Three behaviors. One JSON envelope." tone="run">
+        Most datasets only teach a model to call tools. Ours teaches it to{" "}
+        <span className="text-foreground">call</span>, <span className="text-foreground">refuse</span>, and{" "}
+        <span className="text-foreground">clarify</span> — the decisions that separate a reliable agent from a
+        confident liar.
+      </SectionHeader>
 
-        <div className="mt-14 grid gap-5 md:grid-cols-3">
+      <div className="mt-14 grid gap-5 md:grid-cols-3">
           {behaviors.map((b, i) => {
             const a = accent[b.accent];
             const Icon = b.icon;
@@ -98,13 +94,14 @@ export function Behaviors() {
                 <p className="mb-2 font-mono text-sm text-run">{"// the moat"}</p>
                 <h3 className="font-display text-2xl font-bold">Hard negatives</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  ~28% of the training set is examples where the right answer is <em>not</em> a tool call. That&apos;s
-                  exactly where baselines score ~50% — and where we win.
+                  ~40% of the training set is cases where the right answer is <em>not</em> a plain tool call —
+                  refuse, clarify, disambiguate, resist over-refusal, or complete every call. That&apos;s exactly
+                  where baselines score ~50%, and where we win.
                 </p>
               </div>
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {hnKinds.map((k) => (
-                  <div key={k.name} className="rounded-xl border border-border/60 bg-black/20 p-4">
+                  <div key={k.name} className="rounded-xl border border-border/60 bg-black/20 p-4 transition-colors hover:border-border">
                     <p className={`font-mono text-sm ${k.color}`}>{k.name}</p>
                     <p className="mt-1 text-xs text-muted-foreground">{k.desc}</p>
                   </div>
@@ -113,7 +110,6 @@ export function Behaviors() {
             </div>
           </div>
         </Reveal>
-      </div>
-    </section>
+    </Section>
   );
 }

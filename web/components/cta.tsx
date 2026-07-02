@@ -78,7 +78,7 @@ const cards = [
 export function CTA() {
   const anyUnconfigured = cards.some((c) => !c.configured);
   return (
-    <section id="release" className="relative z-10 px-6 py-28">
+    <section id="release" className="relative z-10 scroll-mt-24 px-6 py-24 sm:py-28">
       <Reveal className="mx-auto max-w-4xl text-center">
         <p className="mb-3 font-mono text-sm text-run">{"// open release"}</p>
         <h2 className="font-display text-4xl font-bold tracking-tight sm:text-6xl">

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { Reveal } from "@/components/reveal";
+import { Section, SectionHeader } from "@/components/section";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Terminal } from "@/components/ui/terminal";
 
@@ -21,21 +22,19 @@ const LANG_COLOR: Record<string, string> = {
 
 export function DataViz() {
   return (
-    <section id="dataviz" className="relative z-10 px-6 py-28">
-      <div className="mx-auto max-w-6xl">
-        <Reveal className="mb-10 max-w-2xl">
-          <p className="mb-3 font-mono text-sm text-violet">{"// second track · data visualization"}</p>
-          <h2 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
-            Charts, read in English <span className="text-grad">and Hindi.</span>
-          </h2>
-          <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
-            A multimodal chart-understanding model trained on a <span className="text-foreground">self-verifying</span>{" "}
-            synthetic dataset — every answer computed from the underlying data, so the number on the chart matches the
-            gold by construction. Plus a Devanagari + romanized slice for the HackIndia track.
-          </p>
-        </Reveal>
+    <Section id="dataviz">
+      <SectionHeader
+        eyebrow="second track · data visualization"
+        title={<>Charts, read in English <span className="text-grad">and Hindi.</span></>}
+        tone="violet"
+        className="mb-10"
+      >
+        A multimodal chart-understanding model trained on a <span className="text-foreground">self-verifying</span>{" "}
+        synthetic dataset — every answer computed from the underlying data, so the number on the chart matches the
+        gold by construction. Plus a Devanagari + romanized slice for the HackIndia track.
+      </SectionHeader>
 
-        <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
           <Reveal>
             <SpotlightCard className="h-full rounded-2xl glass p-6" color="139, 92, 246">
               <ul className="space-y-4 text-sm">
@@ -94,7 +93,6 @@ export function DataViz() {
             </Reveal>
           ))}
         </div>
-      </div>
-    </section>
+    </Section>
   );
 }
