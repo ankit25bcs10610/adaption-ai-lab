@@ -362,6 +362,15 @@ def main() -> None:
         except Exception as e:
             print(f"[build] source 'toucan' skipped ({type(e).__name__})")
 
+    # execution-verified examples from deterministic tool environments (correct by construction)
+    n_env = dcfg.get("env_examples", 0)
+    if n_env:
+        from . import envs
+
+        env_ex = envs.generate(n_env, seed=seed)
+        positives += env_ex
+        print(f"[build] env (execution-verified): +{len(env_ex)}")
+
     # 2. Curate + cap positives
     positives = curate_positives(positives)
     random.Random(seed).shuffle(positives)

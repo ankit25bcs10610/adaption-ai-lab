@@ -64,6 +64,29 @@ benchmarks, and exactly how the function-calling repo implements each lever.
 - **Function masking** during training (up to +51 F1 on weak bases) — apply at the training layer if the
   platform exposes it.
 
+## Advanced upgrades (research-backed, implemented)
+
+From a 6-stream advanced-research pass. All offline, seeded, tested (72 checks).
+
+1. **Execution-verified tool environments** (`src/envs.py`) — the highest-leverage data work. Deterministic
+   cart/calendar domains with state-diff checkers generate **execution-verified** multi-turn examples
+   (correct by construction — the call is *run* and the resulting state checked) and **execution-labeled
+   DPO pairs** (chosen = verified, rejected = checker-proven-wrong). This is the data-centric stand-in for
+   RL-with-verifiable-rewards (the platform can't run online RL). Enable with `dataset.env_examples: 400`.
+2. **Robustness-delta table** (`src/robustness_table.py`) — shows the fine-tuned model's accuracy *drop*
+   under distribution shift (multi-turn / clarify / irrelevance / …) is **smaller** than the baseline's.
+   BFCL authors report 11–19% drops from mere paraphrasing, so this is what makes a large hidden-baseline
+   gain *believable* — the single biggest credibility lever.
+3. **Statistical honesty kit** (`src/eval_stats.py`) — bootstrapped 95% CIs, a paired base-vs-ft gap CI +
+   bootstrap p-value, and an exact McNemar test. Report "+X pp ± CI, p<0.05" instead of a bare number.
+4. **Interactive eval dashboard** (`src/eval_report.py`) — now adds a significance banner + an SVG radar
+   of per-category accuracy on top of the confusion matrix.
+
+Bigger bets still open (need an HF token / more time): a real in-browser base-vs-fine-tuned playground
+(ONNX + transformers.js), and unblocking the multimodal/Indic track by hosting chart images as an HF
+Image dataset. **Trap to avoid:** don't promise online RL (GRPO/PPO) — the platform is data-centric;
+express RLVR as the execution-labeled DPO pairs above.
+
 ## Uncertainties to double-check before relying on them
 
 - xLAM-60k license can flip (NC↔BY) — confirm at use time.

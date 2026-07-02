@@ -24,6 +24,7 @@ dataset:
   hard_negative_ratio: 0.22
   multiturn_ratio: 0.20        # multi-turn is ~30% of BFCL v4 and where small fine-tunes beat GPT-4o
   schema_drift_ratio: 0.08     # distinctive originality slice: tool schemas that changed under the model
+  env_examples: 0              # execution-verified examples from src.envs (0 = off; e.g. 400 to include)
   novel_tool_frac: 0.15        # hold out 15% of tool NAMES; examples using only them -> test_novel
   quality_keep_frac: 1.0       # keep top X of positives after quality filter (1.0 = filter off)
   quality_judge: heuristic     # heuristic (offline) | claude (Anthropic SDK LLM-as-judge)
