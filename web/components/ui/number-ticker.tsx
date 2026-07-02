@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useInView, useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "framer-motion";
 
-/** Count-up number that animates once when scrolled into view. Respects reduced-motion. */
+/** Count-up number that animates once when scrolled into view. Native IntersectionObserver (fires
+ * immediately for above-the-fold elements). Respects reduced-motion. */
 export function NumberTicker({
   value,
   decimals = 0,
@@ -20,27 +21,44 @@ export function NumberTicker({
   className?: string;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-15%" });
   const reduce = useReducedMotion();
   const [n, setN] = useState(0);
 
   useEffect(() => {
-    if (!inView) return;
-    if (reduce) {
-      setN(value);
-      return;
-    }
+    const el = ref.current;
+    if (!el) return;
     let raf = 0;
-    const start = performance.now();
-    const tick = (t: number) => {
-      const p = Math.min((t - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
-      setN(value * eased);
-      if (p < 1) raf = requestAnimationFrame(tick);
+    let done = false;
+    const run = () => {
+      if (done) return;
+      done = true;
+      if (reduce) {
+        setN(value);
+        return;
+      }
+      const start = performance.now();
+      const step = (t: number) => {
+        const p = Math.min((t - start) / duration, 1);
+        setN(value * (1 - Math.pow(1 - p, 3))); // easeOutCubic
+        if (p < 1) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [inView, value, duration, reduce]);
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          run();
+          io.disconnect();
+        }
+      },
+      { threshold: 0.2 },
+    );
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      cancelAnimationFrame(raf);
+    };
+  }, [value, duration, reduce]);
 
   return (
     <span ref={ref} className={className}>

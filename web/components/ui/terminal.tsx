@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useInView, useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "framer-motion";
 
 export interface TermLine {
   text: string;
@@ -13,24 +13,38 @@ const COLOR = { cmd: "text-foreground", out: "text-muted-foreground", comment: "
 /** Animated terminal that reveals lines sequentially when in view (Magic-UI "terminal" pattern). */
 export function Terminal({ lines, title = "bash" }: { lines: TermLine[]; title?: string }) {
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-15%" });
   const reduce = useReducedMotion();
   const [shown, setShown] = useState(0);
 
   useEffect(() => {
-    if (!inView) return;
-    if (reduce) {
-      setShown(lines.length);
-      return;
-    }
-    let i = 0;
-    const id = setInterval(() => {
-      i += 1;
-      setShown(i);
-      if (i >= lines.length) clearInterval(id);
-    }, 420);
-    return () => clearInterval(id);
-  }, [inView, lines.length, reduce]);
+    const el = ref.current;
+    if (!el) return;
+    let id: ReturnType<typeof setInterval>;
+    let started = false;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting || started) return;
+        started = true;
+        io.disconnect();
+        if (reduce) {
+          setShown(lines.length);
+          return;
+        }
+        let i = 0;
+        id = setInterval(() => {
+          i += 1;
+          setShown(i);
+          if (i >= lines.length) clearInterval(id);
+        }, 420);
+      },
+      { threshold: 0.2 },
+    );
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      if (id) clearInterval(id);
+    };
+  }, [lines.length, reduce]);
 
   return (
     <div ref={ref} className="overflow-hidden rounded-2xl border-glow glass font-mono text-sm">
