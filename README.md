@@ -118,17 +118,21 @@ export ANTHROPIC_API_KEY=...            # optional: Claude LLM-as-judge quality 
 **Pipeline**
 
 ```bash
-python -m src.build_dataset --config config.yaml   # build, curate, dedup, split
-python -m src.baseline       --config config.yaml   # honest "before" number
-python -m src.train_adaption --config config.yaml   # Adaption AutoScientist run
-python -m src.eval_bfcl      --model <finetuned> --data data/out/test.jsonl
-python -m src.eval_report                            # HTML report + call/refuse/clarify confusion matrix
+python -m src.build_dataset   --config config.yaml   # build, curate, dedup, DECONTAMINATE, split
+python -m src.build_preference --config config.yaml  # DPO pairs (+ execution-labeled env pairs)
+python -m src.baseline        --config config.yaml   # honest "before" number
+python -m src.train_adaption  --config config.yaml   # Adaption AutoScientist run
+python -m src.eval_bfcl       --model <finetuned> --data data/out/test.jsonl
+python -m src.eval_decompose  --base results/baseline_pred.jsonl --finetuned results/pred.jsonl  # gap decomposition
+python -m src.reliability_probe --model <finetuned>  # legible call/refuse/clarify/over-refusal probe
+python -m src.eval_report                            # HTML: significance + decomposition + confusion + schema-drift
+python -m src.release preflight                       # blocks publish on missing artifacts / placeholders / LICENSE
 python -m src.fill_model_card --username <you>       # auto-fill MODEL_CARD.md from results/*.json
 ```
 
 Data sources are permissively licensed only: `Salesforce/xlam-function-calling-60k` (CC-BY-4.0), `Team-ACE/ToolACE` (Apache-2.0), optional `Agent-Ark/Toucan-1.5M` (Apache-2.0). Base model: `Qwen/Qwen2.5-Coder-3B-Instruct`. Full strategy in [`docs/WINNING.md`](docs/WINNING.md).
 
-**Data-quality audit.** Because the dataset *is* the product, the build pipeline was adversarially audited before release. It caught the refuse/clarify moat being generated and then silently discarded by dedup — `no_tool` was **8 rows → fixed to 239**, `miss_param` **1 → 36**, `ambiguous` **0 → 133** — plus a slice-mixing undershoot and a DPO poison-pair risk. Full write-up, root causes, and before/after in [`docs/DATA_QUALITY_AUDIT.md`](docs/DATA_QUALITY_AUDIT.md). `stats.json` now carries a `mix` block with intended-vs-realized shares and a `mix_ok` guard.
+**Data-quality audit (two adversarial passes).** Because the dataset *is* the product, the build pipeline was adversarially audited before release. Pass 1 caught the refuse/clarify moat being generated and then silently discarded by dedup — `no_tool` **8 → 239**, `miss_param` **1 → 36**, `ambiguous` **0 → 133** — plus a slice-mixing undershoot and a DPO poison-pair risk. Pass 2 caught a schema-drift poison bug (**36% of `rename` gold calls were schema-invalid** → fixed to 0) and added over-refusal-trap + partial-parallel slices, execution-verified multi-call trajectories, a leakage **decontamination** pass, and a blocking release preflight. Full write-up and before/after in [`docs/DATA_QUALITY_AUDIT.md`](docs/DATA_QUALITY_AUDIT.md). `stats.json` carries `mix` (intended-vs-realized shares + `mix_ok`) and `contamination` blocks.
 
 ---
 

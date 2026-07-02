@@ -78,3 +78,38 @@ gold tool, the `<think>` firewall, the DPO poison guard), so the moat can't sile
 
 Reproduce: `python -m src.build_dataset --config config.yaml` then inspect `data/out/stats.json`
 (`mix` block).
+
+---
+
+## Round 2 — a second adversarial pass (25 agents)
+
+A second research + adversarial-verification pass audited the *fixed* pipeline and found more, most
+notably another confirmed poison bug:
+
+- **Schema-drift poison (36% of rename golds were schema-invalid).** `make_rename` hardcoded the string
+  `"example"` / `"ACME-42"` for every required argument, ignoring declared type/enum — so integer and
+  enum fields received invalid values. Those gold calls are graded through the validator, so they were
+  literally teaching the model to emit invalid calls. Fixed by centralizing a type/enum-aware
+  `sample_value()` (`src/format_utils.py`, shared with multi-turn) and adding a `validate_answer`
+  drop-guard in `schema_drift.generate()`. Now **0** invalid rename golds.
+
+Four new correct-by-construction slices/defenses were added on top:
+
+- **Over-refusal traps** (`over_refusal`, 79 rows) — a hedged but fully-satisfiable request whose gold
+  is to **call**. Direct counterweight to the enlarged refuse/clarify slice, so the model doesn't learn
+  to over-abstain. (A model that refuses here scores 0.)
+- **Partial-parallel** (`partial_parallel`, 77 rows) — two intents in one request; the gold is **two**
+  calls. The only slice that stresses call *completeness*.
+- **Execution-verified multi-call trajectories** (`src/envs.py`) — 2–3 order-independent calls verified
+  by replaying them against a deterministic environment.
+- **Decontamination** (`src/decontaminate.py`) — every training query is checked (n-gram + embedding)
+  against public BFCL/ToolACE-style probes and dropped on overlap; a `contamination` block lands in
+  `stats.json`. This defends the held-out claim against leakage.
+
+Two dedup subtleties fixed along the way: dedup is now **slice-group aware** (an over-refusal example,
+being a deliberate hedged near-paraphrase of a positive, is no longer deleted as a "duplicate" of it),
+and the execution-labeled env DPO pairs — previously generated but **never consumed** — are now merged
+into `pref.jsonl` with the hardest confirmed-wrong negative selected per pair.
+
+All of the above is regression-tested in `tests/smoke_test.py` and gated for release by a blocking
+`src/release.py` preflight (missing artifacts / placeholders / missing LICENSE).

@@ -40,12 +40,22 @@ generalization test). **~2,935 examples** total after dedup. Per-source/kind cou
 (intended-vs-realized shares + a `mix_ok` guard) are in `stats.json`.
 
 Slices (counts across all splits):
-- **positives** — real tool-call examples curated from ToolACE (schema-validated). ~57.6% of the set.
-- **hard negatives** (~18.9%) — `no_tool` → refuse (**239**); `missing_arg` → clarify (**183**);
-  `ambiguous` → clarify (**133**). `no_tool` sits at **8.1% of the total set** (research optimum ~10%).
-- **multi-turn** (~14.3%) — `miss_param` (**36**), `miss_func` (**192**), `long_context` (**193**), BFCL v3/v4 style.
-- **schema-drift** (~9.1%) — a tool's schema changed under the model: `add_required` (**123**),
-  `retype_enum` (**59**), `rename` (**86**).
+- **positives** — real tool-call examples curated from ToolACE (schema-validated), plus a small slice
+  of **execution-verified** examples from deterministic tool environments (`src/envs.py`).
+- **hard negatives** — `no_tool` → refuse (~**213–263**, held at ~**8–9% of the total set**, the research
+  optimum); `missing_arg` / `ambiguous` → clarify; `over_refusal` → **must call** (hedged-but-satisfiable
+  requests, the counterweight to refusal bias); `partial_parallel` → **two calls** (call completeness).
+- **multi-turn** — `miss_param`, `miss_func`, `long_context` (BFCL v3/v4 style), plus verified
+  **multi-call** env trajectories (2–3 order-independent calls).
+- **schema-drift** — a tool's schema changed under the model: `add_required` / `retype_enum` (→ clarify)
+  and `rename` (→ remap to the new field). Every drift gold is validated against its drifted schema.
+
+Exact per-kind counts and realized-vs-intended shares are in `stats.json` (`mix` block). A companion
+**preference set** (`pref.jsonl`) includes execution-labeled DPO pairs (chosen = verified call,
+rejected = checker-proven-wrong).
+
+**Decontamination:** every training query is checked (n-gram + embedding) against public
+BFCL/ToolACE-style probes and dropped on overlap; a `contamination` block is recorded in `stats.json`.
 
 > **Data-quality audit.** An adversarial audit of the build pipeline caught the refuse/clarify moat
 > being generated and then silently discarded by query-only dedup (`no_tool` had collapsed to **8**
