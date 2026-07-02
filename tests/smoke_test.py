@@ -399,6 +399,17 @@ def main() -> int:
     ok &= check("manifest missing -> flagged", _mverify(_td, _mpath + ".nope") != [])
     ok &= check("preflight blocks on manifest mismatch", any("changed" in p or "manifest" in p for p in preflight(_td, card_paths=["clean\n"], manifest_path=_mpath)))
 
+    print("fetch_improved (platform deliverable):")
+    from src.fetch_improved import extract_enhanced
+    _raw = [{"prompt": "P", "completion": "C", "enhanced_prompt": "EP", "enhanced_completion": "EC", "row_embedding": [0.1]},
+            {"prompt": "P2", "completion": "C2"}]  # second row has no enhanced fields
+    _enh = list(extract_enhanced(_raw, prefer_enhanced=True))
+    ok &= check("uses enhanced pair when present", _enh[0] == {"prompt": "EP", "completion": "EC"})
+    ok &= check("falls back to original when no enhanced", _enh[1] == {"prompt": "P2", "completion": "C2"})
+    ok &= check("enhanced extract drops embeddings", "row_embedding" not in _enh[0])
+    _orig = list(extract_enhanced(_raw, prefer_enhanced=False))
+    ok &= check("original mode ignores enhanced", _orig[0] == {"prompt": "P", "completion": "C"})
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 

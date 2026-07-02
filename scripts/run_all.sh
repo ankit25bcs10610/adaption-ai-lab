@@ -28,6 +28,11 @@ python3 -m src.build_preference --config config.yaml --split train
 if [ -z "${SKIP_TRAIN:-}" ] && [ -n "${ADAPTION_API_KEY:-}" ]; then
   echo "==> [3/9] Adaption AutoScientist run"
   python3 -m src.train_adaption --config config.yaml || echo "   (train_adaption failed; retry later)"
+  # Fetch the platform's improved (enhanced) dataset — the actual data-centric deliverable.
+  if [ -n "${IMPROVED_DATASET_ID:-}" ]; then
+    python3 -m src.fetch_improved --dataset-id "$IMPROVED_DATASET_ID" \
+      --out data/adaptive_out/enhanced_train_pc.jsonl || echo "   (fetch_improved skipped)"
+  fi
 else
   echo "==> [3/9] Adaption run SKIPPED (set ADAPTION_API_KEY and unset SKIP_TRAIN to enable)"
 fi

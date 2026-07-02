@@ -59,6 +59,12 @@ rejected = checker-proven-wrong).
 **Decontamination:** every training query is checked (n-gram + embedding) against public
 BFCL/ToolACE-style probes and dropped on overlap; a `contamination` block is recorded in `stats.json`.
 
+**Platform-enhanced variant.** Adaptive Data (data-centric) rewrites each row into a richer
+`enhanced_prompt` / `enhanced_completion` — in the completed run it revised **100%** of completions
+(e.g. flagging *both* an invalid enum *and* a missing required argument where the original flagged only
+one). Fetch it with `python -m src.fetch_improved --dataset-id <id>` to get a clean enhanced
+prompt/completion file to train on; this is the artifact behind the platform's quality-grade gain.
+
 > **Data-quality audit.** An adversarial audit of the build pipeline caught the refuse/clarify moat
 > being generated and then silently discarded by query-only dedup (`no_tool` had collapsed to **8**
 > rows, `miss_param` to **1**). The generators, the slice-mixing math, and dedup were fixed, and
