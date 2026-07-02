@@ -521,6 +521,15 @@ def main() -> None:
         }
     with open(os.path.join(out_dir, "stats.json"), "w") as f:
         json.dump(stats, f, indent=2)
+
+    # Reproducibility manifest: SHA-256 of every artifact + seed + config/git/lib provenance.
+    try:
+        from . import manifest as _manifest
+        m = _manifest.write(out_dir=out_dir, config_path="config.yaml")
+        print(f"[build] manifest: {len(m['artifacts_sha256'])} artifacts hashed, commit {str(m['git_commit'])[:8]}")
+    except Exception as e:
+        print(f"[build] manifest skipped ({type(e).__name__}: {e})")
+
     print("[build] done:", json.dumps(stats, indent=2))
 
 

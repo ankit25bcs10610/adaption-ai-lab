@@ -17,7 +17,8 @@ _PLACEHOLDERS = ["YOUR_USERNAME", "<user>", "<you>", "value: 0.000", "0.000", "<
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def preflight(out_dir: str = "data/out", card_paths=None, require_pref: bool = False) -> list:
+def preflight(out_dir: str = "data/out", card_paths=None, require_pref: bool = False,
+              check_manifest: bool = True, manifest_path: str = "results/manifest.json") -> list:
     """Return a list of BLOCKING release problems (empty list = safe to publish).
 
     Pure filesystem/string checks — never touches the network — so it can gate every upload and run in
@@ -48,6 +49,14 @@ def preflight(out_dir: str = "data/out", card_paths=None, require_pref: bool = F
         for marker in _PLACEHOLDERS:
             if marker in text:
                 problems.append(f"placeholder '{marker}' in {label}")
+
+    # Reproducibility manifest must exist AND match the on-disk artifacts (no stale/tampered release).
+    if check_manifest:
+        try:
+            from . import manifest as _manifest
+            problems.extend(_manifest.verify(out_dir=out_dir, manifest_path=manifest_path))
+        except Exception as e:
+            problems.append(f"manifest check failed ({type(e).__name__}: {e})")
     return problems
 
 

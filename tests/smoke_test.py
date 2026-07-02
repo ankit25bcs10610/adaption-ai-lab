@@ -384,10 +384,20 @@ def main() -> int:
     _td = _tf.mkdtemp()
     for _n in ("train.jsonl", "val.jsonl", "test.jsonl", "stats.json"):
         open(_os2.path.join(_td, _n), "w").write("{}\n")
-    ok &= check("preflight flags placeholder card", any("placeholder" in p for p in preflight(_td, card_paths=["clean text with YOUR_USERNAME here\n"])))
-    ok &= check("preflight passes clean card + artifacts", preflight(_td, card_paths=["all real numbers, no markers\n"]) == [])
+    ok &= check("preflight flags placeholder card", any("placeholder" in p for p in preflight(_td, card_paths=["clean text with YOUR_USERNAME here\n"], check_manifest=False)))
+    ok &= check("preflight passes clean card + artifacts", preflight(_td, card_paths=["all real numbers, no markers\n"], check_manifest=False) == [])
     _td2 = _tf.mkdtemp()  # missing artifacts
-    ok &= check("preflight flags missing artifact", any("missing artifact" in p for p in preflight(_td2, card_paths=["clean\n"])))
+    ok &= check("preflight flags missing artifact", any("missing artifact" in p for p in preflight(_td2, card_paths=["clean\n"], check_manifest=False)))
+
+    print("reproducibility manifest:")
+    from src.manifest import write as _mwrite, verify as _mverify
+    _mpath = _os2.path.join(_td, "manifest.json")
+    _mwrite(out_dir=_td, config_path="config.yaml", manifest_path=_mpath)
+    ok &= check("manifest verifies clean", _mverify(_td, _mpath) == [])
+    open(_os2.path.join(_td, "train.jsonl"), "w").write('{"tampered":1}\n')
+    ok &= check("manifest detects tampered artifact", any("changed" in p for p in _mverify(_td, _mpath)))
+    ok &= check("manifest missing -> flagged", _mverify(_td, _mpath + ".nope") != [])
+    ok &= check("preflight blocks on manifest mismatch", any("changed" in p or "manifest" in p for p in preflight(_td, card_paths=["clean\n"], manifest_path=_mpath)))
 
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
