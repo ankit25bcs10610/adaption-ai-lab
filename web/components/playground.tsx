@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Check, CircleSlash, HelpCircle, Play } from "lucide-react";
 import { Reveal } from "@/components/reveal";
+import { Section, SectionHeader } from "@/components/section";
 import { Button } from "@/components/ui/button";
 import {
   PRESET_TOOLS,
@@ -40,21 +41,14 @@ export function Playground() {
   }
 
   return (
-    <section id="playground" className="relative z-10 px-6 py-28">
-      <div className="mx-auto max-w-6xl">
-        <Reveal className="mb-10 max-w-2xl">
-          <p className="mb-3 font-mono text-sm text-cyan">{"// try it live"}</p>
-          <h2 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
-            Watch it decide, in your browser.
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            Toggle a tool off and re-run — a valid <span className="text-run">call</span> becomes a{" "}
-            <span className="text-cyan">refusal</span>. That&apos;s the whole point: it won&apos;t invent a tool it
-            doesn&apos;t have.
-          </p>
-        </Reveal>
+    <Section id="playground">
+      <SectionHeader eyebrow="try it live" title="Watch it decide, in your browser." tone="cyan" className="mb-10">
+        Toggle a tool off and re-run — a valid <span className="text-run">call</span> becomes a{" "}
+        <span className="text-cyan">refusal</span>. That&apos;s the whole point: it won&apos;t invent a tool it
+        doesn&apos;t have.
+      </SectionHeader>
 
-        <Reveal>
+      <Reveal>
           <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
             {/* Tools + query */}
             <div className="rounded-2xl glass p-6">
@@ -127,13 +121,12 @@ export function Playground() {
               )}
             </div>
           </div>
-          <p className="mt-4 text-xs text-muted-foreground/70">
-            This playground runs a faithful, deterministic simulation of the model&apos;s decision logic in your
-            browser (no download). The released weights produce the same JSON envelope.
-          </p>
-        </Reveal>
-      </div>
-    </section>
+        <p className="mt-4 text-xs text-muted-foreground/70">
+          This playground runs a faithful, deterministic simulation of the model&apos;s decision logic in your
+          browser (no download). The released weights produce the same JSON envelope.
+        </p>
+      </Reveal>
+    </Section>
   );
 }
 
