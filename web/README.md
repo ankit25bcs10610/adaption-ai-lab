@@ -13,6 +13,20 @@ npm run dev          # http://localhost:3000
 
 Build for production: `npm run build && npm start`.
 
+### Blank page / HTTP 500 in dev?
+
+Almost always a corrupted `.next` cache or a stale dev server left on port 3000 (Next then silently
+starts the new one on **3001**, so `localhost:3000` shows the dead process). Fix:
+
+```bash
+# free port 3000, then start clean
+lsof -ti tcp:3000 | xargs kill -9 2>/dev/null   # kill the stale server
+npm run dev:clean                               # wipes .next + node_modules/.cache, then next dev
+```
+
+`npm run clean` wipes the caches on their own. If the terminal says "Port 3000 is in use, trying 3001",
+open the port it actually printed.
+
 ## Stack
 
 - **3D:** `@react-three/fiber` + `three` — the hero scene is `components/hero-3d.tsx` (wireframe model core +

@@ -5,9 +5,11 @@
   "description": "Landing page for the AutoScientist Tool-Caller — Next.js + react-three-fiber + Tailwind (21st.dev/shadcn ready)",
   "scripts": {
     "dev": "next dev",
+    "dev:clean": "rm -rf .next node_modules/.cache && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "clean": "rm -rf .next node_modules/.cache",
     "sync:results": "node scripts/sync-results.mjs"
   },
   "dependencies": {
