@@ -21,7 +21,7 @@ criterion to its status and the exact artifact, so nothing is missed at submissi
 | 3 | Build dataset with **Adaptive Data** | ✅ done | ran `datasets.run()`; **+15.7% quality, grade C→B** on the fixed set (`c4923b7f`); enhanced dataset downloaded to `data/adaptive_out/` |
 | 4 | Train model with **AutoScientist** | ⚠️ **console step** | the Python SDK is dataset-only; the model-training loop + weights are in the **web console** (adaptionlabs.ai/app). Run AutoScientist on the adapted dataset there → produces weights + the official held-out number |
 | 5 | Beat the baseline on the held-out test set | ⚠️ **needs step 4** | the platform reports the held-out improvement when AutoScientist training completes. Adaptive Data already shows **+15.7%** dataset-quality gain (criterion #2); the held-out *model* number comes from step 4 |
-| 6 | Release **weights + dataset** on **HF and Kaggle** | 🟡 **HF done; Kaggle + weights pending** | **Published to HF:** [dataset](https://huggingface.co/datasets/pandeyankit84/autoscientist-toolcaller-dataset) + [model card](https://huggingface.co/pandeyankit84/autoscientist-toolcaller). Remaining: **Kaggle** (`python -m src.release kaggle-dataset/kaggle-model` — needs Kaggle API creds) and the **weights** (from the AutoScientist console run) added to the HF model repo |
+| 6 | Release **weights + dataset** on **HF and Kaggle** | 🟡 **dataset on BOTH done; weights pending** | **Dataset published to both:** HF [dataset](https://huggingface.co/datasets/pandeyankit84/autoscientist-toolcaller-dataset) + [model card](https://huggingface.co/pandeyankit84/autoscientist-toolcaller); Kaggle [dataset](https://www.kaggle.com/datasets/pandeyankit99/autoscientist-toolcaller-dataset) (public). Remaining: **model weights** (from the AutoScientist console run) uploaded to the HF model repo + a Kaggle model |
 | 7 | Post on LinkedIn + X, tag @adaption_ai | ⚠️ **you post** | drafts in `docs/social_posts.md`; add the live-demo URL after deploy (bonus points) |
 | 8 | Submit (Part 2 form) | ⚠️ **you submit** | after steps 4–7; form opens before July 6 |
 
@@ -44,7 +44,7 @@ Plus (HackIndia track, necessary): **join the WhatsApp channel** and the **Disco
 | Blocker | Owner | Unblocks |
 |---|---|---|
 | ~~HF write token~~ | ✅ done | dataset + model card **published to HF** |
-| **Kaggle API creds** | **you** | Kaggle half of Step 6 — then `python -m src.release kaggle-dataset` |
+| ~~Kaggle API creds~~ | ✅ done | dataset **published to Kaggle** (public) |
 | **AutoScientist console run** for weights + official held-out number | **you** (web console) | Steps 4–5 and the weights half of Step 6 (add weights to the HF model repo) |
 | LinkedIn/X posts, WhatsApp + Discord join | **you** | Step 7 + HackIndia eligibility |
 | **Rotate** the pasted credentials (HF write, Adaption key) | **you** | security — they were shared in chat |

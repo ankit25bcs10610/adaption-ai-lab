@@ -85,6 +85,6 @@ available tools (JSON Schema) + the user request; the model returns one JSON env
 
 ## Links
 
-- Dataset: https://huggingface.co/datasets/pandeyankit84/autoscientist-toolcaller-dataset
-- Kaggle: https://www.kaggle.com/models/pandeyankit84/autoscientist-toolcaller
+- Dataset (HF): https://huggingface.co/datasets/pandeyankit84/autoscientist-toolcaller-dataset
+- Dataset (Kaggle): https://www.kaggle.com/datasets/pandeyankit99/autoscientist-toolcaller-dataset
 - Code: https://github.com/ankit25bcs10610/adaption-ai-lab
