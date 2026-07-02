@@ -25,7 +25,10 @@ cat <<'EOF'
     python -m src.eval_harness --model $FINETUNED_MODEL --data data/out/test.jsonl      --out results/eval.json
     python -m src.eval_bfcl    --model $FINETUNED_MODEL --data data/out/test.jsonl      --out results/eval_bfcl.json
     python -m src.eval_harness --model $FINETUNED_MODEL --data data/out/test_novel.jsonl --out results/eval_novel.json
-    python -m src.error_analysis --model $FINETUNED_MODEL --data data/out/test.jsonl
+    python -m src.error_analysis --model $BASELINE_MODEL   --data data/out/test.jsonl --out-dir results/base
+    python -m src.error_analysis --model $FINETUNED_MODEL   --data data/out/test.jsonl --out-dir results/ft
+    python -m src.eval_stats --base results/base/predictions.jsonl --finetuned results/ft/predictions.jsonl
+    #   -> bootstrapped 95% CIs + paired base-vs-ft gap CI + bootstrap/McNemar p-values (significance)
     python -m src.eval_report      # -> results/report.html (base-vs-ft table, per-category bars, confusion matrix)
     python -m src.fill_model_card --username YOURUSER
 

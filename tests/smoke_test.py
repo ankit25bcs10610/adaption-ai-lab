@@ -203,6 +203,22 @@ def main() -> int:
     ok &= check("metrics block has both cols", "0.400" in blk and "0.800" in blk)
     ok &= check("metrics block has improvement", "37" in blk)
 
+    print("eval_stats:")
+    from src.eval_stats import bootstrap_ci, mcnemar, paired_gap
+    ci = bootstrap_ci([1] * 80 + [0] * 20)
+    ok &= check("bootstrap_ci mean=0.8", abs(ci["mean"] - 0.8) < 1e-9)
+    ok &= check("bootstrap_ci brackets mean", ci["lo"] <= ci["mean"] <= ci["hi"])
+    # base 60% vs ft 90% on 100 aligned examples -> clear, significant improvement
+    base = [1] * 60 + [0] * 40
+    ft = [1] * 90 + [0] * 10
+    g = paired_gap(base, ft)
+    ok &= check("paired gap ~ +0.30", abs(g["gap"] - 0.30) < 1e-9)
+    ok &= check("gap CI excludes 0", g["lo"] > 0)
+    ok &= check("bootstrap p<0.05", g["p_value"] < 0.05)
+    mc = mcnemar(base, ft)
+    ok &= check("mcnemar p<0.05 on clear win", mc["p_value"] < 0.05)
+    ok &= check("no gap -> p=1", paired_gap([1, 0, 1, 0], [1, 0, 1, 0])["p_value"] == 1.0)
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 
