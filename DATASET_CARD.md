@@ -36,13 +36,22 @@ Each row is one example (canonical format in `src/format_utils.py`):
 ```
 
 Splits: `train` / `val` / `test`, plus `test_novel` (examples using tools **never seen in training** — a
-generalization test). ~2,294 examples total after dedup. Per-source/kind counts in `stats.json`.
+generalization test). **~2,935 examples** total after dedup. Per-source/kind counts and a `mix` block
+(intended-vs-realized shares + a `mix_ok` guard) are in `stats.json`.
 
-Slices:
-- **positives** — real tool-call examples curated from ToolACE (schema-validated).
-- **hard negatives** — `no_tool` → refuse; `missing_arg` → clarify; `ambiguous` → clarify.
-- **multi-turn** — `miss_param`, `miss_func`, `long_context` (BFCL v3/v4 style).
-- **schema-drift** — a tool's schema changed under the model (`add_required` / `retype_enum` / `rename`).
+Slices (counts across all splits):
+- **positives** — real tool-call examples curated from ToolACE (schema-validated). ~57.6% of the set.
+- **hard negatives** (~18.9%) — `no_tool` → refuse (**239**); `missing_arg` → clarify (**183**);
+  `ambiguous` → clarify (**133**). `no_tool` sits at **8.1% of the total set** (research optimum ~10%).
+- **multi-turn** (~14.3%) — `miss_param` (**36**), `miss_func` (**192**), `long_context` (**193**), BFCL v3/v4 style.
+- **schema-drift** (~9.1%) — a tool's schema changed under the model: `add_required` (**123**),
+  `retype_enum` (**59**), `rename` (**86**).
+
+> **Data-quality audit.** An adversarial audit of the build pipeline caught the refuse/clarify moat
+> being generated and then silently discarded by query-only dedup (`no_tool` had collapsed to **8**
+> rows, `miss_param` to **1**). The generators, the slice-mixing math, and dedup were fixed, and
+> regression-tested; the counts above are the post-fix set. Full write-up:
+> [`docs/DATA_QUALITY_AUDIT.md`](https://github.com/ankit25bcs10610/adaption-ai-lab/blob/main/docs/DATA_QUALITY_AUDIT.md).
 
 ## Provenance & licensing
 
