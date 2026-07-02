@@ -138,6 +138,22 @@ def main() -> int:
     ok &= check("lenient acceptable list", args_match_lenient({"city": "NYC"}, {"city": {"_acceptable": ["nyc", "new york city"]}}))
     ok &= check("lenient judge correct", judge_bfcl(pos, target_to_json_str(pos["answer"]))["correct"])
 
+    print("bfcl_handler (envelope translation):")
+    from src.bfcl_handler import translate, is_no_call
+    ok &= check("call -> decoded ast", translate('{"action":"call","calls":[{"name":"f","arguments":{"a":1}}]}') == [{"f": {"a": 1}}])
+    ok &= check("refuse -> empty (no call)", translate('{"action":"refuse","message":"x"}') == [])
+    ok &= check("is_no_call on clarify", is_no_call('{"action":"clarify","message":"x"}'))
+    ok &= check("think block firewalled in handler", translate('<think>{z}</think>{"action":"call","calls":[{"name":"g","arguments":{}}]}') == [{"g": {}}])
+
+    print("export_bfcl:")
+    from src.export_bfcl import to_bfcl_prompt, to_bfcl_answer
+    _ex = {"tools": TOOLS, "query": "weather?", "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Mumbai"}}]}}
+    _p = to_bfcl_prompt(_ex, "BFCL_v4_simple_0")
+    _a = to_bfcl_answer(_ex, "BFCL_v4_simple_0")
+    ok &= check("prompt has question turns", _p["question"] == [[{"role": "user", "content": "weather?"}]])
+    ok &= check("answer wraps values in lists", _a["ground_truth"] == [{"get_weather": {"city": ["Mumbai"]}}])
+    ok &= check("irrelevance answer empty", to_bfcl_answer({"tools": TOOLS, "query": "poem?", "answer": {"type": "refuse", "content": "x"}}, "i")["ground_truth"] == [])
+
     print("quality_filter:")
     from src.quality_filter import filter_examples, heuristic_score
     good_ex = {"tools": TOOLS, "query": "what is the weather in Mumbai city today", "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Mumbai"}}]}}
@@ -173,14 +189,6 @@ def main() -> int:
     mf = next((e for e in mts if e["meta"]["mt_kind"] == "miss_func"), None)
     if mf:
         ok &= check("miss_func judged correct", judge(mf, target_to_json_str(mf["answer"]))["correct"])
-
-    print("export_bfcl:")
-    from src.export_bfcl import to_bfcl
-    b = to_bfcl(pos, 0)
-    ok &= check("bfcl has function list", len(b["function"]) == len(pos["tools"]))
-    ok &= check("bfcl question is nested turns", isinstance(b["question"], list) and isinstance(b["question"][0], list))
-    b_neg = to_bfcl({"tools": TOOLS, "query": "poem?", "answer": {"type": "refuse", "content": "x"}, "meta": {}}, 1)
-    ok &= check("bfcl refuse -> empty ground_truth", b_neg["ground_truth"] == [])
 
     print("schema_drift:")
     from src import schema_drift as sd
