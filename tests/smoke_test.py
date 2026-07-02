@@ -219,6 +219,38 @@ def main() -> int:
     ok &= check("mcnemar p<0.05 on clear win", mc["p_value"] < 0.05)
     ok &= check("no gap -> p=1", paired_gap([1, 0, 1, 0], [1, 0, 1, 0])["p_value"] == 1.0)
 
+    print("robustness_table:")
+    from src.robustness_table import robustness
+    base_p = ([{"category": "simple", "correct": True}] * 9 + [{"category": "simple", "correct": False}]
+              + [{"category": "multi_turn", "correct": True}] * 4 + [{"category": "multi_turn", "correct": False}] * 6)
+    ft_p = ([{"category": "simple", "correct": True}] * 9 + [{"category": "simple", "correct": False}]
+            + [{"category": "multi_turn", "correct": True}] * 8 + [{"category": "multi_turn", "correct": False}] * 2)
+    r = robustness(base_p, ft_p)
+    ok &= check("robustness computes drops", r["mean_base_drop"] is not None and r["mean_ft_drop"] is not None)
+    ok &= check("ft more robust (smaller drop)", r["mean_ft_drop"] < r["mean_base_drop"])
+
+    print("envs (execution-verified):")
+    from src.envs import CalendarEnv, CartEnv
+    from src.envs import generate as env_gen, generate_dpo as env_dpo
+    cart = CartEnv()
+    s1, aok, _ = cart.apply(cart.blank(), {"name": "add_item", "arguments": {"item": "apples", "quantity": 3}})
+    ok &= check("cart add verified", aok and s1["items"]["apples"] == 3)
+    _, rok, _ = cart.apply(s1, {"name": "remove_item", "arguments": {"item": "apples", "quantity": 10}})
+    ok &= check("cart over-remove rejected", not rok)
+    _, cok, _ = cart.apply(cart.blank(), {"name": "checkout", "arguments": {}})
+    ok &= check("checkout empty cart rejected", not cok)
+    _, eok, _ = CalendarEnv().apply(CalendarEnv().blank(), {"name": "cancel_event", "arguments": {"title": "Standup"}})
+    ok &= check("cancel missing event rejected", not eok)
+    exs = env_gen(20, seed=1)
+    ok &= check("env examples generated", len(exs) > 0)
+    ok &= check("env examples verified", all(e["meta"]["verified"] and e["answer"]["type"] == "tool_call" for e in exs))
+    # execution consistency: the answer call must name a real tool in that example's tool list
+    ok &= check("env answer uses a real tool", all(
+        e["answer"]["calls"][0]["name"] in {t["name"] for t in e["tools"]} for e in exs))
+    ok &= check("env determinism", env_gen(20, seed=1) == exs)
+    dpo = env_dpo(20, seed=1)
+    ok &= check("env DPO pairs built", len(dpo) > 0 and all(d["chosen"] != d["rejected"] for d in dpo))
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 
