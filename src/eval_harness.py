@@ -42,6 +42,7 @@ def judge(example: Dict[str, Any], output_text: str) -> Dict[str, Any]:
 
     result = {
         "hn_kind": example["meta"].get("hn_kind"),
+        "sd_kind": example["meta"].get("sd_kind"),
         "gold_type": gold_type,
         "parsed_ok": parsed is not None,
         "correct": False,
@@ -142,6 +143,18 @@ def evaluate(
         "parse_failure_rate": sum(not v["parsed_ok"] for v in verdicts) / len(verdicts),
         "counts": {"positive": len(positives), "refuse": len(refusals), "clarify": len(clarifies)},
     }
+
+    # First-class schema-drift slice: schema-awareness is a distinctive claim, so score it explicitly.
+    sd_verdicts = [v for v in verdicts if v.get("sd_kind")]
+    if sd_verdicts:
+        by_sd: Dict[str, Any] = {}
+        for kind in sorted({v["sd_kind"] for v in sd_verdicts}):
+            sub = [int(v["correct"]) for v in sd_verdicts if v["sd_kind"] == kind]
+            by_sd[kind] = {"n": len(sub), "accuracy": sum(sub) / len(sub), "stderr": _bootstrap_se(sub)}
+        sd_bits = [int(v["correct"]) for v in sd_verdicts]
+        metrics["by_sd_kind"] = by_sd
+        metrics["schema_drift_accuracy"] = sum(sd_bits) / len(sd_bits)
+
     if return_records:
         return {"metrics": metrics, "records": details}
     return metrics

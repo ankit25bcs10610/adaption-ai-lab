@@ -12,6 +12,7 @@ rather than crashing the pipeline.
 """
 from __future__ import annotations
 
+import functools
 import re
 import sys
 from typing import Any, Dict, List, Set, Tuple
@@ -26,11 +27,29 @@ def _dedup_text(ex: Dict[str, Any]) -> str:
     a Hammer ``no_tool`` reuses a real positive's query (but offers different tools and the answer
     is *refuse*), and the templated ``ambiguous`` / ``miss_param`` slices share a fixed query
     across different tool sets. Two rows are true duplicates only when the request, the tools on
-    offer, AND the required behavior all match — so fold all three into the signature.
+    offer, AND the required behavior all match — so fold those into the signature.
+
+    We also prefix the SLICE GROUP (the specific hard-negative / multi-turn / schema-drift kind).
+    This keeps an augmentation slice like ``over_refusal`` — deliberately a hedged near-paraphrase of
+    a real positive — from being deleted as a "duplicate" of that positive, while base positives
+    (no kind -> group "") still deduplicate across sources as before.
     """
     tools = sorted(t.get("name", "") for t in (ex.get("tools") or []))
     atype = (ex.get("answer") or {}).get("type", "")
-    return f"{atype} | {' '.join(tools)} | {ex.get('query', '')}"
+    return f"{_dedup_group(ex)} | {atype} | {' '.join(tools)} | {ex.get('query', '')}"
+
+
+def _dedup_group(ex: Dict[str, Any]) -> str:
+    """The slice a row belongs to. Base positives share group "" (so they dedup across sources);
+    each augmentation slice is its own group so it never collapses against a base positive it was
+    intentionally derived from (e.g. an over_refusal hedge of a real positive)."""
+    meta = ex.get("meta") or {}
+    kind = meta.get("hn_kind") or meta.get("mt_kind") or meta.get("sd_kind")
+    if kind:
+        return kind
+    if meta.get("source") == "env":
+        return "env"  # execution-verified env rows dedup among themselves, not vs base positives
+    return ""
 
 
 def _shingles(text: str, k: int = 3) -> Set[str]:
@@ -64,12 +83,17 @@ def minhash_dedup(
     return kept
 
 
-def _embed(texts: List[str]):
-    """Static sentence embeddings via model2vec (fast, CPU-friendly)."""
+@functools.lru_cache(maxsize=1)
+def _embed_model():
+    """Load the static embedding model once (cached) — decontam + dedup share this singleton."""
     from model2vec import StaticModel
 
-    model = StaticModel.from_pretrained("minishlab/potion-base-8M")
-    return model.encode(texts)
+    return StaticModel.from_pretrained("minishlab/potion-base-8M")
+
+
+def _embed(texts: List[str]):
+    """Static sentence embeddings via model2vec (fast, CPU-friendly)."""
+    return _embed_model().encode(texts)
 
 
 def semantic_dedup(
@@ -92,16 +116,19 @@ def semantic_dedup(
     norms[norms == 0] = 1.0
     embs = embs / norms
 
+    # Compare each example only against previously-kept examples of the SAME slice group. Otherwise a
+    # deliberate near-paraphrase augmentation (e.g. over_refusal, a hedged copy of a real positive)
+    # is wrongly deleted as a paraphrase of the positive it was built from.
     kept_idx: List[int] = []
-    kept_vecs = None
+    kept_vecs_by_group: Dict[str, Any] = {}
     for i in range(len(examples)):
+        g = _dedup_group(examples[i])
         v = embs[i : i + 1]
-        if kept_vecs is not None:
-            sims = (kept_vecs @ v.T).ravel()
-            if float(sims.max()) >= threshold:
-                continue
+        store = kept_vecs_by_group.get(g)
+        if store is not None and float((store @ v.T).ravel().max()) >= threshold:
+            continue
         kept_idx.append(i)
-        kept_vecs = v if kept_vecs is None else np.vstack([kept_vecs, v])
+        kept_vecs_by_group[g] = v if store is None else np.vstack([store, v])
     kept = [examples[i] for i in kept_idx]
     print(f"[dedup] semantic: {len(examples)} -> {len(kept)}")
     return kept

@@ -53,6 +53,25 @@ def build_system_prompt(tools: List[Dict[str, Any]]) -> str:
     return SYSTEM_TEMPLATE.format(tools_json=render_tools(tools))
 
 
+def sample_value(spec: Dict[str, Any], rng) -> Any:
+    """Synthesize a schema-VALID value for a parameter spec (enum-first, then type-aware).
+
+    Centralized so every synthetic generator produces type/enum-correct arguments. Using a hardcoded
+    string for an integer- or enum-typed field silently ships schema-invalid gold calls, which trains
+    the model to emit invalid calls — see src/schema_drift.py (make_rename) for the bug this prevents.
+    """
+    if "enum" in spec and spec["enum"]:
+        return rng.choice(spec["enum"])
+    t = spec.get("type", "string")
+    if t in ("integer", "number"):
+        return rng.choice([1, 3, 7, 12, 30])
+    if t == "boolean":
+        return rng.choice([True, False])
+    if t == "array":
+        return []
+    return rng.choice(["Mumbai", "2026-02-01", "report.pdf", "acme-corp", "en"])
+
+
 def answer_to_target(answer: Dict[str, Any]) -> Dict[str, Any]:
     """Normalize an example's `answer` into the exact JSON envelope the model must produce."""
     t = answer.get("type")

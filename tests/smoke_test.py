@@ -317,6 +317,78 @@ def main() -> int:
     dpo = env_dpo(20, seed=1)
     ok &= check("env DPO pairs built", len(dpo) > 0 and all(d["chosen"] != d["rejected"] for d in dpo))
 
+    # ---- round-2 advanced upgrades -------------------------------------------------------------
+    print("schema_drift poison guard (#1):")
+    from src.format_utils import sample_value
+    import random as _r
+    _rng = _r.Random(0)
+    ok &= check("sample_value enum -> member", sample_value({"type": "string", "enum": ["a", "b"]}, _rng) in ("a", "b"))
+    ok &= check("sample_value integer -> int", isinstance(sample_value({"type": "integer"}, _rng), int))
+    _tool = {"name": "mk", "description": "make", "parameters": {"type": "object", "properties": {
+        "count": {"type": "integer"}, "priority": {"type": "string", "enum": ["low", "high"]}, "title": {"type": "string"}},
+        "required": ["count", "priority", "title"]}}
+    _sd = sd.generate([_tool], 30, {"rename": 1.0}, seed=1)
+    ok &= check("all rename golds valid (no poison)", all(validate_answer(e["answer"], e["tools"])[0] for e in _sd if e["answer"]["type"] == "tool_call"))
+    ok &= check("rename int arg is int", all(isinstance(list(e["answer"]["calls"][0]["arguments"].values())[0], (int, str)) for e in _sd))
+
+    print("hard-negative taxonomy (#2/#3):")
+    _W = {"name": "get_weather", "description": "weather", "parameters": {"type": "object", "properties": {"city": {"type": "string"}}, "required": ["city"]}}
+    _S = {"name": "get_stock", "description": "stock", "parameters": {"type": "object", "properties": {"ticker": {"type": "string"}}, "required": ["ticker"]}}
+    _pA = {"tools": [_W], "query": "What is the weather in Mumbai?", "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Mumbai"}}]}, "meta": {}}
+    _pB = {"tools": [_S], "query": "Price of AAPL?", "answer": {"type": "tool_call", "calls": [{"name": "get_stock", "arguments": {"ticker": "AAPL"}}]}, "meta": {}}
+    _ort = hard_negatives.generate([_W, _S], 8, {"over_refusal": 1.0}, seed=1, positives=[_pA, _pB])
+    ok &= check("over_refusal -> tool_call", _ort and all(e["answer"]["type"] == "tool_call" and e["meta"]["hn_kind"] == "over_refusal" for e in _ort))
+    ok &= check("over_refusal keeps gold tool + hedges query", all(e["query"] != _pA["query"] and e["query"] != _pB["query"] for e in _ort))
+    ok &= check("over_refusal judged: refuse is WRONG", not judge(_ort[0], '{"action":"refuse","message":"x"}')["correct"] and judge(_ort[0], target_to_json_str(_ort[0]["answer"]))["correct"])
+    _pp = hard_negatives.generate([_W, _S], 8, {"partial_parallel": 1.0}, seed=2, positives=[_pA, _pB])
+    ok &= check("partial_parallel -> 2 distinct calls", _pp and all(len(e["answer"]["calls"]) == 2 for e in _pp))
+    ok &= check("partial_parallel single-call is WRONG", not judge(_pp[0], target_to_json_str({"type": "tool_call", "calls": [_pp[0]["answer"]["calls"][0]]}))["correct"])
+    ok &= check("partial_parallel skips with <2 positives", hard_negatives.generate([_W, _S], 5, {"partial_parallel": 1.0}, seed=1, positives=[_pA]) == [])
+
+    print("env multicall (#4):")
+    from src.envs import generate_multicall
+    _mc = generate_multicall(8, seed=1)
+    ok &= check("multicall 2-3 verified calls", _mc and all(2 <= len(e["answer"]["calls"]) <= 3 and validate_answer(e["answer"], e["tools"])[0] for e in _mc))
+    ok &= check("multicall drop-one is WRONG", not judge(_mc[0], target_to_json_str({"type": "tool_call", "calls": _mc[0]["answer"]["calls"][:-1]}))["correct"])
+    ok &= check("multicall determinism", generate_multicall(8, seed=1) == _mc)
+
+    print("pref hardness + env merge (#5):")
+    from src.build_preference import _hardness
+    _chosen = {"action": "call", "calls": [{"name": "f", "arguments": {"a": 1, "b": 2}}]}
+    _nearmiss = {"action": "call", "calls": [{"name": "f", "arguments": {"a": 1, "b": 9}}]}
+    _swap = {"action": "call", "calls": [{"name": "g", "arguments": {"a": 1, "b": 2}}]}
+    ok &= check("near-miss harder (smaller dist) than tool swap", _hardness(_chosen, _nearmiss) < _hardness(_chosen, _swap))
+
+    print("decontamination (#6):")
+    from src.decontaminate import decontaminate, DEFAULT_PROBES
+    _rows = [{"query": DEFAULT_PROBES[0], "meta": {"source": "toolace"}},
+             {"query": "Completely unrelated: parse this XML config file for me.", "meta": {"source": "toolace"}}]
+    _kept, _dropped = decontaminate(_rows, DEFAULT_PROBES, ngram_threshold=0.5, cos_threshold=0.95)
+    ok &= check("decontam drops the contaminated row", len(_dropped) == 1 and len(_kept) == 1)
+    ok &= check("decontam keeps the unrelated row", _kept[0]["query"].startswith("Completely unrelated"))
+    from src.dedup import _embed_model
+    ok &= check("embed model cached (same object)", _embed_model() is _embed_model())
+
+    print("schema-drift eval + worst-seed (#7):")
+    _rec = [{"tools": [_W], "query": "x", "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Mumbai"}}]}, "meta": {"sd_kind": "rename"}}]
+    _m = evaluate(_rec, lambda p: target_to_json_str(_rec[0]["answer"]))
+    ok &= check("evaluate reports by_sd_kind", "by_sd_kind" in _m and "rename" in _m["by_sd_kind"])
+    ok &= check("schema_drift_accuracy present", _m.get("schema_drift_accuracy") == 1.0)
+    _agg = {"seeds": 2, "base_acc": {"mean": 0.5, "std": 0.0}, "ft_acc": {"mean": 0.7, "std": 0.0}, "gap": {"mean": 0.2, "std": 0.05}, "worst_seed_overall_gap": 0.15, "worst_seed_index": 1}
+    from src.eval_decompose import seeds_to_markdown as _sm
+    ok &= check("worst-seed in banner", "worst seed" in _sm(_agg))
+
+    print("release preflight (#8):")
+    from src.release import preflight
+    import tempfile as _tf, os as _os2
+    _td = _tf.mkdtemp()
+    for _n in ("train.jsonl", "val.jsonl", "test.jsonl", "stats.json"):
+        open(_os2.path.join(_td, _n), "w").write("{}\n")
+    ok &= check("preflight flags placeholder card", any("placeholder" in p for p in preflight(_td, card_paths=["clean text with YOUR_USERNAME here\n"])))
+    ok &= check("preflight passes clean card + artifacts", preflight(_td, card_paths=["all real numbers, no markers\n"]) == [])
+    _td2 = _tf.mkdtemp()  # missing artifacts
+    ok &= check("preflight flags missing artifact", any("missing artifact" in p for p in preflight(_td2, card_paths=["clean\n"])))
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 

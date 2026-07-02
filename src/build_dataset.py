@@ -367,9 +367,14 @@ def main() -> None:
     if n_env:
         from . import envs
 
-        env_ex = envs.generate(n_env, seed=seed)
+        mc_frac = dcfg.get("env_multicall_frac", 0.0)
+        n_mc = int(round(n_env * mc_frac))
+        n_single = n_env - n_mc
+        env_ex = envs.generate(n_single, seed=seed)
+        if n_mc > 0:
+            env_ex += envs.generate_multicall(n_mc, seed=seed)
         positives += env_ex
-        print(f"[build] env (execution-verified): +{len(env_ex)}")
+        print(f"[build] env (execution-verified): +{len(env_ex)} ({n_mc} multi-call)")
 
     # 2. Curate + cap positives
     positives = curate_positives(positives)
@@ -444,6 +449,23 @@ def main() -> None:
         semantic_threshold=cfg["dedup"]["semantic_threshold"],
     )
 
+    # 4b. Decontaminate against public BFCL/ToolACE-style probes (leakage guard for the hidden-set claim)
+    contamination = None
+    if cfg["dedup"].get("decontaminate"):
+        from . import decontaminate as _decon
+        probes = _decon._load_probes(cfg["dedup"].get("decontam_probes"))
+        n_before = len(combined)
+        combined, dropped = _decon.decontaminate(
+            combined, probes,
+            ngram_threshold=cfg["dedup"].get("decontam_ngram_threshold", 0.6),
+            cos_threshold=cfg["dedup"].get("decontam_cos_threshold", 0.92),
+        )
+        contamination = {"probes_checked": len(probes), "dropped_count": len(dropped),
+                         "before": n_before, "after": len(combined),
+                         "ngram_threshold": cfg["dedup"].get("decontam_ngram_threshold", 0.6),
+                         "cos_threshold": cfg["dedup"].get("decontam_cos_threshold", 0.92)}
+        print(f"[build] decontamination: dropped {len(dropped)} of {n_before} vs {len(probes)} probes")
+
     # 5. Split, then kill cross-split leakage from train
     parts = split(combined, dcfg["splits"], seed)
     if cfg["dedup"]["check_cross_split"]:
@@ -487,6 +509,8 @@ def main() -> None:
         "miss_param_rows": n_miss_param, "mix_ok": mix_ok,
     }
     stats = {"total": total_rows, "novel_test": len(novel_test), "mix": mix}
+    if contamination is not None:
+        stats["contamination"] = contamination
     for name, rows in parts.items():
         stats[name] = {
             "n": len(rows),

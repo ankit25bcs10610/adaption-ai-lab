@@ -25,17 +25,9 @@ def _properties(tool: Dict[str, Any]) -> Dict[str, Any]:
     return dict((tool.get("parameters") or {}).get("properties", {}))
 
 
-def _sample_value(spec: Dict[str, Any], rng: random.Random) -> Any:
-    if "enum" in spec and spec["enum"]:
-        return rng.choice(spec["enum"])
-    t = spec.get("type", "string")
-    if t in ("integer", "number"):
-        return rng.choice([1, 3, 7, 12, 30])
-    if t == "boolean":
-        return rng.choice([True, False])
-    if t == "array":
-        return []
-    return rng.choice(["Mumbai", "2026-02-01", "report.pdf", "acme-corp", "en"])
+# Centralized in format_utils so schema_drift and other generators share the same type/enum-aware
+# synthesis (aliased here to preserve this module's existing RNG sequence / determinism byte-for-byte).
+from .format_utils import sample_value as _sample_value  # noqa: E402
 
 
 def make_miss_param(tool: Dict[str, Any], rng: random.Random) -> Optional[Dict[str, Any]]:

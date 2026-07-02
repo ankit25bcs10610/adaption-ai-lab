@@ -18,6 +18,9 @@ import copy
 import random
 from typing import Any, Dict, List, Optional
 
+from .format_utils import sample_value
+from .schema_validator import validate_answer
+
 _ENUMS = {
     "priority": ["low", "medium", "high"],
     "status": ["open", "closed", "pending"],
@@ -97,14 +100,16 @@ def make_rename(tool: Dict[str, Any], rng: random.Random) -> Optional[Dict[str, 
         props[new] = props.pop(old)
     drifted["parameters"]["required"] = [new if r == old else r for r in req]
 
-    # supply plausible values for all current required params; the query names the OLD field
-    value = "ACME-42"
-    args = {}
-    for r in drifted["parameters"]["required"]:
-        args[r] = value if r == new else "example"
+    # Supply TYPE/ENUM-VALID values for every current required param (using the DRIFTED schema, so the
+    # renamed field's spec is honored under its new key). Hardcoding "example" here shipped
+    # schema-invalid gold calls (int/enum fields got a bad string) — training the model to emit invalid
+    # calls. The NL query names the OLD field with the SAME synthesized value so text and args agree.
+    drifted_props = drifted["parameters"]["properties"]
+    args = {r: sample_value(drifted_props.get(r, {}), rng) for r in drifted["parameters"]["required"]}
+    renamed_value = args[new]
     return {
         "tools": [drifted],
-        "query": f"{_desc(tool)} — the {old} is {value}.",
+        "query": f"{_desc(tool)} — the {old} is {renamed_value}.",
         "answer": {"type": "tool_call", "calls": [{"name": tool["name"], "arguments": args}]},
         "meta": {"source": "schema_drift", "hn_kind": None, "sd_kind": "rename"},
     }
@@ -133,6 +138,9 @@ def generate(
         kind = rng.choices(kinds, weights=weights, k=1)[0]
         tool = rng.choice(tool_pool)
         ex = makers[kind](tool, rng)
+        # Drop-guard: never ship a tool_call gold that doesn't validate against its own (drifted) schema.
+        if ex is not None and ex["answer"]["type"] == "tool_call" and not validate_answer(ex["answer"], ex["tools"])[0]:
+            ex = None
         if ex is not None:
             out.append(ex)
     return out

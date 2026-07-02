@@ -120,11 +120,17 @@ def aggregate_seeds(pairs: List[Tuple[str, str]], n_boot: int = 1000) -> Dict[st
         var = sum((v - m) ** 2 for v in vals) / k
         return {"mean": m, "std": var ** 0.5, "n": k}
 
+    gaps = [d["overall"]["gap"] for d in per_seed]
+    worst_gap = min(gaps) if gaps else 0.0
+    worst_idx = gaps.index(worst_gap) if gaps else -1
     return {
         "seeds": len(per_seed),
         "base_acc": _stats([d["overall"]["base_acc"] for d in per_seed]),
         "ft_acc": _stats([d["overall"]["ft_acc"] for d in per_seed]),
-        "gap": _stats([d["overall"]["gap"] for d in per_seed]),
+        "gap": _stats(gaps),
+        # The worst seed is the honest floor of the claim — report it, don't hide behind the mean.
+        "worst_seed_overall_gap": worst_gap,
+        "worst_seed_index": worst_idx,
         "per_seed": per_seed,
     }
 
@@ -182,10 +188,12 @@ def to_html(dec: Dict[str, Any]) -> str:
 
 def seeds_to_markdown(agg: Dict[str, Any]) -> str:
     g, b, f = agg["gap"], agg["base_acc"], agg["ft_acc"]
+    worst = agg.get("worst_seed_overall_gap")
+    worst_txt = f" · worst seed **{_pp(worst)}**" if isinstance(worst, (int, float)) else ""
     return (
         f"**Multi-seed ({agg['seeds']} seeds):** baseline {b['mean']*100:.1f}% ± {b['std']*100:.1f} · "
         f"fine-tuned {f['mean']*100:.1f}% ± {f['std']*100:.1f} · "
-        f"gap **{_pp(g['mean'])} ± {g['std']*100:.1f}pp** (mean ± std across seeds)."
+        f"gap **{_pp(g['mean'])} ± {g['std']*100:.1f}pp** (mean ± std across seeds){worst_txt}."
     )
 
 

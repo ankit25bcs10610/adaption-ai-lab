@@ -23,7 +23,7 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
-from .format_utils import build_system_prompt, target_to_json_str
+from .format_utils import answer_to_target, build_system_prompt, target_to_json_str
 
 
 def _prompt(example: Dict[str, Any]) -> str:
@@ -117,6 +117,24 @@ def _confirmed_wrong(example: Dict[str, Any], rejected_obj: Dict[str, Any]) -> b
     return rargs != gargs  # required args present but a value changed
 
 
+def _hardness(chosen_obj: Dict[str, Any], cand_obj: Dict[str, Any]) -> int:
+    """Structural distance from chosen to a rejected candidate — SMALLER = a harder near-miss.
+
+    A near-miss (one changed required value) teaches a sharper preference boundary than an obviously
+    wrong tool swap. Pure + deterministic so selection is reproducible and unit-testable.
+    """
+    cc = (chosen_obj.get("calls") or [{}])[0]
+    rc = (cand_obj.get("calls") or [{}])[0]
+    dist = 0
+    if cc.get("name") != rc.get("name"):
+        dist += 10  # a tool-name change is a large, easy-to-spot difference
+    ca, ra = cc.get("arguments") or {}, rc.get("arguments") or {}
+    for k in set(ca) | set(ra):
+        if ca.get(k) != ra.get(k):
+            dist += 1
+    return dist
+
+
 def build_pairs(examples: List[Dict[str, Any]], seed: int = 42) -> List[Dict[str, str]]:
     rng = random.Random(seed)
     pairs: List[Dict[str, str]] = []
@@ -124,8 +142,10 @@ def build_pairs(examples: List[Dict[str, Any]], seed: int = 42) -> List[Dict[str
     for ex in examples:
         ans = ex["answer"]
         chosen = target_to_json_str(ans)
-        # Rejection sampling: try up to 4 candidate negatives, keep the first CONFIRMED-wrong one.
-        rejected_obj = None
+        chosen_obj = answer_to_target(ans)
+        # Rejection sampling: draw 4 candidates, keep ALL confirmed-wrong, then pick the HARDEST
+        # (smallest structural distance to chosen) so DPO trains on the sharpest near-miss.
+        cands = []
         for _ in range(4):
             cand = (
                 _plausible_hallucinated_call(ex, rng)
@@ -133,11 +153,13 @@ def build_pairs(examples: List[Dict[str, Any]], seed: int = 42) -> List[Dict[str
                 else _corrupt_positive(ex, rng)
             )
             if cand is not None and _confirmed_wrong(ex, cand):
-                rejected_obj = cand
-                break
-        if rejected_obj is None:
+                cands.append(cand)
+        if not cands:
             skipped += 1
             continue
+        rejected_obj = min(
+            cands, key=lambda c: (_hardness(chosen_obj, c), json.dumps(c, sort_keys=True))
+        )
         pairs.append(
             {
                 "prompt": _prompt(ex),
@@ -161,13 +183,31 @@ def main() -> None:
     src = os.path.join(out_dir, f"{args.split}.jsonl")
     examples = [json.loads(l) for l in open(src, encoding="utf-8") if l.strip()]
     pairs = build_pairs(examples, seed=cfg["seed"])
+    n_sft = len(pairs)
+
+    # Merge the execution-labeled env DPO pairs — the repo's single highest-quality preference signal
+    # (chosen = checker-verified call, rejected = checker-PROVEN-wrong). Previously generated but never
+    # consumed. Generate them on demand if configured and not yet materialized.
+    n_env = 0
+    env_dpo_n = cfg["dataset"].get("env_dpo", 0)
+    if env_dpo_n:
+        env_path = os.path.join(out_dir, "env_dpo.jsonl")
+        if not os.path.exists(env_path):
+            from .envs import generate_dpo
+            with open(env_path, "w", encoding="utf-8") as f:
+                for d in generate_dpo(env_dpo_n, seed=cfg["seed"]):
+                    f.write(json.dumps(d, ensure_ascii=False) + "\n")
+        env_pairs = [json.loads(l) for l in open(env_path, encoding="utf-8") if l.strip()]
+        pairs += env_pairs
+        n_env = len(env_pairs)
 
     out = os.path.join(out_dir, "pref.jsonl")
     with open(out, "w", encoding="utf-8") as f:
         for p in pairs:
             f.write(json.dumps(p, ensure_ascii=False) + "\n")
     n_hn = sum(1 for e in examples if e["answer"]["type"] in ("refuse", "clarify"))
-    print(f"[pref] wrote {len(pairs)} pairs -> {out} ({n_hn} from hard negatives)")
+    print(f"[pref] wrote {len(pairs)} pairs -> {out} "
+          f"({n_sft} SFT-derived incl. {n_hn} hard-neg, {n_env} execution-labeled env)")
 
 
 if __name__ == "__main__":

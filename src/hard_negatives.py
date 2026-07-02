@@ -19,9 +19,20 @@ by construction.
 """
 from __future__ import annotations
 
+import copy
 import random
 import re
 from typing import Any, Dict, List, Optional
+
+# Hedged preambles for over-refusal traps: they add NO information a tool needs, they just tempt an
+# over-cautious model into refusing/clarifying when the request is actually fully satisfiable.
+_HEDGES = [
+    "I'm not totally sure this is something you can do, but ",
+    "You probably can't help with this, but ",
+    "This might be outside what you can do — still, ",
+    "Not sure you have a tool for this, but ",
+    "Feel free to tell me if you can't, but ",
+]
 
 # Stop-words carry no topical signal, so they must not count toward the off-domain overlap guard
 # below. (The original guard keyed on the FIRST word of every request — almost always a stop-word
@@ -108,6 +119,63 @@ def make_no_tool_from_positive(
         "query": positive["query"],
         "answer": {"type": "refuse", "content": rng.choice(_REFUSAL_TEMPLATES)},
         "meta": {"source": "hard_negative", "hn_kind": "no_tool", "removed_tool": sorted(gold)[0]},
+    }
+
+
+def _validated_positive_calls(positive: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
+    """Gold calls of a positive IFF it's a tool_call whose every call names a tool actually on offer."""
+    ans = positive.get("answer") or {}
+    if ans.get("type") != "tool_call" or not ans.get("calls") or not positive.get("query"):
+        return None
+    names = {t.get("name") for t in (positive.get("tools") or [])}
+    if not all(c.get("name") in names for c in ans["calls"]):
+        return None
+    return ans["calls"]
+
+
+def make_over_refusal_trap(positive: Dict[str, Any], rng: random.Random) -> Optional[Dict[str, Any]]:
+    """A hedged-but-fully-satisfiable request -> the model MUST call, not refuse/clarify.
+
+    Counterweight to the large refuse/clarify slice: we take a real, validated positive (gold tool on
+    offer, all required args present), prepend a grade-neutral hedge that adds no information, and keep
+    the exact gold call. A model biased toward abstention scores 0 here. Correct by construction.
+    """
+    calls = _validated_positive_calls(positive)
+    if calls is None:
+        return None
+    q = positive["query"]
+    hedged = rng.choice(_HEDGES) + (q[:1].lower() + q[1:] if q else q)
+    return {
+        "tools": positive["tools"],
+        "query": hedged,
+        "answer": {"type": "tool_call", "calls": copy.deepcopy(calls)},
+        "meta": {"source": "hard_negative", "hn_kind": "over_refusal", "gold_type": "tool_call"},
+    }
+
+
+def make_partial_parallel(pos_pool: List[Dict[str, Any]], rng: random.Random) -> Optional[Dict[str, Any]]:
+    """Two intents in one request -> the gold is TWO calls; completing only one is wrong.
+
+    The only slice that stresses call COMPLETENESS (eval_harness.judge enforces exact call count +
+    order-insensitive matching, but no other generator emits >1 call). Built from two validated
+    positives on DISTINCT tools; offered tools = union; query conjoins the two intents.
+    """
+    usable = [p for p in pos_pool if _validated_positive_calls(p) and len(_validated_positive_calls(p)) == 1]
+    if len(usable) < 2:
+        return None
+    a, b = rng.sample(usable, 2)
+    ca, cb = _validated_positive_calls(a)[0], _validated_positive_calls(b)[0]
+    if ca.get("name") == cb.get("name"):
+        return None  # need distinct tools so order-insensitive matching is unambiguous
+    tools_by_name: Dict[str, Any] = {}
+    for t in (a["tools"] + b["tools"]):
+        tools_by_name.setdefault(t.get("name"), t)
+    q1, q2 = a["query"].rstrip("."), b["query"].rstrip(".")
+    return {
+        "tools": list(tools_by_name.values()),
+        "query": f"{q1}. Also, {q2.lower()[:1] + q2[1:]}.",
+        "answer": {"type": "tool_call", "calls": [copy.deepcopy(ca), copy.deepcopy(cb)]},
+        "meta": {"source": "hard_negative", "hn_kind": "partial_parallel", "gold_type": "tool_call"},
     }
 
 
@@ -245,6 +313,10 @@ def generate(
             if ex is None:  # fallback: off-domain request
                 k = rng.randint(2, min(4, len(tool_pool)))
                 ex = make_no_tool(rng.sample(tool_pool, k), rng)
+        elif kind == "over_refusal":
+            ex = make_over_refusal_trap(rng.choice(pos_pool), rng) if pos_pool else None
+        elif kind == "partial_parallel":
+            ex = make_partial_parallel(pos_pool, rng) if len(pos_pool) >= 2 else None
         elif kind == "missing_arg":
             tool = rng.choice(tool_pool)
             ex = make_missing_arg(tool, rng)

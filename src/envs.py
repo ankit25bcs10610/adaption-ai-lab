@@ -254,6 +254,71 @@ def generate(n: int, seed: int = 42) -> List[Dict[str, Any]]:
     return out
 
 
+def _apply_seq(env, state: Dict[str, Any], calls: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Apply a sequence of calls; return the final state, or None if any step fails."""
+    s = state
+    for c in calls:
+        s, ok, _ = env.apply(s, c)
+        if not ok:
+            return None
+    return s
+
+
+def generate_multicall(n: int, seed: int = 42, k_range: Tuple[int, int] = (2, 3)) -> List[Dict[str, Any]]:
+    """Execution-verified MULTI-CALL trajectories: 2-3 calls the model must emit together.
+
+    Each call is verified by replaying it against the environment (execution-verified). We keep only
+    ORDER-INDEPENDENT compositions — every permutation of the k calls reaches the same final state — so
+    the gold set of calls is unambiguous under the eval's order-insensitive matcher. This is the only
+    slice that trains multi-call COMPLETENESS from verified state.
+    """
+    from itertools import permutations
+
+    rng = random.Random(seed + 404)
+    out: List[Dict[str, Any]] = []
+    attempts = 0
+    while len(out) < n and attempts < n * 50:
+        attempts += 1
+        env = rng.choice(ENVS)()
+        state, hist = _build_state(env, rng, rng.randint(0, 2))
+        k = rng.randint(k_range[0], k_range[1])
+        calls: List[Dict[str, Any]] = []
+        cur = state
+        for _ in range(k):
+            c = _valid_next_call(env, cur, rng)
+            if c is None:
+                break
+            nxt, ok, _ = env.apply(cur, c)
+            if not ok:
+                break
+            calls.append(c)
+            cur = nxt
+        if len(calls) < k:
+            continue
+        # reject exact-duplicate calls (unnatural request) and non-commuting sets
+        if len({json.dumps(c, sort_keys=True) for c in calls}) != len(calls):
+            continue
+        final = _apply_seq(env, state, calls)
+        if final is None:
+            continue
+        if any(_apply_seq(env, state, list(p)) != final for p in permutations(calls)):
+            continue  # order matters -> ambiguous gold; skip
+        history = []
+        for intent, c in hist:
+            history.append({"role": "user", "content": intent})
+            history.append({"role": "assistant", "content": json.dumps({"action": "call", "calls": [c]})})
+        query = f"({env.describe(state)}) " + " ".join(_intent_text(env, c) for c in calls)
+        out.append({
+            "tools": env.tools(),
+            "query": query,
+            "answer": {"type": "tool_call", "calls": calls},
+            "history": history or None,
+            "meta": {"source": "env", "env": env.name, "hn_kind": None,
+                     "verified": True, "multicall": True, "expected_state": final},
+        })
+    return out
+
+
 def generate_dpo(n: int, seed: int = 42) -> List[Dict[str, Any]]:
     """Execution-labeled DPO pairs: chosen = verified call, rejected = checker-proven-wrong call."""
     from .format_utils import build_system_prompt, target_to_json_str
