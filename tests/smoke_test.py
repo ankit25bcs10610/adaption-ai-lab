@@ -282,6 +282,19 @@ def main() -> int:
     ok &= check("multiseed aggregates 3 seeds", agg["seeds"] == 3)
     ok &= check("identical seeds -> zero gap std", agg["gap"]["std"] < 1e-9)
 
+    print("reliability_probe:")
+    from src.reliability_probe import probe_cases, score, to_markdown as probe_md
+    from src.format_utils import build_eval_prompt as _bep, target_to_json_str as _tjs
+    _cases = probe_cases()
+    _gold = {_bep(ex): _tjs(ex["answer"]) for ex in _cases}
+    oracle = score(lambda p: _gold.get(p, '{"action":"refuse","message":"?"}'))
+    ok &= check("probe correct-by-construction (oracle 100%)", oracle["pass_rate"] == 1.0)
+    ok &= check("probe has over-refusal traps", any("over_refusal" in r["probe_id"] for r in oracle["results"]))
+    # a naive 'always call the first tool' predictor MUST fail the refuse/clarify cases -> probe discriminates
+    naive = score(lambda p: '{"action":"call","calls":[{"name":"get_weather","arguments":{"city":"X"}}]}')
+    ok &= check("probe discriminates (naive < 100%)", naive["pass_rate"] < 1.0)
+    ok &= check("probe markdown renders", "Reliability probe" in probe_md(oracle))
+
     print("envs (execution-verified):")
     from src.envs import CalendarEnv, CartEnv
     from src.envs import generate as env_gen, generate_dpo as env_dpo
