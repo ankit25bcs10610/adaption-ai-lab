@@ -73,6 +73,22 @@ _REFUSAL_TEMPLATES = [
 ]
 
 
+def _refusal_message(tools: List[Dict[str, Any]], rng: random.Random) -> str:
+    """A CONTEXTUAL refusal that names the actual tools on offer — so each refusal is distinct and
+    genuinely helpful, instead of one of three fixed strings (which tanks completion diversity)."""
+    names = [t.get("name", "") for t in tools if t.get("name")]
+    if not names:
+        return rng.choice(_REFUSAL_TEMPLATES)
+    tl = ", ".join(f"`{n}`" for n in names)
+    return rng.choice([
+        f"None of the available tools ({tl}) can handle this request.",
+        f"I can only act through {tl}, and none of those fit this request.",
+        f"That's outside what my tools do — I have {tl}, none of which apply here.",
+        f"I don't have a tool for this; the ones I have ({tl}) don't cover it.",
+        f"This request falls outside {tl}, so there's no valid tool call for it.",
+    ])
+
+
 def _tool_names(tools: List[Dict[str, Any]]) -> List[str]:
     return [t["name"] for t in tools]
 
@@ -117,7 +133,7 @@ def make_no_tool_from_positive(
     return {
         "tools": tools,
         "query": positive["query"],
-        "answer": {"type": "refuse", "content": rng.choice(_REFUSAL_TEMPLATES)},
+        "answer": {"type": "refuse", "content": _refusal_message(tools, rng)},
         "meta": {"source": "hard_negative", "hn_kind": "no_tool", "removed_tool": sorted(gold)[0]},
     }
 
@@ -197,14 +213,14 @@ def make_no_tool(tools: List[Dict[str, Any]], rng: random.Random) -> Optional[Di
         return {
             "tools": tools,
             "query": req,
-            "answer": {"type": "refuse", "content": rng.choice(_REFUSAL_TEMPLATES)},
+            "answer": {"type": "refuse", "content": _refusal_message(tools, rng)},
             "meta": {"source": "hard_negative", "hn_kind": "no_tool"},
         }
     # last resort: return an off-domain request anyway (better than starving the slice)
     return {
         "tools": tools,
         "query": rng.choice(candidates),
-        "answer": {"type": "refuse", "content": rng.choice(_REFUSAL_TEMPLATES)},
+        "answer": {"type": "refuse", "content": _refusal_message(tools, rng)},
         "meta": {"source": "hard_negative", "hn_kind": "no_tool"},
     }
 
