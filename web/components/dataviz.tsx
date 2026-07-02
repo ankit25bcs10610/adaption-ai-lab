@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Reveal } from "@/components/reveal";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Terminal } from "@/components/ui/terminal";
@@ -74,12 +75,14 @@ export function DataViz() {
                 className="rounded-2xl glass p-3 transition-transform hover:-translate-y-1"
                 color={c.lang === "hi" ? "139, 92, 246" : "34, 197, 94"}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={c.src}
                   alt={`${c.lang === "hi" ? "Hindi" : "English"} chart — ${c.cap}`}
+                  width={600}
+                  height={400}
                   loading="lazy"
-                  className="w-full rounded-lg bg-white"
+                  sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 340px"
+                  className="h-auto w-full rounded-lg bg-white"
                 />
                 <div className="mt-2 flex items-center justify-between px-1">
                   <span className="text-xs text-muted-foreground">{c.cap}</span>

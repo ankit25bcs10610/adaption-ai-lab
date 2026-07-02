@@ -6,14 +6,15 @@ import { Button } from "@/components/ui/button";
 import { TiltCard } from "@/components/tilt-card";
 import { CopyInstall } from "@/components/copy-install";
 import { NumberTicker } from "@/components/ui/number-ticker";
-import { headlineStats, representative } from "@/lib/results";
+import { headlineStats } from "@/lib/results";
 import { links } from "@/lib/links";
 import { cn } from "@/lib/utils";
 
-function parseStat(v: string): { prefix: string; num: number | null; suffix: string } {
+function parseStat(v: string): { prefix: string; num: number | null; suffix: string; decimals: number } {
   const m = v.match(/^([−+-]?)(\d+(?:\.\d+)?)(.*)$/);
-  if (!m) return { prefix: "", num: null, suffix: v };
-  return { prefix: m[1], num: parseFloat(m[2]), suffix: m[3] };
+  if (!m) return { prefix: "", num: null, suffix: v, decimals: 0 };
+  const dot = m[2].indexOf(".");
+  return { prefix: m[1], num: parseFloat(m[2]), suffix: m[3], decimals: dot === -1 ? 0 : m[2].length - dot - 1 };
 }
 
 // r3f Canvas is client-only; load without SSR to avoid a WebGL hydration flash.
@@ -77,7 +78,7 @@ export function Hero() {
                     {p.num === null ? (
                       s.value
                     ) : (
-                      <NumberTicker value={p.num} prefix={p.prefix} suffix={p.suffix} />
+                      <NumberTicker value={p.num} prefix={p.prefix} suffix={p.suffix} decimals={p.decimals} />
                     )}
                   </dt>
                   <dd className="mt-1 text-xs text-muted-foreground">{s.label}</dd>
@@ -85,11 +86,9 @@ export function Hero() {
               );
             })}
           </dl>
-          {representative && (
-            <p className="mt-3 text-[11px] text-muted-foreground/70">
-              Representative targets — the eval harness produces the final base-vs-fine-tuned table.
-            </p>
-          )}
+          <p className="mt-3 text-[11px] text-muted-foreground/70">
+            Measured — Adaptive Data quality grade (C→B) and the audited dataset composition.
+          </p>
         </div>
 
         {/* Floating 3D output card */}

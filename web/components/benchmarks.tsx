@@ -2,7 +2,8 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { Reveal } from "@/components/reveal";
-import { benchmarks, representative } from "@/lib/results";
+import { NumberTicker } from "@/components/ui/number-ticker";
+import { audit, benchmarks, dataQuality, projected } from "@/lib/results";
 
 function Bar({ base, ft, lowerIsBetter }: { base: number; ft: number; lowerIsBetter?: boolean }) {
   const reduce = useReducedMotion();
@@ -29,14 +30,91 @@ export function Benchmarks() {
       <div className="mx-auto max-w-6xl">
         <Reveal className="mb-12 max-w-2xl">
           <p className="mb-3 font-mono text-sm text-violet">{"// results"}</p>
-          <h2 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">Base vs. fine-tuned.</h2>
+          <h2 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
+            Measured wins, honest targets.
+          </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Same greedy decoding, bootstrapped standard error. Lower is better for hallucination.
+            The dataset is the product, so we lead with what the platform actually measured — and clearly
+            mark what still needs a training run.
           </p>
         </Reveal>
 
-        <Reveal>
-          <div className="rounded-2xl border-glow glass p-6 sm:p-8">
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* MEASURED — Adaptive Data quality grade */}
+          <Reveal>
+            <div className="flex h-full flex-col rounded-2xl border-glow glass p-6 sm:p-8">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-run/15 px-2.5 py-1 text-xs font-medium text-run">
+                  <span className="h-1.5 w-1.5 rounded-full bg-run" /> Measured
+                </span>
+                <span className="text-xs text-muted-foreground">Adaptive Data · {dataQuality.rows.toLocaleString()} rows</span>
+              </div>
+              <h3 className="mt-4 font-display text-xl font-semibold">Dataset-quality grade</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                A data-centric platform grades the <em>dataset</em>. This is the improvement it reported.
+              </p>
+              <div className="mt-6 flex items-end gap-4">
+                <div className="font-display text-6xl font-bold text-grad">
+                  <NumberTicker value={dataQuality.improvementPercent} prefix="+" suffix="%" decimals={1} />
+                </div>
+                <div className="pb-2 font-mono text-sm text-muted-foreground">
+                  score {dataQuality.scoreBefore.toFixed(1)} → <span className="text-run">{dataQuality.scoreAfter.toFixed(1)}</span>
+                </div>
+              </div>
+              <div className="mt-5 flex items-center gap-3 font-mono text-sm">
+                <span className="rounded-md border border-border/60 px-2.5 py-1 text-muted-foreground">grade {dataQuality.gradeBefore}</span>
+                <span className="text-muted-foreground">→</span>
+                <span className="rounded-md border border-run/40 bg-run/10 px-2.5 py-1 font-semibold text-run">grade {dataQuality.gradeAfter}</span>
+              </div>
+            </div>
+          </Reveal>
+
+          {/* MEASURED — the data-quality audit before/after */}
+          <Reveal>
+            <div className="flex h-full flex-col rounded-2xl glass p-6 sm:p-8">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan/15 px-2.5 py-1 text-xs font-medium text-cyan">
+                  <span className="h-1.5 w-1.5 rounded-full bg-cyan" /> Measured
+                </span>
+                <span className="text-xs text-muted-foreground">two adversarial audit passes</span>
+              </div>
+              <h3 className="mt-4 font-display text-xl font-semibold">The data-quality audit</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                What a bug hunt on the build pipeline found — and fixed. The moat had nearly shipped empty.
+              </p>
+              <ul className="mt-5 space-y-3">
+                {audit.map((r) => (
+                  <li key={r.label} className="grid grid-cols-[1fr_auto] items-baseline gap-x-3 border-b border-border/40 pb-3 last:border-0">
+                    <span className="text-sm font-medium">{r.label}</span>
+                    <span className="font-mono text-sm tabular-nums">
+                      <span className="text-muted-foreground/70">{r.before}</span>
+                      <span className="mx-1 text-muted-foreground">→</span>
+                      <span className="font-semibold text-run">{r.after}</span>
+                    </span>
+                    <span className="col-span-2 text-xs text-muted-foreground/80">{r.note}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Reveal>
+        </div>
+
+        {/* PROJECTED — base vs fine-tuned model behavior (clearly labeled) */}
+        <Reveal className="mt-6">
+          <div className="rounded-2xl glass p-6 sm:p-8">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-violet/15 px-2.5 py-1 text-xs font-medium text-violet">
+                    Target
+                  </span>
+                  <h3 className="font-display text-xl font-semibold">Base vs. fine-tuned model</h3>
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Illustrative targets for the behavior the moat trains. Same greedy decoding, bootstrapped SE.
+                </p>
+              </div>
+            </div>
             <div className="space-y-6">
               {benchmarks.map((row) => (
                 <div key={row.label}>
@@ -53,10 +131,11 @@ export function Benchmarks() {
                 </div>
               ))}
             </div>
-            {representative && (
+            {projected && (
               <p className="mt-6 text-xs text-muted-foreground/70">
-                Representative figures shown for illustration. <code className="text-muted-foreground">src/eval_bfcl.py</code>{" "}
-                emits the final numbers; run <code className="text-muted-foreground">npm run sync:results</code> to wire them in.
+                Illustrative targets — the model table becomes real after training on the improved dataset
+                (a GPU step). The one-command harness (<code className="text-muted-foreground">scripts/run_all.sh</code>){" "}
+                runs baseline → multi-seed eval → paired significance → gap decomposition → report.
               </p>
             )}
           </div>
