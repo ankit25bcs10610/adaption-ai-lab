@@ -21,8 +21,10 @@ A curated function-calling / tool-use dataset for the Adaption AutoScientist Cha
 distinguishing feature is a large slice of **hard negatives** and reliability-focused cases — where the
 correct behavior is *not* a plain tool call.
 
-> **Adaption dataset IDs:** `a99c0c96-ff5b-490a-9aa9-372ea62d79d4` (completed: quality **8.0 → 8.8,
-> +10.0%**) · `4bee4b34-fd6b-4343-ae68-f0175fb96ce5` (1,949-row, dedup + reasoning_traces).
+> **Adaptive Data quality (real):** on the **fixed** set (`c4923b7f…`, 2,440 rows) the platform reports
+> **7.0 → 8.1, +15.7%, grade C → B**; an earlier 250-row run (`a99c0c96…`, completed) scored
+> **8.0 → 8.8, +10.0%, grade B**. This is the platform's dataset-quality grade — the data-centric
+> "measurable improvement."
 
 ## Composition
 
