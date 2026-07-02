@@ -47,7 +47,7 @@ def _records(rows: List[Dict[str, Any]], split: str) -> List[Dict[str, Any]]:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--data-dir", default="data/viz")
-    ap.add_argument("--repo", required=True, help="e.g. pandeyankit8456/autoscientist-chartqa-dataset")
+    ap.add_argument("--repo", required=True, help="e.g. pandeyankit84/autoscientist-chartqa-dataset")
     ap.add_argument("--token", default=os.environ.get("HF_TOKEN"))
     ap.add_argument("--private", action="store_true", help="default is PUBLIC (challenge requires open)")
     args = ap.parse_args()

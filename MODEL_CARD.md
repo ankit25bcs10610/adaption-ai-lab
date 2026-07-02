@@ -6,7 +6,7 @@ language: [en]
 base_model: Qwen/Qwen2.5-Coder-3B-Instruct
 base_model_relation: finetune
 datasets:
-  - pandeyankit8456/autoscientist-toolcaller-dataset
+  - pandeyankit84/autoscientist-toolcaller-dataset
 tags:
   - function-calling
   - tool-use
@@ -17,7 +17,7 @@ model-index:
   - name: autoscientist-toolcaller
     results:
       - task: {type: text-generation, name: Function Calling}
-        dataset: {name: autoscientist-toolcaller-test, type: pandeyankit8456/autoscientist-toolcaller-dataset}
+        dataset: {name: autoscientist-toolcaller-test, type: pandeyankit84/autoscientist-toolcaller-dataset}
         metrics:
           - {type: accuracy, name: dataset_quality_improvement_percent, value: 15.7}
 ---
@@ -85,6 +85,6 @@ available tools (JSON Schema) + the user request; the model returns one JSON env
 
 ## Links
 
-- Dataset: https://huggingface.co/datasets/pandeyankit8456/autoscientist-toolcaller-dataset
-- Kaggle: https://www.kaggle.com/models/pandeyankit8456/autoscientist-toolcaller
+- Dataset: https://huggingface.co/datasets/pandeyankit84/autoscientist-toolcaller-dataset
+- Kaggle: https://www.kaggle.com/models/pandeyankit84/autoscientist-toolcaller
 - Code: https://github.com/ankit25bcs10610/adaption-ai-lab

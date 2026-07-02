@@ -11,20 +11,22 @@
  * Defaults are LIVE, topical URLs (not dead "#" anchors) so every button works today.
  */
 export const links = {
+  // Published, real artifacts (override via NEXT_PUBLIC_* if you fork).
   huggingface:
-    process.env.NEXT_PUBLIC_HF_URL ?? "https://huggingface.co/models?search=autoscientist",
+    process.env.NEXT_PUBLIC_HF_URL ?? "https://huggingface.co/pandeyankit84/autoscientist-toolcaller",
+  hfDataset:
+    process.env.NEXT_PUBLIC_HF_DATASET_URL ??
+    "https://huggingface.co/datasets/pandeyankit84/autoscientist-toolcaller-dataset",
   kaggle:
     process.env.NEXT_PUBLIC_KAGGLE_URL ?? "https://www.kaggle.com/models?search=autoscientist",
   discord: process.env.NEXT_PUBLIC_DISCORD_URL ?? "https://discord.gg/THQuQhN7C9",
-  github:
-    process.env.NEXT_PUBLIC_GITHUB_URL ??
-    "https://github.com/search?q=autoscientist%20tool-caller&type=repositories",
+  github: process.env.NEXT_PUBLIC_GITHUB_URL ?? "https://github.com/ankit25bcs10610/adaption-ai-lab",
 } as const;
 
 /** True once a link points at a real published artifact (not a search fallback). */
 export const linkConfigured = {
-  huggingface: Boolean(process.env.NEXT_PUBLIC_HF_URL),
-  kaggle: Boolean(process.env.NEXT_PUBLIC_KAGGLE_URL),
-  discord: true, // real invite by default
-  github: Boolean(process.env.NEXT_PUBLIC_GITHUB_URL),
+  huggingface: true, // published: pandeyankit84/autoscientist-toolcaller
+  kaggle: Boolean(process.env.NEXT_PUBLIC_KAGGLE_URL), // pending Kaggle publish
+  discord: true,
+  github: true, // ankit25bcs10610/adaption-ai-lab
 } as const;
