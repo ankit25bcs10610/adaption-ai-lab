@@ -85,18 +85,20 @@ function Parallax({ animate }: { animate: boolean }) {
 
 export function Hero3D() {
   const reduce = useReducedMotion();
-  const animate = !reduce;
+  // Honor a reduced-motion preference by not mounting a WebGL context at all — the global aurora +
+  // grid-fade still provide ambiance, and we save a GPU context on low-power / motion-sensitive setups.
+  if (reduce) return null;
   return (
     <Canvas
       className="absolute inset-0"
       dpr={[1, 2]}
       camera={{ position: [0, 0, 15], fov: 60 }}
-      gl={{ antialias: true, alpha: true }}
+      gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       aria-hidden
     >
-      <Core animate={animate} />
-      <Tools animate={animate} />
-      <Parallax animate={animate} />
+      <Core animate />
+      <Tools animate />
+      <Parallax animate />
     </Canvas>
   );
 }
