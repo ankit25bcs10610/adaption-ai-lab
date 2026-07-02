@@ -36,7 +36,8 @@ def main() -> None:
     ds = client.datasets.upload_file(args.data)
     dataset_id = getattr(ds, "id", ds)
 
-    column_mapping = {"prompt": "prompt", "completion": "completion", "image": "image"}
+    # image must also be in `context` for the model to see it (and to bill multimodal: 10 credits/100 rows)
+    column_mapping = {"prompt": "prompt", "completion": "completion", "image": "image", "context": ["image"]}
     recipe_specification = {"recipes": {"deduplication": True, "reasoning_traces": True}}
     brand_controls = {
         "length": "concise",
@@ -45,7 +46,9 @@ def main() -> None:
             "the value, category, yes/no, or trend word requested — no explanation."
         ),
     }
-    job_specification = {"base_model": args.base_model}
+    # NOTE: run() has no base_model param — AutoScientist selects the model. job_specification only
+    # carries max_rows / idempotency_key.
+    job_specification = {}
     if args.max_rows:
         job_specification["max_rows"] = args.max_rows
 

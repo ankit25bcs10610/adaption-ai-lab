@@ -5,9 +5,16 @@ import { ArrowUpRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TiltCard } from "@/components/tilt-card";
 import { CopyInstall } from "@/components/copy-install";
+import { NumberTicker } from "@/components/ui/number-ticker";
 import { headlineStats, representative } from "@/lib/results";
 import { links } from "@/lib/links";
 import { cn } from "@/lib/utils";
+
+function parseStat(v: string): { prefix: string; num: number | null; suffix: string } {
+  const m = v.match(/^([−+-]?)(\d+(?:\.\d+)?)(.*)$/);
+  if (!m) return { prefix: "", num: null, suffix: v };
+  return { prefix: m[1], num: parseFloat(m[2]), suffix: m[3] };
+}
 
 // r3f Canvas is client-only; load without SSR to avoid a WebGL hydration flash.
 const Hero3D = dynamic(() => import("@/components/hero-3d").then((m) => m.Hero3D), {
@@ -62,12 +69,21 @@ export function Hero() {
           </div>
 
           <dl className="mt-10 grid max-w-lg grid-cols-3 gap-4">
-            {headlineStats.map((s) => (
-              <div key={s.label} className="rounded-xl glass p-4">
-                <dt className={cn("font-display text-2xl font-bold", accentClass[s.accent])}>{s.value}</dt>
-                <dd className="mt-1 text-xs text-muted-foreground">{s.label}</dd>
-              </div>
-            ))}
+            {headlineStats.map((s) => {
+              const p = parseStat(s.value);
+              return (
+                <div key={s.label} className="rounded-xl glass p-4">
+                  <dt className={cn("font-display text-2xl font-bold", accentClass[s.accent])}>
+                    {p.num === null ? (
+                      s.value
+                    ) : (
+                      <NumberTicker value={p.num} prefix={p.prefix} suffix={p.suffix} />
+                    )}
+                  </dt>
+                  <dd className="mt-1 text-xs text-muted-foreground">{s.label}</dd>
+                </div>
+              );
+            })}
           </dl>
           {representative && (
             <p className="mt-3 text-[11px] text-muted-foreground/70">

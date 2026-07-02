@@ -1,0 +1,54 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useInView, useReducedMotion } from "framer-motion";
+
+export interface TermLine {
+  text: string;
+  kind?: "cmd" | "out" | "comment";
+}
+
+const COLOR = { cmd: "text-foreground", out: "text-muted-foreground", comment: "text-run/80" } as const;
+
+/** Animated terminal that reveals lines sequentially when in view (Magic-UI "terminal" pattern). */
+export function Terminal({ lines, title = "bash" }: { lines: TermLine[]; title?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-15%" });
+  const reduce = useReducedMotion();
+  const [shown, setShown] = useState(0);
+
+  useEffect(() => {
+    if (!inView) return;
+    if (reduce) {
+      setShown(lines.length);
+      return;
+    }
+    let i = 0;
+    const id = setInterval(() => {
+      i += 1;
+      setShown(i);
+      if (i >= lines.length) clearInterval(id);
+    }, 420);
+    return () => clearInterval(id);
+  }, [inView, lines.length, reduce]);
+
+  return (
+    <div ref={ref} className="overflow-hidden rounded-2xl border-glow glass font-mono text-sm">
+      <div className="flex items-center gap-1.5 border-b border-border/50 px-4 py-2.5">
+        <span className="h-3 w-3 rounded-full bg-red-500/80" />
+        <span className="h-3 w-3 rounded-full bg-yellow-500/80" />
+        <span className="h-3 w-3 rounded-full bg-run/80" />
+        <span className="ml-2 text-xs text-muted-foreground">{title}</span>
+      </div>
+      <div className="space-y-1 p-4">
+        {lines.slice(0, shown).map((l, i) => (
+          <div key={i} className={COLOR[l.kind ?? "out"]}>
+            {l.kind === "cmd" && <span className="select-none text-run">$ </span>}
+            {l.text}
+            {i === shown - 1 && shown < lines.length && <span className="ml-0.5 animate-pulse">▋</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

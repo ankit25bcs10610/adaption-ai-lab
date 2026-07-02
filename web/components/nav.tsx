@@ -9,6 +9,7 @@ const links = [
   { href: "#playground", label: "Playground" },
   { href: "#how", label: "How it works" },
   { href: "#bench", label: "Benchmarks" },
+  { href: "#dataviz", label: "Data-Viz" },
   { href: "#release", label: "Open release" },
 ];
 

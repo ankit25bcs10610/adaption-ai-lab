@@ -10,6 +10,7 @@ dataset:
     xlam:
       repo: Salesforce/xlam-function-calling-60k   # CC-BY-4.0 (⚠ re-verify: history of NC→BY flip)
       max_examples: 4000
+      enabled: false                                # gated on HF; skip unless you've accepted terms + HF_TOKEN
     toolace:
       repo: Team-ACE/ToolACE                        # Apache-2.0 (clean)
       max_examples: 3000

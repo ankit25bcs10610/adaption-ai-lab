@@ -63,37 +63,82 @@ def load_xlam(repo: str, limit: int) -> List[Dict[str, Any]]:
     return out
 
 
+def _toolace_tools(system: str) -> List[Dict[str, Any]]:
+    """Tools are a JSON array embedded in ToolACE's system string after '... invoke:'."""
+    if not system:
+        return []
+    start = system.find("[{")
+    if start == -1:
+        return []
+    try:
+        arr, _ = json.JSONDecoder().raw_decode(system[start:])
+        return arr if isinstance(arr, list) else []
+    except (json.JSONDecodeError, ValueError):
+        return []
+
+
+def _toolace_calls(value: str) -> List[Dict[str, Any]]:
+    """Parse ToolACE's assistant call DSL: [Name(a="x", b=1), Name2(c=[1,2])] -> [{name,arguments}]."""
+    import ast
+
+    s = (value or "").strip()
+    if not (s.startswith("[") and "(" in s):
+        return []
+    s = s[1:-1] if s.endswith("]") else s[1:]
+    calls, i, n = [], 0, len(s)
+    while i < n:
+        while i < n and s[i] in ", ":
+            i += 1
+        j = s.find("(", i)
+        if j == -1:
+            break
+        name = s[i:j].strip()
+        depth, k = 0, j
+        while k < n:
+            if s[k] == "(":
+                depth += 1
+            elif s[k] == ")":
+                depth -= 1
+                if depth == 0:
+                    break
+            k += 1
+        argstr = s[j + 1 : k]
+        args: Dict[str, Any] = {}
+        try:
+            node = ast.parse(f"dict({argstr})", mode="eval")
+            for kw in node.body.keywords:  # type: ignore[attr-defined]
+                if kw.arg:
+                    args[kw.arg] = ast.literal_eval(kw.value)
+        except (SyntaxError, ValueError):
+            args = {}
+        if name:
+            calls.append({"name": name, "arguments": args})
+        i = k + 1
+    return calls
+
+
 def load_toolace(repo: str, limit: int) -> List[Dict[str, Any]]:
     from datasets import load_dataset
 
     ds = load_dataset(repo, split="train")
     out: List[Dict[str, Any]] = []
     for row in ds:
-        tools = _load_json_field(row.get("system") or row.get("tools"))
+        tools = _toolace_tools(row.get("system", ""))
         convs = row.get("conversations")
-        if not convs:
+        if not (tools and convs):
             continue
-        # ToolACE stores multi-turn conversations; take single-turn tool-call pairs.
-        user_msg, tool_msg = None, None
+        # take the first user -> assistant(tool-call) pair (single-turn positive)
+        user_msg, call_str = None, None
         for turn in convs:
             role = turn.get("from") or turn.get("role")
             content = turn.get("value") or turn.get("content")
             if role in ("user", "human"):
                 user_msg = content
-            elif role in ("assistant", "gpt", "function_call") and user_msg:
-                tool_msg = content
+            elif role in ("assistant", "gpt") and user_msg:
+                call_str = content
                 break
-        parsed_calls = _load_json_field(tool_msg) if tool_msg else None
-        if not (tools and user_msg and parsed_calls):
-            continue
-        if isinstance(parsed_calls, dict):
-            parsed_calls = [parsed_calls]
-        calls = [
-            {"name": c.get("name"), "arguments": c.get("arguments", c.get("parameters", {}))}
-            for c in parsed_calls
-            if isinstance(c, dict) and c.get("name")
-        ]
-        if not calls:
+        calls = _toolace_calls(call_str) if call_str else []
+        if not (user_msg and calls):
             continue
         out.append(
             {
@@ -166,8 +211,31 @@ def load_toucan(repo: str, limit: int) -> List[Dict[str, Any]]:
     return out
 
 
+# ToolACE (and others) use Python-style type names; map them to JSON Schema types so validation works.
+_TYPE_MAP = {
+    "dict": "object", "list": "array", "tuple": "array", "int": "integer", "float": "number",
+    "str": "string", "bool": "boolean", "any": "string", "none": "null",
+}
+
+
+def _normalize_schema_types(node: Any) -> Any:
+    """Recursively rewrite non-standard JSON-Schema 'type' values (dict->object, int->integer, ...)."""
+    if isinstance(node, dict):
+        out = {}
+        for k, v in node.items():
+            if k == "type" and isinstance(v, str):
+                out[k] = _TYPE_MAP.get(v.lower(), v.lower() if v.lower() in
+                                       {"object", "array", "integer", "number", "string", "boolean", "null"} else "string")
+            else:
+                out[k] = _normalize_schema_types(v)
+        return out
+    if isinstance(node, list):
+        return [_normalize_schema_types(x) for x in node]
+    return node
+
+
 def _normalize_tools(tools: Any) -> List[Dict[str, Any]]:
-    """Coerce various tool encodings into [{name, description, parameters}]."""
+    """Coerce various tool encodings into [{name, description, parameters}] with JSON-Schema types."""
     if isinstance(tools, dict):
         tools = [tools]
     norm: List[Dict[str, Any]] = []
@@ -179,13 +247,10 @@ def _normalize_tools(tools: Any) -> List[Dict[str, Any]]:
         name = fn.get("name")
         if not name:
             continue
-        norm.append(
-            {
-                "name": name,
-                "description": fn.get("description", ""),
-                "parameters": fn.get("parameters", {"type": "object", "properties": {}}),
-            }
-        )
+        params = fn.get("parameters", {"type": "object", "properties": {}})
+        params = _normalize_schema_types(params) if isinstance(params, dict) else {"type": "object", "properties": {}}
+        params.setdefault("type", "object")
+        norm.append({"name": name, "description": fn.get("description", ""), "parameters": params})
     return norm
 
 
@@ -277,15 +342,25 @@ def main() -> None:
     dcfg = cfg["dataset"]
     out_dir = cfg["paths"]["out_dir"]
 
-    # 1. Load sources
+    # 1. Load sources (each guarded — a gated/unavailable source is skipped, not fatal)
     positives: List[Dict[str, Any]] = []
-    positives += load_xlam(dcfg["sources"]["xlam"]["repo"], dcfg["sources"]["xlam"]["max_examples"])
-    positives += load_toolace(
-        dcfg["sources"]["toolace"]["repo"], dcfg["sources"]["toolace"]["max_examples"]
-    )
+    for name, loader, key in (
+        ("xlam", load_xlam, "xlam"),
+        ("toolace", load_toolace, "toolace"),
+    ):
+        scfg = dcfg["sources"].get(key, {})
+        if scfg.get("enabled") is False:
+            continue
+        try:
+            positives += loader(scfg["repo"], scfg["max_examples"])
+        except Exception as e:
+            print(f"[build] source '{name}' skipped ({type(e).__name__}: {str(e)[:120]})")
     toucan_cfg = dcfg["sources"].get("toucan", {})
     if toucan_cfg.get("enabled"):
-        positives += load_toucan(toucan_cfg["repo"], toucan_cfg["max_examples"])
+        try:
+            positives += load_toucan(toucan_cfg["repo"], toucan_cfg["max_examples"])
+        except Exception as e:
+            print(f"[build] source 'toucan' skipped ({type(e).__name__})")
 
     # 2. Curate + cap positives
     positives = curate_positives(positives)

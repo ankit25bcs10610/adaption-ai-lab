@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import time
 
 import yaml
 
@@ -47,27 +48,37 @@ def main() -> None:
     # 1. Upload -----------------------------------------------------------------
     print(f"[adaption] uploading {train_pc} ...")
     dataset = client.datasets.upload_file(train_pc)  # CSV/JSON/JSONL/Parquet supported
-    dataset_id = getattr(dataset, "id", dataset)
+    dataset_id = getattr(dataset, "dataset_id", None) or getattr(dataset, "id", dataset)
     print(f"[adaption] dataset_id = {dataset_id}")
 
-    column_mapping = cfg["adaption"]["column_mapping"]
+    # Wait for the async import to populate row_count before running.
+    for _ in range(60):
+        st = client.datasets.get_status(dataset_id)
+        if getattr(st, "row_count", None) is not None or getattr(st, "status", None) == "failed":
+            break
+        time.sleep(3)
 
-    # job_specification describes the objective AutoScientist optimizes toward. Adaption co-optimizes the
-    # data + training recipe; we state the goal in plain language plus the base model to specialize.
-    job_specification = {
-        "base_model": cfg["base_model"],
-        "objective": (
-            "Specialize the model for reliable function calling. It must (a) emit schema-correct JSON "
-            "tool calls with all required arguments, (b) REFUSE when no available tool applies, and "
-            "(c) ASK for clarification when a required argument is missing or the tool choice is "
-            "ambiguous — never hallucinate a call or guess an argument."
+    column_mapping = cfg["adaption"]["column_mapping"]
+    # The reliable-tool-calling objective lives in the brand_controls blueprint (system prompt applied
+    # to every generated completion). run() has no base_model/objective — AutoScientist selects the model.
+    recipe_specification = {"recipes": {"deduplication": True, "reasoning_traces": True}}
+    brand_controls = {
+        "length": "concise",
+        "blueprint": (
+            "You are a reliable function-calling assistant. Emit schema-correct JSON tool calls with all "
+            "required arguments; REFUSE when no available tool applies; ASK for clarification when a "
+            "required argument is missing or the tool choice is ambiguous. Never hallucinate a call or "
+            "guess an argument."
         ),
     }
+    job_specification = {}
 
     # 2. Cost estimate ----------------------------------------------------------
     est = client.datasets.run(
         dataset_id,
         column_mapping=column_mapping,
+        recipe_specification=recipe_specification,
+        brand_controls=brand_controls,
         job_specification=job_specification,
         estimate=True,
     )
@@ -80,6 +91,8 @@ def main() -> None:
     run = client.datasets.run(
         dataset_id,
         column_mapping=column_mapping,
+        recipe_specification=recipe_specification,
+        brand_controls=brand_controls,
         job_specification=job_specification,
     )
     run_id = getattr(run, "id", run)

@@ -41,10 +41,22 @@ def validate_call(
     if not isinstance(args, dict):
         return False, "'arguments' is not an object"
     schema = _params_schema(index[name])
-    errors = sorted(Draft7Validator(schema).iter_errors(args), key=lambda e: e.path)
-    if errors:
-        return False, "; ".join(e.message for e in errors[:3])
-    return True, "ok"
+    try:
+        errors = sorted(Draft7Validator(schema).iter_errors(args), key=lambda e: e.path)
+        if errors:
+            return False, "; ".join(e.message for e in errors[:3])
+        return True, "ok"
+    except Exception:
+        # schema not understandable by jsonschema (non-standard types) -> lightweight check
+        props = schema.get("properties", {})
+        for r in schema.get("required", []):
+            if r not in args:
+                return False, f"missing required '{r}'"
+        if schema.get("additionalProperties") is False:
+            extra = [k for k in args if k not in props]
+            if extra:
+                return False, f"unexpected argument(s): {', '.join(extra)}"
+        return True, "ok (lenient)"
 
 
 def validate_answer(answer: Dict[str, Any], tools: List[Dict[str, Any]]) -> Tuple[bool, str]:
