@@ -1,9 +1,11 @@
 """Publish weights + dataset to Hugging Face AND Kaggle (both are mandatory for the challenge).
 
 Usage:
-  python -m src.release hf-dataset   --repo USER/autoscientist-toolcall-dataset --dir data/out
-  python -m src.release hf-model     --repo USER/autoscientist-toolcall        --dir path/to/weights
-  python -m src.release kaggle-model --slug USER/autoscientist-toolcall        --dir path/to/weights
+  python -m src.release hf-dataset     --repo USER/autoscientist-toolcall-dataset --dir data/out
+  python -m src.release hf-model       --repo USER/autoscientist-toolcall        --dir path/to/weights
+  python -m src.release kaggle-dataset --slug USER/autoscientist-toolcall-data   --dir data/out
+  python -m src.release kaggle-model   --slug USER/autoscientist-toolcall        --dir path/to/weights
+  python -m src.release preflight      --dir data/out    # validate before any publish
 
 Requires HF_TOKEN (or `hf auth login`) and KAGGLE_USERNAME/KAGGLE_KEY.
 """
@@ -95,6 +97,22 @@ def kaggle_upload(
     print(f"[release] uploaded {path} -> kaggle model {handle}")
 
 
+def kaggle_dataset_upload(slug: str, path: str, license_name: str = "Apache 2.0") -> None:
+    """Publish the ADAPTED DATASET to Kaggle (the challenge requires the dataset on Kaggle too).
+
+    Handle grammar is <owner>/<dataset-slug>. kagglehub writes a dataset-metadata.json if absent.
+    """
+    _enforce_preflight()
+    import kagglehub
+
+    kagglehub.dataset_upload(
+        slug,
+        path,
+        version_notes="AutoScientist adapted function-calling dataset (hard negatives + audit fixes)",
+    )
+    print(f"[release] uploaded {path} -> kaggle dataset {slug}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -113,6 +131,11 @@ def main() -> None:
     p3.add_argument("--license", default="Apache 2.0")
     p3.add_argument("--framework", default="transformers")
 
+    p3b = sub.add_parser("kaggle-dataset")
+    p3b.add_argument("--slug", required=True, help="<owner>/<dataset-slug>")
+    p3b.add_argument("--dir", required=True)
+    p3b.add_argument("--license", default="Apache 2.0")
+
     p4 = sub.add_parser("preflight", help="run release checks without uploading")
     p4.add_argument("--dir", default="data/out")
 
@@ -129,6 +152,8 @@ def main() -> None:
         hf_upload(args.repo, args.dir, "model")
     elif args.cmd == "kaggle-model":
         kaggle_upload(args.slug, args.dir, args.license, args.framework)
+    elif args.cmd == "kaggle-dataset":
+        kaggle_dataset_upload(args.slug, args.dir, args.license)
 
 
 if __name__ == "__main__":
