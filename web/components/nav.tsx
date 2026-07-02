@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Cpu, Menu, X } from "lucide-react";
+import { motion } from "framer-motion";
+import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -18,12 +20,30 @@ const links = [
 export function Nav() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [active, setActive] = useState("");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Highlight the nav link for the section currently in view (band centered in the viewport).
+  useEffect(() => {
+    const els = links
+      .map((l) => document.getElementById(l.href.slice(1)))
+      .filter((el): el is HTMLElement => el !== null);
+    if (!els.length) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        const vis = entries.filter((e) => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (vis[0]) setActive(vis[0].target.id);
+      },
+      { rootMargin: "-45% 0px -50% 0px", threshold: [0, 0.5, 1] },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
   }, []);
 
   return (
@@ -35,19 +55,33 @@ export function Nav() {
         )}
       >
         <div className="flex items-center justify-between">
-          <a href="#top" className="flex cursor-pointer items-center gap-2.5 font-display text-lg font-bold tracking-tight">
-            <span className="grid h-8 w-8 place-items-center rounded-lg border border-run/40 bg-run/15">
-              <Cpu className="h-4 w-4 text-run" aria-hidden />
-            </span>
-            AutoScientist<span className="text-run">·</span>ToolCaller
+          <a href="#top" aria-label="AutoScientist ToolCaller — home" className="cursor-pointer rounded-lg">
+            <Logo />
           </a>
 
-          <div className="hidden items-center gap-7 text-sm font-medium text-muted-foreground md:flex">
-            {links.map((l) => (
-              <a key={l.href} href={l.href} className="link-underline cursor-pointer transition-colors hover:text-foreground">
-                {l.label}
-              </a>
-            ))}
+          <div className="hidden items-center gap-1 text-sm font-medium md:flex">
+            {links.map((l) => {
+              const isActive = active === l.href.slice(1);
+              return (
+                <a
+                  key={l.href}
+                  href={l.href}
+                  className={cn(
+                    "relative cursor-pointer rounded-full px-3 py-1.5 transition-colors",
+                    isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {isActive && (
+                    <motion.span
+                      layoutId="nav-pill"
+                      className="absolute inset-0 -z-10 rounded-full bg-foreground/[0.08]"
+                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                    />
+                  )}
+                  {l.label}
+                </a>
+              );
+            })}
           </div>
 
           <div className="flex items-center gap-2">

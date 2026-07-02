@@ -80,11 +80,11 @@ export function CTA() {
   return (
     <section id="release" className="relative z-10 scroll-mt-24 px-6 py-24 sm:py-28">
       <Reveal className="mx-auto max-w-4xl text-center">
-        <p className="mb-3 font-mono text-sm text-run">{"// open release"}</p>
-        <h2 className="font-display text-4xl font-bold tracking-tight sm:text-6xl">
+        <p className="eyebrow eyebrow-run mb-3 justify-center">open release</p>
+        <h2 className="text-balance font-display text-display-2 font-bold tracking-tight">
           Weights, data, and demo. <span className="text-grad">All open.</span>
         </h2>
-        <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">
+        <p className="mx-auto mt-5 max-w-xl text-pretty text-fluid-lg text-muted-foreground">
           Everything is public — model card, dataset card, eval harness, and a live Space. Reproduce it, fork it, beat it.
         </p>
 

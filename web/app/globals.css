@@ -6,6 +6,12 @@
   /* Light theme (shadcn/21st.dev tokens, slate base) */
   :root {
     --ease: cubic-bezier(0.2, 0.7, 0.2, 1); /* shared premium easing */
+    /* Fluid modular type scale (one ladder for the whole page, 375→1440 — no per-breakpoint sizes). */
+    --step-0: clamp(1rem, 0.95rem + 0.24vw, 1.13rem);
+    --step-1: clamp(1.2rem, 1.11rem + 0.44vw, 1.5rem);
+    --step-3: clamp(1.73rem, 1.49rem + 1.18vw, 2.66rem);
+    --step-4: clamp(2.07rem, 1.71rem + 1.8vw, 3.55rem);
+    --step-6: clamp(2.99rem, 2.16rem + 3.95vw, 6.31rem);
     --background: 210 40% 98%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
@@ -56,6 +62,16 @@
   .text-pretty {
     text-wrap: pretty;
   }
+  /* Readable measure for prose ledes. */
+  .measure {
+    max-width: 62ch;
+  }
+  /* Tonal seam between sections — a hairline that dissolves at the edges. */
+  .section-seam {
+    height: 1px;
+    border: 0;
+    background: linear-gradient(90deg, transparent, hsl(var(--border) / 0.9) 20%, hsl(var(--border) / 0.9) 80%, transparent);
+  }
   /* Skip-to-content link: visually hidden until focused (keyboard users). */
   .skip-link {
     position: fixed;
@@ -100,6 +116,39 @@
       inset 0 1px 0 0 hsl(0 0% 100% / 0.07),
       0 2px 4px 0 hsl(222 47% 3% / 0.4),
       0 24px 48px -20px hsl(222 47% 3% / 0.7);
+  }
+
+  /* One eyebrow treatment for every section label: mono caps + a colored code-comment tick. */
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-family: var(--font-mono), monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+  .eyebrow::before {
+    content: "";
+    width: 0.9rem;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    opacity: 0.9;
+  }
+  .eyebrow-run { color: #22c55e; }
+  .eyebrow-cyan { color: #22d3ee; }
+  .eyebrow-violet { color: #8b5cf6; }
+
+  /* Recessed code surface — code reads as carved into the glass, not a flat hole punched in it.
+     Radius rule: outer cards rounded-2xl · insets rounded-xl · pills rounded-full. */
+  .inset-well {
+    background: linear-gradient(180deg, hsl(222 47% 2% / 0.5), hsl(222 47% 4% / 0.35));
+    border: 1px solid hsl(var(--border) / 0.4);
+    box-shadow: inset 0 1px 3px hsl(222 47% 0% / 0.6), inset 0 0 0 1px hsl(0 0% 100% / 0.02);
+    border-radius: 0.75rem;
   }
 
   /* Subtle film-grain overlay — the detail that makes dark UIs feel "expensive" instead of flat. */

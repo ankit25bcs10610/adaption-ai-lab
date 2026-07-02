@@ -29,6 +29,13 @@ const config: Config = {
         body: ["var(--font-body)", "sans-serif"],
         mono: ["var(--font-mono)", "monospace"],
       },
+      fontSize: {
+        // fluid scale — one ladder drives all display/lede sizing (see --step-* in globals.css)
+        "fluid-lg": ["var(--step-1)", { lineHeight: "1.5" }],
+        "fluid-2xl": ["var(--step-3)", { lineHeight: "1.15" }],
+        "display-2": ["var(--step-4)", { lineHeight: "1.08" }],
+        "display-1": ["var(--step-6)", { lineHeight: "1.03" }],
+      },
       keyframes: {
         drift: { to: { transform: "translate3d(6vw,4vw,0) scale(1.15)" } },
         scrollx: { to: { transform: "translateX(-50%)" } },

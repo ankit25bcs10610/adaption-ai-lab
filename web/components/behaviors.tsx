@@ -76,7 +76,7 @@ export function Behaviors() {
                     </div>
                     <h3 className="font-display text-xl font-semibold">{b.title}</h3>
                     <p className="mt-2 text-sm text-muted-foreground">{b.desc}</p>
-                    <pre className={`mt-4 overflow-x-auto rounded-lg bg-black/40 p-3 font-mono text-xs ${a.code}`}>
+                    <pre className={`inset-well mt-4 overflow-x-auto p-3 font-mono text-xs ${a.code}`}>
                       {b.code}
                     </pre>
                   </div>
@@ -91,7 +91,7 @@ export function Behaviors() {
           <div className="mt-10 rounded-2xl border-glow glass p-8">
             <div className="grid items-center gap-8 md:grid-cols-[1fr_1.4fr]">
               <div>
-                <p className="mb-2 font-mono text-sm text-run">{"// the moat"}</p>
+                <p className="eyebrow eyebrow-run mb-2">the moat</p>
                 <h3 className="font-display text-2xl font-bold">Hard negatives</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   ~40% of the training set is cases where the right answer is <em>not</em> a plain tool call —
@@ -101,7 +101,7 @@ export function Behaviors() {
               </div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {hnKinds.map((k) => (
-                  <div key={k.name} className="rounded-xl border border-border/60 bg-black/20 p-4 transition-colors hover:border-border">
+                  <div key={k.name} className="inset-well p-4 transition-colors hover:border-border">
                     <p className={`font-mono text-sm ${k.color}`}>{k.name}</p>
                     <p className="mt-1 text-xs text-muted-foreground">{k.desc}</p>
                   </div>

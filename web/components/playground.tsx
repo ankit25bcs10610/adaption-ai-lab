@@ -52,7 +52,7 @@ export function Playground() {
           <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
             {/* Tools + query */}
             <div className="rounded-2xl glass p-6">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              <p className="mb-3 eyebrow">
                 Available tools
               </p>
               <div className="space-y-2">
@@ -76,7 +76,7 @@ export function Playground() {
                 ))}
               </div>
 
-              <p className="mb-2 mt-6 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              <p className="mb-2 mt-6 eyebrow">
                 Try a scenario
               </p>
               <div className="flex flex-wrap gap-2">
@@ -91,7 +91,7 @@ export function Playground() {
                 ))}
               </div>
 
-              <label htmlFor="pg-query" className="mb-2 mt-6 block text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              <label htmlFor="pg-query" className="mb-2 mt-6 block eyebrow">
                 User request
               </label>
               <textarea
@@ -99,7 +99,7 @@ export function Playground() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 rows={2}
-                className="w-full resize-none rounded-xl border border-border/60 bg-black/20 p-3 font-mono text-sm text-foreground outline-none focus:border-cyan/50"
+                className="inset-well w-full resize-none p-3 font-mono text-sm text-foreground outline-none focus:border-cyan/50"
               />
               <Button onClick={run} className="mt-3 w-full">
                 <Play className="h-4 w-4" /> Run
@@ -108,7 +108,7 @@ export function Playground() {
 
             {/* Output */}
             <div className="rounded-2xl border-glow glass p-6">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              <p className="mb-3 eyebrow">
                 Model output
               </p>
               {!result ? (
@@ -141,7 +141,7 @@ function Output({ result }: { result: SimResult }) {
       <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${s.cls}`}>
         <s.Icon className="h-3.5 w-3.5" /> {s.pill}
       </span>
-      <pre className="mt-4 overflow-x-auto rounded-xl border border-border/60 bg-black/40 p-4 font-mono text-sm text-foreground/90">
+      <pre className="inset-well mt-4 overflow-x-auto p-4 font-mono text-sm text-foreground/90">
         {JSON.stringify(envelope, null, 2)}
       </pre>
       <p className="mt-3 text-xs text-muted-foreground">

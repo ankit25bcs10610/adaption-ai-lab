@@ -41,12 +41,12 @@ export function SectionHeader({
   center?: boolean;
   className?: string;
 }) {
-  const toneClass = { run: "text-run", cyan: "text-cyan", violet: "text-violet" }[tone];
+  const eyebrowTone = { run: "eyebrow-run", cyan: "eyebrow-cyan", violet: "eyebrow-violet" }[tone];
   return (
     <Reveal className={cn(center ? "mx-auto max-w-2xl text-center" : "max-w-2xl", className)}>
-      <p className={cn("mb-3 font-mono text-sm", toneClass)}>{"// "}{eyebrow}</p>
-      <h2 className="text-balance font-display text-4xl font-bold tracking-tight sm:text-5xl">{title}</h2>
-      {children && <p className="mt-4 text-pretty text-lg leading-relaxed text-muted-foreground">{children}</p>}
+      <p className={cn("eyebrow mb-4", eyebrowTone, center && "justify-center")}>{eyebrow}</p>
+      <h2 className="text-balance font-display text-fluid-2xl font-bold tracking-tight">{title}</h2>
+      {children && <p className="mt-4 text-pretty text-fluid-lg leading-relaxed text-muted-foreground">{children}</p>}
     </Reveal>
   );
 }

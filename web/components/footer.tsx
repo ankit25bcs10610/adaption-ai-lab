@@ -1,4 +1,4 @@
-import { Cpu } from "lucide-react";
+import { Logo } from "@/components/logo";
 import { links } from "@/lib/links";
 
 const cols = [
@@ -27,12 +27,7 @@ export function Footer() {
       <div className="mx-auto max-w-6xl">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr]">
           <div>
-            <div className="flex items-center gap-2.5 font-display text-lg font-bold tracking-tight">
-              <span className="grid h-8 w-8 place-items-center rounded-lg border border-run/40 bg-run/15">
-                <Cpu className="h-4 w-4 text-run" aria-hidden />
-              </span>
-              AutoScientist<span className="text-run">·</span>ToolCaller
-            </div>
+            <Logo />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
               A data-centric function-calling model + audited dataset. It refuses, clarifies, and calls —
               instead of hallucinating tools.

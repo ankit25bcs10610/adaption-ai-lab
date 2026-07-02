@@ -61,7 +61,7 @@ export function NumberTicker({
   }, [value, duration, reduce]);
 
   return (
-    <span ref={ref} className={className}>
+    <span ref={ref} className={["tabular-nums", className].filter(Boolean).join(" ")}>
       {prefix}
       {n.toFixed(decimals)}
       {suffix}

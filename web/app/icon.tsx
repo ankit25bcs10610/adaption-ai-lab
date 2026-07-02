@@ -4,7 +4,7 @@ export const runtime = "edge";
 export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
 
-// Favicon: the "run green" tool-caller mark.
+// Favicon: the "run green" chip mark — matches the nav/footer <Logo/> lockup (green box + chip die).
 export default function Icon() {
   return new ImageResponse(
     (
@@ -16,14 +16,22 @@ export default function Icon() {
           alignItems: "center",
           justifyContent: "center",
           background: "#0F172A",
-          color: "#22C55E",
-          fontSize: 20,
-          fontWeight: 800,
-          fontFamily: "monospace",
-          borderRadius: 7,
         }}
       >
-        {"{}"}
+        <div
+          style={{
+            width: 22,
+            height: 22,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 6,
+            background: "rgba(34,197,94,0.18)",
+            border: "1.5px solid rgba(34,197,94,0.55)",
+          }}
+        >
+          <div style={{ width: 9, height: 9, borderRadius: 2, background: "#22C55E" }} />
+        </div>
       </div>
     ),
     { ...size }

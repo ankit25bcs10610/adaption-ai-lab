@@ -41,10 +41,10 @@ export function Hero() {
             <span className="h-2 w-2 animate-pulse rounded-full bg-run" />
             Adaption AutoScientist Challenge · Open Source
           </span>
-          <h1 className="font-display text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
+          <h1 className="text-balance font-display text-display-1 font-bold tracking-tight">
             The tool-caller that knows <span className="text-grad">when not to call.</span>
           </h1>
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
+          <p className="mt-6 max-w-xl text-pretty text-fluid-lg leading-relaxed text-muted-foreground">
             A function-calling model fine-tuned with <span className="font-medium text-foreground">AutoScientist</span>.
             It refuses, clarifies, and calls — instead of hallucinating tools. Trained on the exact failure modes every
             other dataset ignores.
@@ -103,7 +103,7 @@ export function Hero() {
               </div>
               <p className="text-muted-foreground">{"// user has no matching tool"}</p>
               <p className="mt-1 text-cyan">&quot;Write me a poem about the monsoon.&quot;</p>
-              <div className="mt-3 rounded-lg border border-run/20 bg-black/40 p-3 leading-relaxed">
+              <div className="inset-well mt-3 p-3 leading-relaxed">
                 <span className="text-muted-foreground">{"{"}</span>
                 <br />
                 {"  "}
