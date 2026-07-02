@@ -124,13 +124,34 @@ def to_prompt_completion(example: Dict[str, Any], tokenizer=None) -> Dict[str, s
     return {"prompt": prompt, "completion": completion}
 
 
+def strip_think(text: str) -> str | None:
+    """Return only the answer portion after a reasoning block.
+
+    Reasoning traces (``<think> ... </think>``) frequently contain brace-y prose that would
+    otherwise be captured by the first-``{`` scan below and silently mis-graded. We parse ONLY
+    what follows ``</think>``. A ``<think>`` opened but never closed is malformed output, so we
+    signal a parse failure (None) rather than grading truncated reasoning as an answer.
+    """
+    lower = text.lower()
+    open_i = lower.find("<think>")
+    if open_i == -1:
+        return text
+    close = lower.find("</think>", open_i)
+    if close == -1:
+        return None  # dangling reasoning block -> unparseable
+    return text[close + len("</think>"):]
+
+
 def parse_model_output(text: str) -> Dict[str, Any] | None:
     """Best-effort parse of a model's raw output into the envelope dict.
 
     Tolerates markdown fences and leading/trailing prose so eval isn't unfairly strict about
     formatting. Returns None if no JSON object can be recovered.
     """
-    s = text.strip()
+    stripped = strip_think(text)
+    if stripped is None:
+        return None
+    s = stripped.strip()
     if s.startswith("```"):
         s = s.strip("`")
         # drop an optional leading "json" language tag

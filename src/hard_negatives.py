@@ -20,7 +20,23 @@ by construction.
 from __future__ import annotations
 
 import random
+import re
 from typing import Any, Dict, List, Optional
+
+# Stop-words carry no topical signal, so they must not count toward the off-domain overlap guard
+# below. (The original guard keyed on the FIRST word of every request — almost always a stop-word
+# like "what"/"can"/"write" that appears in some tool description — which rejected nearly every
+# candidate and starved the no_tool slice to a handful of rows.)
+_STOP = {
+    "what", "who", "whom", "whose", "which", "when", "where", "why", "how", "can", "could",
+    "would", "will", "the", "a", "an", "me", "my", "you", "your", "is", "are", "am", "do", "does",
+    "of", "to", "for", "and", "or", "give", "tell", "write", "draft", "explain", "summarize",
+    "sing", "with", "about", "please", "that", "this", "some", "any", "get", "make", "have",
+}
+
+
+def _content_words(text: str) -> set:
+    return {w for w in re.findall(r"[a-z]+", text.lower()) if len(w) > 3 and w not in _STOP}
 
 # Requests that are plausibly phrased but that a *tool* list will almost never cover. We check against
 # the actual tool names/descriptions to make sure we don't accidentally pick something a tool DOES do.
@@ -58,17 +74,57 @@ def _properties(tool: Dict[str, Any]) -> Dict[str, Any]:
     return dict((tool.get("parameters") or {}).get("properties", {}))
 
 
+def _gold_tool_names(positive: Dict[str, Any]) -> set:
+    calls = (positive.get("answer") or {}).get("calls") or []
+    return {c.get("name") for c in calls if c.get("name")}
+
+
+def make_no_tool_from_positive(
+    positive: Dict[str, Any], distractor_pool: List[Dict[str, Any]], rng: random.Random
+) -> Optional[Dict[str, Any]]:
+    """Hammer-style construction: take a REAL positive, then offer a tool set that EXCLUDES the
+    tool(s) it needs. The request is now unsatisfiable with the tools on hand -> the model must
+    refuse. Labels are correct by construction and the query stays natural (it's a real request),
+    which is why this is the primary no_tool generator — grounded and never starved.
+    """
+    gold = _gold_tool_names(positive)
+    if not gold or not positive.get("query"):
+        return None
+    candidates = [t for t in distractor_pool if t.get("name") not in gold]
+    if len(candidates) < 2:
+        return None
+    # Prefer distractors that don't lexically overlap the request, so a distractor doesn't
+    # accidentally look like it could satisfy it.
+    req_words = _content_words(positive["query"])
+    def _overlap(t: Dict[str, Any]) -> int:
+        return len(req_words & _content_words(t.get("name", "") + " " + t.get("description", "")))
+    ranked = sorted(candidates, key=_overlap)
+    k = rng.randint(2, min(4, len(ranked)))
+    tools = ranked[: max(k, 2) + 2]
+    rng.shuffle(tools)
+    tools = tools[:k]
+    return {
+        "tools": tools,
+        "query": positive["query"],
+        "answer": {"type": "refuse", "content": rng.choice(_REFUSAL_TEMPLATES)},
+        "meta": {"source": "hard_negative", "hn_kind": "no_tool", "removed_tool": sorted(gold)[0]},
+    }
+
+
 def make_no_tool(tools: List[Dict[str, Any]], rng: random.Random) -> Optional[Dict[str, Any]]:
-    """A request no listed tool can satisfy -> the model must refuse, not invent a call."""
-    haystack = " ".join(
-        [t.get("name", "") + " " + t.get("description", "") for t in tools]
-    ).lower()
+    """Fallback no_tool generator: an off-domain request no listed tool can satisfy -> refuse.
+
+    Used only when no positive corpus is available for the Hammer construction. The overlap guard
+    now compares *content words* (not the first token), so ordinary requests aren't all rejected.
+    """
+    haystack_words = set()
+    for t in tools:
+        haystack_words |= _content_words(t.get("name", "") + " " + t.get("description", ""))
     candidates = list(_OFF_DOMAIN_REQUESTS)  # copy — never mutate the module global
     rng.shuffle(candidates)
     for req in candidates:
-        # crude overlap guard: skip if a tool clearly relates to the request's key noun
-        key = req.lower().split()[0]
-        if key in haystack:
+        # skip only if the request shares real topical words with a tool (>=2 content-word overlap)
+        if len(_content_words(req) & haystack_words) >= 2:
             continue
         return {
             "tools": tools,
@@ -76,7 +132,13 @@ def make_no_tool(tools: List[Dict[str, Any]], rng: random.Random) -> Optional[Di
             "answer": {"type": "refuse", "content": rng.choice(_REFUSAL_TEMPLATES)},
             "meta": {"source": "hard_negative", "hn_kind": "no_tool"},
         }
-    return None
+    # last resort: return an off-domain request anyway (better than starving the slice)
+    return {
+        "tools": tools,
+        "query": rng.choice(candidates),
+        "answer": {"type": "refuse", "content": rng.choice(_REFUSAL_TEMPLATES)},
+        "meta": {"source": "hard_negative", "hn_kind": "no_tool"},
+    }
 
 
 def make_missing_arg(
@@ -111,13 +173,25 @@ def make_missing_arg(
     }
 
 
+def _topic_hint(tool: Dict[str, Any]) -> str:
+    """A short natural noun-phrase for a tool, used to give ambiguous queries distinct wording."""
+    words = _content_words(tool.get("description", "") or tool.get("name", ""))
+    picks = sorted(words)[:2]
+    return " ".join(picks) if picks else (tool.get("name", "") or "this")
+
+
 def make_ambiguous(
     tool_a: Dict[str, Any], tool_b: Dict[str, Any], rng: random.Random
 ) -> Dict[str, Any]:
-    """Two plausible tools, an underspecified request -> ask which one, don't pick arbitrarily."""
-    verb = rng.choice(["handle", "take care of", "do", "process"])
+    """Two plausible tools, an underspecified request -> ask which one, don't pick arbitrarily.
+
+    The query embeds a topic hint drawn from the two tools so different tool pairs produce
+    genuinely different request text (otherwise a single fixed template collapses under dedup).
+    """
+    verb = rng.choice(["handle", "take care of", "sort out", "help me with", "deal with"])
+    hint = _topic_hint(tool_a) or _topic_hint(tool_b)
     query = (
-        f"Can you {verb} this for me? Use whichever of your tools fits best."
+        f"Can you {verb} the {hint} thing for me? Use whichever of your tools fits best."
     )
     return {
         "tools": [tool_a, tool_b],
@@ -143,27 +217,34 @@ def generate(
     n: int,
     kind_weights: Dict[str, float],
     seed: int = 42,
+    positives: Optional[List[Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
     """Generate up to `n` hard negatives from a pool of real tool schemas.
 
     `tool_pool` is a de-duplicated list of tool schemas harvested from the positive corpus.
+    `positives` (optional) enables the grounded Hammer construction for no_tool negatives — a real
+    request whose required tool has been removed from the offered set. Strongly recommended: without
+    it, no_tool falls back to a small pool of off-domain requests and dedup collapses the slice.
     """
     rng = random.Random(seed)
     if len(tool_pool) < 2:
         raise ValueError("need at least 2 distinct tools to build ambiguous negatives")
 
+    pos_pool = [p for p in (positives or []) if _gold_tool_names(p) and p.get("query")]
     kinds = list(kind_weights.keys())
     weights = [kind_weights[k] for k in kinds]
     out: List[Dict[str, Any]] = []
     attempts = 0
-    while len(out) < n and attempts < n * 20:
+    while len(out) < n and attempts < n * 40:
         attempts += 1
         kind = rng.choices(kinds, weights=weights, k=1)[0]
         if kind == "no_tool":
-            # give the model a realistic set of 2-4 tools it must decline to use
-            k = rng.randint(2, min(4, len(tool_pool)))
-            tools = rng.sample(tool_pool, k)
-            ex = make_no_tool(tools, rng)
+            ex = None
+            if pos_pool:  # primary path: grounded Hammer construction from a real positive
+                ex = make_no_tool_from_positive(rng.choice(pos_pool), tool_pool, rng)
+            if ex is None:  # fallback: off-domain request
+                k = rng.randint(2, min(4, len(tool_pool)))
+                ex = make_no_tool(rng.sample(tool_pool, k), rng)
         elif kind == "missing_arg":
             tool = rng.choice(tool_pool)
             ex = make_missing_arg(tool, rng)

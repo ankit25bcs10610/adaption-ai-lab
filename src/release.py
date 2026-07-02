@@ -22,15 +22,20 @@ def hf_upload(repo: str, path: str, repo_type: str) -> None:
     print(f"[release] uploaded {path} -> https://huggingface.co/{repo}")
 
 
-def kaggle_upload(slug: str, path: str, license_name: str, framework: str) -> None:
+def kaggle_upload(
+    slug: str, path: str, license_name: str, framework: str, variation: str = "default"
+) -> None:
     import kagglehub
 
-    handle = f"{slug}/{framework}/v1"
+    # kagglehub model handle grammar is <owner>/<model>/<framework>/<variation-slug>. The 4th part
+    # is the VARIATION, not the version — versions auto-increment on each upload. Passing "v1" here
+    # mislabels the variation and pins every push to a phantom version; use a real variation slug.
+    handle = f"{slug}/{framework}/{variation}"
     kagglehub.model_upload(
         handle,
         path,
         license_name=license_name,
-        version_notes="v1: AutoScientist SFT with hard-negative function-calling data",
+        version_notes="AutoScientist SFT with hard-negative function-calling data",
     )
     print(f"[release] uploaded {path} -> kaggle model {handle}")
 

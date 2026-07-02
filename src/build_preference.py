@@ -57,44 +57,87 @@ def _fake_value(spec: Dict[str, Any], name: str, rng: random.Random) -> Any:
     return {"city": "New York", "date": "2026-01-01", "query": "example"}.get(name, "example")
 
 
+def _required_of(example: Dict[str, Any], tool_name: str) -> List[str]:
+    tool = next((t for t in example["tools"] if t.get("name") == tool_name), None)
+    if not tool:
+        return []
+    return list((tool.get("parameters") or {}).get("required", []))
+
+
 def _corrupt_positive(example: Dict[str, Any], rng: random.Random) -> Optional[Dict[str, Any]]:
-    """Corrupt a correct call into a wrong one: drop a required arg, or swap to another tool."""
+    """Corrupt a correct call into a *provably* wrong one: swap to another tool, or drop a REQUIRED
+    arg. We never drop a merely-optional arg — that can leave the call still-correct (a poison pair).
+    """
     calls = copy.deepcopy(example["answer"]["calls"])
     if not calls:
         return None
-    mode = rng.choice(["drop_arg", "swap_tool"])
     c = calls[0]
-    if mode == "drop_arg" and c.get("arguments"):
-        keys = list(c["arguments"].keys())
-        if keys:
-            del c["arguments"][rng.choice(keys)]
-            return {"action": "call", "calls": calls}
-    # swap_tool: pick a different available tool
+    required = _required_of(example, c.get("name", ""))
+    present_required = [k for k in required if k in (c.get("arguments") or {})]
+    modes = []
     others = [t for t in example["tools"] if t["name"] != c["name"]]
     if others:
+        modes.append("swap_tool")
+    if present_required:
+        modes.append("drop_required")
+    if not modes:
+        return None
+    mode = rng.choice(modes)
+    if mode == "swap_tool":
         c["name"] = rng.choice(others)["name"]
-        return {"action": "call", "calls": calls}
-    # fallback to drop_arg if swap impossible
-    if c.get("arguments"):
-        keys = list(c["arguments"].keys())
-        if keys:
-            del c["arguments"][rng.choice(keys)]
-            return {"action": "call", "calls": calls}
-    return None
+    else:  # drop_required -> the call is now missing a required arg (schema-invalid)
+        del c["arguments"][rng.choice(present_required)]
+    return {"action": "call", "calls": calls}
+
+
+def _canon(obj: Any) -> str:
+    return json.dumps(obj, sort_keys=True, ensure_ascii=False)
+
+
+def _confirmed_wrong(example: Dict[str, Any], rejected_obj: Dict[str, Any]) -> bool:
+    """Gate against poison pairs: a `rejected` is usable only if it is provably NOT the correct
+    answer. If the correct behavior is refuse/clarify, any tool call is wrong. For a positive, the
+    rejected must differ from gold by tool name, a missing required arg, or a changed required value.
+    """
+    ans = example["answer"]
+    if ans["type"] in ("refuse", "clarify"):
+        return rejected_obj.get("action") == "call" and bool(rejected_obj.get("calls"))
+    gold_calls = ans.get("calls") or []
+    if _canon(rejected_obj) == _canon({"action": "call", "calls": gold_calls}):
+        return False  # identical to gold -> poison
+    rc = (rejected_obj.get("calls") or [{}])[0]
+    gc = (gold_calls or [{}])[0]
+    if rc.get("name") != gc.get("name"):
+        return True  # different tool
+    required = _required_of(example, rc.get("name", ""))
+    rargs = rc.get("arguments") or {}
+    gargs = gc.get("arguments") or {}
+    if any(k not in rargs for k in required):
+        return True  # dropped a required arg
+    return rargs != gargs  # required args present but a value changed
 
 
 def build_pairs(examples: List[Dict[str, Any]], seed: int = 42) -> List[Dict[str, str]]:
     rng = random.Random(seed)
     pairs: List[Dict[str, str]] = []
+    skipped = 0
     for ex in examples:
         ans = ex["answer"]
         chosen = target_to_json_str(ans)
-        if ans["type"] in ("refuse", "clarify"):
-            rejected_obj = _plausible_hallucinated_call(ex, rng)
-        else:
-            rejected_obj = _corrupt_positive(ex, rng)
-            if rejected_obj is None:
-                continue
+        # Rejection sampling: try up to 4 candidate negatives, keep the first CONFIRMED-wrong one.
+        rejected_obj = None
+        for _ in range(4):
+            cand = (
+                _plausible_hallucinated_call(ex, rng)
+                if ans["type"] in ("refuse", "clarify")
+                else _corrupt_positive(ex, rng)
+            )
+            if cand is not None and _confirmed_wrong(ex, cand):
+                rejected_obj = cand
+                break
+        if rejected_obj is None:
+            skipped += 1
+            continue
         pairs.append(
             {
                 "prompt": _prompt(ex),
@@ -102,6 +145,8 @@ def build_pairs(examples: List[Dict[str, Any]], seed: int = 42) -> List[Dict[str
                 "rejected": json.dumps(rejected_obj, sort_keys=True, ensure_ascii=False),
             }
         )
+    if skipped:
+        print(f"[pref] skipped {skipped} examples (no confirmed-wrong negative — poison guard)")
     return pairs
 
 

@@ -19,6 +19,20 @@ from typing import Any, Dict, List, Set, Tuple
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
 
 
+def _dedup_text(ex: Dict[str, Any]) -> str:
+    """The identity used for near-dup detection.
+
+    Keying on the query ALONE wrongly collapses distinct training signal that shares a query:
+    a Hammer ``no_tool`` reuses a real positive's query (but offers different tools and the answer
+    is *refuse*), and the templated ``ambiguous`` / ``miss_param`` slices share a fixed query
+    across different tool sets. Two rows are true duplicates only when the request, the tools on
+    offer, AND the required behavior all match — so fold all three into the signature.
+    """
+    tools = sorted(t.get("name", "") for t in (ex.get("tools") or []))
+    atype = (ex.get("answer") or {}).get("type", "")
+    return f"{atype} | {' '.join(tools)} | {ex.get('query', '')}"
+
+
 def _shingles(text: str, k: int = 3) -> Set[str]:
     toks = _TOKEN_RE.findall(text.lower())
     if len(toks) < k:
@@ -40,7 +54,7 @@ def minhash_dedup(
     kept: List[Dict[str, Any]] = []
     for i, ex in enumerate(examples):
         m = MinHash(num_perm=128)
-        for sh in _shingles(ex["query"]):
+        for sh in _shingles(_dedup_text(ex)):
             m.update(sh.encode("utf-8"))
         if lsh.query(m):  # a near-dup already indexed
             continue
@@ -68,7 +82,7 @@ def semantic_dedup(
         print("[dedup] numpy missing; skipping semantic pass", file=sys.stderr)
         return examples
     try:
-        embs = _embed([e["query"] for e in examples])
+        embs = _embed([_dedup_text(e) for e in examples])
     except Exception as e:  # model2vec missing or offline
         print(f"[dedup] semantic pass skipped ({e})", file=sys.stderr)
         return examples

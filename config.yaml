@@ -20,8 +20,9 @@ dataset:
       enabled: false                                # opt-in: large download; flip on when ready
   target_positive: 3500        # curated positive (tool-should-be-called) examples
   # Research-backed mix: ~10% irrelevance is the swept optimum (more degrades positive calling).
-  # hard_negative_ratio spans no_tool+missing_arg+ambiguous; kinds weights keep no_tool≈10% of total.
-  hard_negative_ratio: 0.22
+  # Shares are SHARED-denominator (see build_dataset step 3): realized ≈ intended, so with
+  # hard_negative_ratio 0.22 and no_tool kind-weight ~0.5, no_tool lands at ~11% of the TOTAL set.
+  hard_negative_ratio: 0.22    # no_tool + missing_arg + ambiguous (refuse/clarify moat)
   multiturn_ratio: 0.20        # multi-turn is ~30% of BFCL v4 and where small fine-tunes beat GPT-4o
   schema_drift_ratio: 0.08     # distinctive originality slice: tool schemas that changed under the model
   env_examples: 0              # execution-verified examples from src.envs (0 = off; e.g. 400 to include)
@@ -35,10 +36,10 @@ dataset:
     test: 0.05
 
 hard_negatives:
-  kinds:                       # relative weights across the three failure modes
-    no_tool: 0.45              # no available tool can satisfy the request -> refuse (the irrelevance lever)
-    missing_arg: 0.30          # required argument absent -> ask for it (clarify)
-    ambiguous: 0.25            # two plausible tools -> disambiguate (clarify)
+  kinds:                       # relative weights across the three failure modes (within the HN slice)
+    no_tool: 0.50              # no available tool can satisfy the request -> refuse (the irrelevance lever)
+    missing_arg: 0.28          # required argument absent -> ask for it (clarify)
+    ambiguous: 0.22            # two plausible tools -> disambiguate (clarify)
 
 multiturn:
   kinds:                       # BFCL v3/v4 multi-turn failure modes

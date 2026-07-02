@@ -395,29 +395,44 @@ def main() -> None:
     if novel_frac > 0:
         positives, novel_test, novel_names = carve_novel_tools(positives, novel_frac, seed)
 
-    # 3. Hard negatives + multi-turn from the TRAIN tool pool only (novel tools stay unseen)
+    # 3. Hard negatives + multi-turn from the TRAIN tool pool only (novel tools stay unseen).
+    #    Slice sizes use a SHARED denominator so realized shares == intended shares. The old code
+    #    sized each slice as if it were the only additive one (n = base * r/(1-r)), which, with four
+    #    additive slices, shrank every realized share below target (positives drifted to ~0.62, hard
+    #    negatives to ~0.17 instead of 0.22). Here: total = base_n / positive_share, then each slice
+    #    is round(total * slice_share) — arithmetic the model card can honestly quote.
     pool = harvest_tool_pool(positives)
     base_n = len(positives)
 
     hn_ratio = dcfg["hard_negative_ratio"]
-    n_hard = int(base_n * hn_ratio / max(1 - hn_ratio, 1e-6))
-    hard = hard_negatives.generate(pool, n_hard, cfg["hard_negatives"]["kinds"], seed=seed)
+    mt_ratio = dcfg.get("multiturn_ratio", 0.0)
+    sd_ratio = dcfg.get("schema_drift_ratio", 0.0)
+    positive_share = 1.0 - (hn_ratio + mt_ratio + sd_ratio)
+    if positive_share <= 0:
+        raise ValueError(
+            f"slice ratios sum to >= 1 (hn={hn_ratio}, mt={mt_ratio}, sd={sd_ratio}); "
+            "positives would be crowded out"
+        )
+    total_target = base_n / positive_share
+    n_hard = round(total_target * hn_ratio)
+    n_mt = round(total_target * mt_ratio)
+    n_sd = round(total_target * sd_ratio)
+
+    hard = hard_negatives.generate(
+        pool, n_hard, cfg["hard_negatives"]["kinds"], seed=seed, positives=positives
+    )
     print(f"[build] hard negatives: requested {n_hard}, got {len(hard)}")
 
-    mt_ratio = dcfg.get("multiturn_ratio", 0.0)
     mt: List[Dict[str, Any]] = []
     if mt_ratio > 0:
-        n_mt = int(base_n * mt_ratio / max(1 - mt_ratio, 1e-6))
         mt = multiturn.generate(
             pool, n_mt, cfg["multiturn"]["kinds"], seed=seed,
             long_context_size=cfg["multiturn"].get("long_context_size", 10),
         )
         print(f"[build] multi-turn: requested {n_mt}, got {len(mt)}")
 
-    sd_ratio = dcfg.get("schema_drift_ratio", 0.0)
     sd: List[Dict[str, Any]] = []
     if sd_ratio > 0:
-        n_sd = int(base_n * sd_ratio / max(1 - sd_ratio, 1e-6))
         sd = schema_drift.generate(pool, n_sd, cfg["schema_drift"]["kinds"], seed=seed)
         print(f"[build] schema-drift: requested {n_sd}, got {len(sd)}")
 
@@ -447,7 +462,31 @@ def main() -> None:
         write_jsonl(os.path.join(out_dir, "test_novel.jsonl"), novel_test)
 
     # 7. Stats for the model card
-    stats = {"total": sum(len(v) for v in parts.values()), "novel_test": len(novel_test)}
+    total_rows = sum(len(v) for v in parts.values())
+    all_rows = [r for rows in parts.values() for r in rows]
+    src_counts = Counter(r["meta"]["source"] for r in all_rows)
+    n_no_tool = sum(1 for r in all_rows if r["meta"].get("hn_kind") == "no_tool")
+    n_miss_param = sum(1 for r in all_rows if r["meta"].get("mt_kind") == "miss_param")
+    realized = {k: round(v / max(total_rows, 1), 4) for k, v in src_counts.items()}
+    no_tool_share = round(n_no_tool / max(total_rows, 1), 4)
+    intended = {
+        "positive": round(positive_share, 4),
+        "hard_negative": hn_ratio, "multiturn": mt_ratio, "schema_drift": sd_ratio,
+    }
+    # The refuse/clarify moat rests on the no_tool slice; guard it (research optimum ~10% of total).
+    mix_ok = 0.06 <= no_tool_share <= 0.14 and n_miss_param >= 10
+    if not mix_ok:
+        print(
+            f"[build] WARNING mix off target: no_tool={no_tool_share:.1%} of total "
+            f"(want ~10%), miss_param rows={n_miss_param} (want >=10). "
+            "Check hard_negatives.kinds / multiturn.kinds weights."
+        )
+    mix = {
+        "intended_shares": intended, "realized_shares": realized,
+        "no_tool_rows": n_no_tool, "no_tool_share_of_total": no_tool_share,
+        "miss_param_rows": n_miss_param, "mix_ok": mix_ok,
+    }
+    stats = {"total": total_rows, "novel_test": len(novel_test), "mix": mix}
     for name, rows in parts.items():
         stats[name] = {
             "n": len(rows),

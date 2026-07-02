@@ -112,16 +112,22 @@ def generate(
     rng = random.Random(seed + 7)  # offset so it doesn't mirror hard_negatives' RNG
     if len(tool_pool) < 2:
         raise ValueError("need >=2 tools for multi-turn generation")
+    # miss_param can only be built from tools that HAVE a required arg to withhold. Selecting from
+    # the full pool (most tools have no required args) meant make_miss_param returned None almost
+    # every time and the slice starved to ~1 row — so pre-filter to the eligible sub-pool.
+    req_pool = [t for t in tool_pool if _required_args(t)]
     kinds = list(kind_weights.keys())
     weights = [kind_weights[k] for k in kinds]
     out: List[Dict[str, Any]] = []
     attempts = 0
-    while len(out) < n and attempts < n * 20:
+    while len(out) < n and attempts < n * 40:
         attempts += 1
         kind = rng.choices(kinds, weights=weights, k=1)[0]
         tool = rng.choice(tool_pool)
         if kind == "miss_param":
-            ex = make_miss_param(tool, rng)
+            if not req_pool:
+                continue
+            ex = make_miss_param(rng.choice(req_pool), rng)
         elif kind == "miss_func":
             ex = make_miss_func(tool, rng)
         else:  # long_context

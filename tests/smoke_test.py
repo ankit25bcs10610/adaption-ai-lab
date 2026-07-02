@@ -68,6 +68,10 @@ def main() -> int:
     fenced = '```json\n{"action": "refuse", "message": "no tool"}\n```'
     ok &= check("parses fenced json", parse_model_output(fenced)["action"] == "refuse")
     ok &= check("parses trailing prose", parse_model_output('Sure! {"action":"clarify","message":"x"} ok')["action"] == "clarify")
+    # <think> firewall: brace-y reasoning must not be mistaken for the answer JSON.
+    thinky = '<think>Maybe I should {call foo} but no tool fits</think>{"action":"refuse","message":"no tool"}'
+    ok &= check("think block ignored, answer parsed", parse_model_output(thinky)["action"] == "refuse")
+    ok &= check("dangling think -> parse fail", parse_model_output('<think>reasoning {a:1} with no close') is None)
 
     print("schema_validator:")
     good, _ = validate_call({"name": "get_weather", "arguments": {"city": "Mumbai"}}, TOOLS)
@@ -87,6 +91,19 @@ def main() -> int:
     ok &= check("all are hard negatives", all(e["meta"]["source"] == "hard_negative" for e in hn))
     ok &= check("kinds valid", all(e["answer"]["type"] in ("refuse", "clarify") for e in hn))
     ok &= check("determinism", hard_negatives.generate(TOOLS, 12, {"no_tool": 0.4, "missing_arg": 0.35, "ambiguous": 0.25}, seed=1) == hn)
+    # Hammer no_tool: from a real positive, the offered tools must EXCLUDE the gold tool -> refuse.
+    _hammer_pool = TOOLS + [
+        {"name": "send_email", "description": "Send an email", "parameters": {"type": "object", "properties": {"to": {"type": "string"}}, "required": ["to"]}},
+        {"name": "create_event", "description": "Create a calendar event", "parameters": {"type": "object", "properties": {"title": {"type": "string"}}, "required": ["title"]}},
+    ]
+    _pos = {"tools": [TOOLS[0]], "query": "What's the weather in Mumbai?",
+            "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Mumbai"}}]},
+            "meta": {"source": "toolace"}}
+    hn_pos = hard_negatives.generate(_hammer_pool, 40, {"no_tool": 1.0}, seed=3, positives=[_pos])
+    nt = [e for e in hn_pos if e["meta"].get("hn_kind") == "no_tool" and "removed_tool" in e["meta"]]
+    ok &= check("hammer no_tool generated", len(nt) > 0)
+    ok &= check("hammer excludes gold tool", all("get_weather" not in [t["name"] for t in e["tools"]] for e in nt))
+    ok &= check("hammer answer is refuse", all(e["answer"]["type"] == "refuse" for e in nt))
 
     print("eval judge:")
     pos = {"tools": TOOLS, "query": "weather?", "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Mumbai"}}]}, "meta": {"hn_kind": None}}
@@ -137,6 +154,10 @@ def main() -> int:
     ok &= check("hard-neg rejected is a call", json.loads(pairs[1]["rejected"])["action"] == "call")
     ok &= check("hard-neg chosen is refuse", json.loads(pairs[1]["chosen"])["action"] == "refuse")
     ok &= check("preference determinism", build_pairs([pos, hn_ex], seed=1) == pairs)
+    # Poison guard: no pair may have rejected == chosen, and every positive's rejected is a real error.
+    ok &= check("no poison pair (chosen==rejected)", all(p["chosen"] != p["rejected"] for p in pairs))
+    from src.build_preference import _confirmed_wrong
+    ok &= check("positive rejected is confirmed wrong", _confirmed_wrong(pos, json.loads(pairs[0]["rejected"])))
 
     print("multiturn:")
     from src import multiturn as mt
