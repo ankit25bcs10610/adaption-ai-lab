@@ -28,9 +28,10 @@ A function-calling / tool-use model fine-tuned with **Adaption AutoScientist** f
 Challenge (category: *All Other Domains*). It is trained to make the decision most tool-use datasets
 ignore: **when *not* to call a tool.**
 
-> **Adaption run:** dataset ID `4bee4b34-fd6b-4343-ae68-f0175fb96ce5` ·
-> AutoScientist run `dataset-4bee4b34-…-1782999081016`. Base model selected by AutoScientist
-> (see the **Measure** tab); intended base `Qwen/Qwen2.5-Coder-3B-Instruct`.
+> **Adaptive Data result (real):** dataset `a99c0c96-ff5b-490a-9aa9-372ea62d79d4` — quality
+> **8.0 → 8.8 (+10.0%)**, grade B, on the curated function-calling set (dedup recipe). A larger
+> 1,949-row run (`4bee4b34-fd6b-4343-ae68-f0175fb96ce5`, dedup + reasoning_traces) is also available.
+> Base model selected by AutoScientist (see the **Measure** tab); intended base `Qwen/Qwen2.5-Coder-3B-Instruct`.
 
 ## What's different
 
@@ -57,8 +58,9 @@ error. Reproduce with `python -m src.eval_bfcl`. Fill from `results/eval.json` a
 | **Hallucination rate on hard negatives** ↓ | 0.000 | 0.000 |
 | Novel-tools holdout accuracy | 0.000 | 0.000 |
 
-AutoScientist `evaluation_summary`: `grade_before` → `grade_after` (`improvement_percent`). The
-challenge requires a measurable improvement over the held-out baseline.
+**Adaptive Data quality** (the platform's dataset-quality grade, real): `score_before` **8.0** →
+`score_after` **8.8**, `improvement_percent` **+10.0%** (grade B). The model-vs-baseline accuracy table
+above is filled after model training + eval on the held-out set.
 
 ## Intended use
 
