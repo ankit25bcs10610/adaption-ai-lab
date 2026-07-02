@@ -23,6 +23,46 @@ import time
 import yaml
 
 
+def _patch_httpx_timeout(seconds: float = 900.0) -> None:
+    """Widen httpx timeouts so multi-MB dataset uploads don't abort mid-stream (httpx.WriteTimeout).
+
+    The SDK's ``do_upload_file`` PUTs the whole file to S3 via the module-level ``httpx.put(url,
+    content=...)`` with NO timeout, so httpx applies its 5s per-request write timeout — too short for
+    a ~10MB body. That per-request default can't be raised by widening the Client constructor, so we
+    wrap ``httpx.put``/``httpx.request`` directly. We also widen the Client constructors for the async
+    upload path (which builds its own client) and the SDK's own client.
+    """
+    try:
+        import httpx
+    except ImportError:
+        return
+    # 1. Wrap the top-level convenience functions used by the S3 PUT upload.
+    for fn_name in ("put", "request", "post"):
+        fn = getattr(httpx, fn_name, None)
+        if fn is None or getattr(fn, "_timeout_patched", False):
+            continue
+
+        def _wrapped(*a, _fn=fn, **kw):
+            kw.setdefault("timeout", httpx.Timeout(seconds))
+            return _fn(*a, **kw)
+
+        _wrapped._timeout_patched = True
+        setattr(httpx, fn_name, _wrapped)
+    # 2. Widen the Client constructors (covers the async upload path + secondary clients).
+    for cls_name in ("Client", "AsyncClient"):
+        cls = getattr(httpx, cls_name, None)
+        if cls is None or getattr(cls.__init__, "_timeout_patched", False):
+            continue
+        orig = cls.__init__
+
+        def _init(self, *a, _orig=orig, **kw):
+            kw.setdefault("timeout", httpx.Timeout(seconds))
+            _orig(self, *a, **kw)
+
+        _init._timeout_patched = True
+        cls.__init__ = _init
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="config.yaml")
@@ -39,7 +79,12 @@ def main() -> None:
     except ImportError:
         raise SystemExit("Install the SDK: pip install adaption  (see adaptionlabs.ai)")
 
-    client = Adaption(api_key=api_key)
+    # The SDK's default timeout (60s total) aborts multi-MB dataset uploads. Raise it via the
+    # supported constructor arg; also patch httpx as a fallback for any secondary (e.g. storage) client.
+    import httpx
+
+    _patch_httpx_timeout(900.0)
+    client = Adaption(api_key=api_key, timeout=httpx.Timeout(900.0, connect=10.0))
 
     train_pc = os.path.join(cfg["paths"]["out_dir"], "train_pc.jsonl")
     if not os.path.exists(train_pc):
@@ -96,7 +141,8 @@ def main() -> None:
         job_specification=job_specification,
     )
     run_id = getattr(run, "id", run)
-    result = client.datasets.wait_for_completion(run_id)
+    # wait_for_completion polls by DATASET id (the SDK tracks the run against its dataset), not run id.
+    result = client.datasets.wait_for_completion(dataset_id, timeout=7200)
 
     # 4. Report -----------------------------------------------------------------
     summary = getattr(result, "evaluation_summary", None) or _get(result, "evaluation_summary")
