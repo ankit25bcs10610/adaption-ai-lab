@@ -1,89 +1,214 @@
-# AutoScientist Challenge — Function-Calling Entry
+<div align="center">
 
-A **data-centric** submission for the Adaption AutoScientist Challenge (category: *All Other Domains* /
-tool-use). The whole thesis: the Adaption platform automates the training loop, so the win comes from the
-**dataset**, not the model. Our edge is a curated function-calling set that deliberately mixes in
-**hard-negative examples** — cases where the correct behavior is *not* to call a tool (no applicable tool,
-missing argument, or ambiguous choice). Baselines fail these constantly; training on them produces a
-measurable, provable improvement.
+# Adaption AI Lab
 
-## Why this wins
+**Two data-centric model submissions for the [Adaption AutoScientist Challenge](https://adaptionlabs.ai/blog/autoscientist-challenge) — a reliable function-calling model and a multimodal chart-understanding model, each built around an original, self-verifying dataset.**
 
-- **Weak, public baseline.** Even good 8B models score ~50% on the Berkeley Function-Calling Leaderboard,
-  and its irrelevance/hallucination category is where most training data is silent.
-- **Fits the platform.** Pure text in / JSON out — exactly the `prompt`/`completion` post-training Adaption
-  runs on Together AI. No audio/vision pipeline.
-- **The moat is data, not compute.** ~2–5k curated examples with a ~25% hard-negative slice beats a large
-  noisy set (LIMA effect), and the hard negatives are original contribution judges reward.
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![Tests](https://img.shields.io/badge/tests-93%20passing-22C55E)](#testing)
+[![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](#license)
 
-## Pipeline
+</div>
+
+---
+
+## Overview
+
+The AutoScientist Challenge automates the model training loop, so the competitive edge is **the dataset, not the compute**. This repository takes that premise literally: each track is a reproducible, seeded data pipeline whose originality lever is a dataset that is *correct by construction* and targets exactly where baselines fail.
+
+| Track | Category | Core idea | Originality lever |
+|---|---|---|---|
+| **Function-Calling** (`src/`) | All Other Domains | A tool-use model that **refuses and clarifies** instead of hallucinating tool calls | Hard-negative examples (no-tool / missing-arg / ambiguous) + multi-turn + schema-drift slices |
+| **Data Visualization** (`src/viz/`) | Data Visualization | A multimodal **chart-reading** model, English + Hindi | Self-verifying synthetic chart generator + Devanagari/romanized chart-QA slice (HackIndia track) |
+
+Both tracks ship an evaluation harness, model/dataset cards, an open-release path (Hugging Face + Kaggle), and a live demo. Everything is offline-testable: heavy dependencies (`torch`, `transformers`, `datasets`, the Adaption SDK) are lazily imported so the correctness-critical logic runs with only stdlib + `numpy`.
+
+---
+
+## Table of contents
+
+- [Repository layout](#repository-layout)
+- [Quickstart](#quickstart)
+- [Track 1 — Function calling](#track-1--function-calling)
+- [Track 2 — Data visualization](#track-2--data-visualization)
+- [Frontend](#frontend)
+- [Testing](#testing)
+- [Reproducibility](#reproducibility)
+- [How this maps to the judging criteria](#how-this-maps-to-the-judging-criteria)
+- [Roadmap](#roadmap)
+- [License & acknowledgements](#license--acknowledgements)
+
+---
+
+## Repository layout
 
 ```
-Core
-1. build_dataset.py   download xLAM + ToolACE -> quality filter -> curate -> hard negatives ->
-                      novel-tool holdout -> dedup -> split
-2. dedup.py           MinHash + semantic near-dup removal + cross-split leakage check
-3. baseline.py        run eval on the RAW base model -> honest "grade_before" number
-4. train_adaption.py  upload to Adaption, run AutoScientist -> grade_before/after/improvement_percent
-5. eval_harness.py    re-run the SAME eval on the fine-tuned model -> confirm margin
-6. release.py         push weights + dataset to HF AND Kaggle
-7. fill_model_card.py auto-populate MODEL_CARD.md from results/*.json
-8. app/app.py         Gradio ZeroGPU demo: refusal vs. hallucination side-by-side
-
-Strength add-ons
-- eval_bfcl.py        BFCL-style category breakdown (simple/multiple/parallel/irrelevance/clarify) +
-                      lenient AST-style arg matching; eval test_novel.jsonl for generalization
-- quality_filter.py   heuristic (offline) or LLM-judge scoring; set dataset.quality_keep_frac < 1.0
-- build_preference.py DPO pairs (chosen=correct refuse/call, rejected=hallucinated call) -> train_dpo.py
-- ablation.py         subsets at 25/50/100% -> accuracy-vs-size table + plot
-- error_analysis.py   group failures by category + hard-negative kind -> data-iteration loop
+.
+├── src/                     # Function-calling track
+│   ├── build_dataset.py       xLAM + ToolACE + Toucan → curate → hard-neg / multi-turn / schema-drift → dedup → split
+│   ├── hard_negatives.py      no-tool / missing-arg / ambiguous generators (the moat)
+│   ├── multiturn.py           BFCL miss_param / miss_func / long_context
+│   ├── schema_drift.py        tools whose schema changed under the model
+│   ├── dedup.py               MinHash + semantic near-dup + cross-split leakage check
+│   ├── quality_filter.py      heuristic scorer  ·  claude_judge.py  LLM-as-judge (Anthropic SDK)
+│   ├── build_preference.py    DPO pairs (chosen=refuse/clarify, rejected=hallucinated call) → train_dpo.py
+│   ├── eval_harness.py        strict scorer   ·  eval_bfcl.py  BFCL-aligned + novel-tools split
+│   ├── error_analysis.py      failures by category/kind   ·  eval_report.py  HTML report + confusion matrix
+│   ├── train_adaption.py      Adaption AutoScientist SDK run   ·  baseline.py  honest before-number
+│   ├── export_gguf.py · export_bfcl.py · release.py · fill_model_card.py
+│   └── viz/                 # Data-visualization track
+│       ├── synth_charts.py     self-verifying chart generator (9 chart types, GT correct by construction)
+│       ├── indic_charts.py     Hindi/Devanagari + romanized slice (paired en/hi twins)
+│       ├── eval_chart.py       hardened ChartQA relaxed-accuracy scorer
+│       ├── format_utils.py     canonical schema + multimodal chat/base64 rendering
+│       ├── build_dataset.py · train_adaption.py · baseline.py · gallery.py
+│       └── model_card_template.md · dataset_card_template.md · README.md
+├── web/                     # Next.js 14 + react-three-fiber landing page (in-browser tool-call playground)
+├── site/                    # Zero-build single-file landing page (Three.js)
+├── app/                     # Gradio ZeroGPU demo (function-calling)
+├── tests/                   # Offline test suites (tests/smoke_test.py, tests/viz/test_viz.py)
+├── docs/WINNING.md          # Research-backed strategy notes
+├── scripts/run_all.sh       # End-to-end function-calling pipeline
+├── requirements.txt · config.yaml
 ```
 
-Run the core end-to-end: `bash scripts/run_all.sh`. See `dataset_card_template.md` for the HF dataset card.
+---
 
-## The canonical example format
+## Quickstart
 
-Every example is stored as one JSON object (see `src/format_utils.py`):
+```bash
+git clone https://github.com/ankit25bcs10610/adaption-ai-lab.git
+cd adaption-ai-lab
+
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+
+# Run the offline test suites (no downloads, no API keys)
+python -m tests.smoke_test        # function-calling  → ALL PASS
+python -m tests.viz.test_viz      # data-visualization → ALL PASS
+```
+
+Credentials are read from the environment only when you reach the training/release steps:
+
+```bash
+export ADAPTION_API_KEY=pt_live_...     # adaptionlabs.ai
+export HF_TOKEN=...                      # or: hf auth login
+export KAGGLE_USERNAME=... KAGGLE_KEY=...
+export ANTHROPIC_API_KEY=...            # optional: Claude LLM-as-judge quality filter
+```
+
+---
+
+## Track 1 — Function calling
+
+**Thesis.** Most function-calling datasets only contain examples where a tool *should* be called. Real evaluations (and the Berkeley Function-Calling Leaderboard's irrelevance category) heavily penalize a model for inventing a call when none applies or guessing a missing argument — and almost nobody trains for it. That gap is the entire edge.
+
+**Canonical example** (`src/format_utils.py`) — one JSON envelope for every decision:
 
 ```json
 {
-  "tools": [ { "name": "...", "description": "...", "parameters": { ...JSON Schema... } } ],
-  "query": "user request text",
-  "answer": {
-    "type": "tool_call" | "refuse" | "clarify",
-    "calls": [ { "name": "...", "arguments": { ... } } ],   // for tool_call
-    "content": "..."                                          // for refuse/clarify
-  },
-  "meta": { "source": "xlam|toolace|hard_negative", "hn_kind": "no_tool|missing_arg|ambiguous|null" }
+  "tools": [{ "name": "...", "description": "...", "parameters": { "...JSON Schema..." } }],
+  "query": "user request",
+  "answer": { "type": "tool_call | refuse | clarify", "calls": [...], "content": "..." },
+  "meta": { "source": "xlam|toolace|hard_negative|multiturn|schema_drift", "hn_kind": "no_tool|missing_arg|ambiguous" }
 }
 ```
 
-`format_utils.to_prompt_completion()` renders this into the `prompt` / `completion` columns Adaption expects,
-using the base model's own chat template.
-
-## Setup
+**Pipeline**
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-export HF_TOKEN=...            # huggingface
-export ADAPTION_API_KEY=...    # pt_live_...  (from adaptionlabs.ai)
-export KAGGLE_USERNAME=... KAGGLE_KEY=...
+python -m src.build_dataset --config config.yaml   # build, curate, dedup, split
+python -m src.baseline       --config config.yaml   # honest "before" number
+python -m src.train_adaption --config config.yaml   # Adaption AutoScientist run
+python -m src.eval_bfcl      --model <finetuned> --data data/out/test.jsonl
+python -m src.eval_report                            # HTML report + call/refuse/clarify confusion matrix
+python -m src.fill_model_card --username <you>       # auto-fill MODEL_CARD.md from results/*.json
 ```
 
-## Judging-criteria coverage
+Data sources are permissively licensed only: `Salesforce/xlam-function-calling-60k` (CC-BY-4.0), `Team-ACE/ToolACE` (Apache-2.0), optional `Agent-Ark/Toucan-1.5M` (Apache-2.0). Base model: `Qwen/Qwen2.5-Coder-3B-Instruct`. Full strategy in [`docs/WINNING.md`](docs/WINNING.md).
 
-| Criterion | Where we address it |
+---
+
+## Track 2 — Data visualization
+
+**Thesis.** A chart is an image, so text-only entrants can't compete — and the gap is wide and measurable (on CharXiv, GPT-4o scores ~47% on reasoning questions vs ~80% human). Two levers most competitors lack:
+
+1. **Self-verifying synthetic charts** (`src/viz/synth_charts.py`) — matplotlib renders 9 chart types and the QA ground-truth is computed from the underlying data, with the on-chart value labels produced by the *same* formatter as the gold answer. A perfectly-reading model is never graded wrong. Hardened against ~30 adversarial edge cases (integer-quantum ties, unique-extremum guards, open-gap count thresholds, Pearson-r scatter, series-named questions on multi-series charts).
+2. **Hindi/Devanagari + romanized slice** (`src/viz/indic_charts.py`) — reuses the same ground-truth with localized labels and questions, keeping numeric gold ASCII and categorical gold as the on-chart string. Paired `en`/`hi` twins share a `pair_id` for a clean matched-pair Δaccuracy — the HackIndia impact story.
+
+```bash
+python -m src.viz.build_dataset --out data/viz --n-synth 400 --n-indic 200
+python -m src.viz.gallery       --data-dir data/viz --n 18     # browsable HTML gallery
+python -m src.viz.baseline      --model Qwen/Qwen3-VL-8B-Instruct --data data/viz/test.jsonl
+python -m src.viz.train_adaption --data data/viz/train_tab.jsonl --dry-run
+```
+
+Primary data: `hewei2001/ReachQA` (MIT). Base VLM: `Qwen/Qwen3-VL-8B-Instruct` or `google/gemma-3-4b-it` (LoRA). See [`src/viz/README.md`](src/viz/README.md).
+
+<div align="center"><em>Example (Hindi) — “माह अनुसार तापमान”: title, axes, and categories in Devanagari; ASCII value labels that match the gold by construction.</em></div>
+
+---
+
+## Frontend
+
+| App | Stack | Highlights |
+|---|---|---|
+| `web/` | Next.js 14 · react-three-fiber · Tailwind · framer-motion | 3D hero, **in-browser tool-call playground** (toggle a tool → a call becomes a refusal), animated benchmarks, dark/light toggle, shadcn/21st.dev-ready |
+| `site/` | Single HTML file · Three.js · Tailwind CDN | Zero-build variant of the same landing page |
+
+```bash
+cd web && npm install && npm run dev     # → http://localhost:3000
+```
+
+---
+
+## Testing
+
+Both suites are fully offline (no model downloads, no API keys) and exercise the correctness-critical logic — scorers, ground-truth generation, determinism, edge cases surfaced by adversarial review.
+
+```bash
+python -m tests.smoke_test      # 45 checks — function-calling
+python -m tests.viz.test_viz    # 53 checks — data-visualization (scorer edge cases + synth GT + split integrity)
+```
+
+Every module is `py_compile`-clean. The data-viz scorer and synthetic generator were each hardened against a dedicated adversarial-review pass (percent reconciliation, Indic digits/lakh grouping, cross-language trend matching, train/test image leakage, series-ambiguity, and more).
+
+---
+
+## Reproducibility
+
+- **Seeded end to end** — every generator threads a single `random.Random(seed)`; per-example RNG is derived by hashing `(seed, index)` (collision-resistant), so output is byte-identical across runs.
+- **Pinned dependencies** in `requirements.txt`; `web/package-lock.json` for the frontend.
+- **No silent leakage** — MinHash + semantic dedup, cross-split leakage removal, novel-tool / novel-chart-type holdouts, and group-splitting so multi-question charts and paired en/hi twins never straddle splits.
+- **Permissive licensing throughout** — clean for the mandatory dual Hugging Face + Kaggle release.
+
+---
+
+## How this maps to the judging criteria
+
+| Criterion | Where it's addressed |
 |---|---|
-| Measurable improvement | `baseline.py` + `eval_harness.py` produce a base-vs-finetuned table with std error |
-| Dataset quality / originality | hard-negative generator (`hard_negatives.py`) + dedup + schema validation |
-| Real-world impact | tool-use / agent reliability is a core production pain point |
-| Depth of AutoScientist usage | `train_adaption.py` uses the SDK end-to-end and logs its evaluation summary |
-| Open-release quality | `model_card_template.md`, pinned `requirements.txt`, seeds, repro steps, Gradio demo |
+| Measurable improvement over baseline | `baseline.py` / `viz/baseline.py` + `eval_bfcl.py` / `eval_chart.py` — identical decoding, bootstrapped std error, base-vs-fine-tuned tables |
+| Dataset quality & originality | Hard-negative + multi-turn + schema-drift generators; self-verifying synthetic charts; Indic slice; dedup + quality filter |
+| Real-world impact | Agent tool-use reliability; multilingual (Hindi) chart understanding |
+| Depth of AutoScientist usage | `train_adaption.py` — SDK end-to-end with recipes, brand controls, `estimate=True`, and evaluation-summary logging |
+| Open-release quality | Auto-filled model + dataset cards, pinned deps, seeds, HTML eval report, GGUF export, live demos |
 
-## Status / TODO before submit
+---
 
-- [ ] Confirm base model + exact metric with Adaption in `#autoscient-challenge` (Discord) — de-risks everything.
-- [ ] Run pipeline, confirm improvement margin.
-- [ ] Publish to HF + Kaggle, fill model card.
-- [ ] Ship Gradio Space, post on LinkedIn/X tagging @adaption_ai.
+## Roadmap
+
+- [ ] Confirm the per-category baseline model + exact metric in the challenge Discord (`#autoscient-challenge`) — the one external unknown.
+- [ ] Run each pipeline on the platform; confirm the improvement margin; fill the cards from `results/`.
+- [ ] Publish weights + datasets to Hugging Face **and** Kaggle; ship the demos; post tagging `@adaption_ai`.
+
+---
+
+## License & acknowledgements
+
+Code and generated datasets released under **Apache-2.0**. Third-party data retains its upstream license
+(xLAM CC-BY-4.0, ToolACE / Toucan / ReachQA Apache-2.0/MIT) with attribution preserved in the dataset cards.
+Built for the Adaption AutoScientist Challenge × HackIndia.
+
+<div align="center"><sub>🤖 Engineered with <a href="https://claude.com/claude-code">Claude Code</a></sub></div>
