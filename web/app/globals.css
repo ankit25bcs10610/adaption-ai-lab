@@ -1,0 +1,156 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Light theme (shadcn/21st.dev tokens, slate base) */
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --border: 214 32% 88%;
+    --muted: 215 20% 92%;
+    --muted-foreground: 215 16% 40%;
+    --ring: 187 85% 53%;
+  }
+
+  /* Dark theme — the primary design ("code dark + run green") */
+  .dark {
+    --background: 222 47% 7%;
+    --foreground: 210 40% 98%;
+    --card: 218 40% 13%;
+    --border: 215 25% 24%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --ring: 187 85% 53%;
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+  ::selection {
+    background: rgba(34, 197, 94, 0.3);
+  }
+  :focus-visible {
+    outline: 2px solid #22d3ee;
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+}
+
+@property --a {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@layer components {
+  .glass {
+    @apply border backdrop-blur-xl;
+    background: hsl(var(--card) / 0.6);
+    border-color: hsl(var(--border) / 0.7);
+  }
+
+  .text-grad {
+    background: linear-gradient(120deg, hsl(var(--foreground)) 30%, #22d3ee 60%, #22c55e 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .glow-run {
+    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35), 0 10px 40px -10px rgba(34, 197, 94, 0.5);
+  }
+
+  /* Conic glowing animated border (21st.dev-style) */
+  .border-glow {
+    position: relative;
+    border-radius: 1rem;
+  }
+  .border-glow::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: conic-gradient(
+      from var(--a),
+      transparent 0 55%,
+      #22c55e 70%,
+      #22d3ee 80%,
+      transparent 92%
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.9;
+    animation: border-spin 6s linear infinite;
+  }
+
+  /* Aurora / spotlight background */
+  .aurora {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .aurora::before,
+  .aurora::after {
+    content: "";
+    position: absolute;
+    width: 60vw;
+    height: 60vw;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.3;
+    animation: drift 22s ease-in-out infinite alternate;
+  }
+  .aurora::before {
+    background: radial-gradient(circle, #22c55e, transparent 60%);
+    top: -15vw;
+    left: -10vw;
+  }
+  .aurora::after {
+    background: radial-gradient(circle, #8b5cf6, transparent 60%);
+    bottom: -20vw;
+    right: -10vw;
+    animation-delay: -8s;
+  }
+
+  .grid-fade {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: linear-gradient(hsl(var(--muted-foreground) / 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--muted-foreground) / 0.08) 1px, transparent 1px);
+    background-size: 44px 44px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+  }
+
+  .link-underline {
+    background-image: linear-gradient(#22c55e, #22c55e);
+    background-size: 0% 2px;
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    transition: background-size 0.3s;
+  }
+  .link-underline:hover {
+    background-size: 100% 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

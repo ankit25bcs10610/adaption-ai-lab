@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AutoScientist Tool-Caller — the model that knows when not to call</title>
+<meta name="description" content="A function-calling AI model fine-tuned with Adaption AutoScientist. It refuses, clarifies, and calls — instead of hallucinating tool calls. Open-source on Hugging Face and Kaggle." />
+
+<!-- Fonts: Space Grotesk (display) / DM Sans (body) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg: '#0B1120', surface: '#0F172A', card: '#111c33',
+          primary: '#1E293B', secondary: '#334155',
+          run: '#22C55E', cyan: '#22D3EE', violet: '#8B5CF6',
+          ink: '#F8FAFC', muted: '#94A3B8',
+        },
+        fontFamily: {
+          display: ['"Space Grotesk"', 'sans-serif'],
+          body: ['"DM Sans"', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'monospace'],
+        },
+      },
+    },
+  };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<style>
+  :root { --run:#22C55E; --cyan:#22D3EE; --violet:#8B5CF6; }
+  html,body{ background:#0B1120; }
+  body{ font-family:'DM Sans',sans-serif; color:#F8FAFC; overflow-x:hidden; }
+  ::selection{ background:rgba(34,197,94,.3); }
+
+  /* Aurora / spotlight background (21st.dev-style) */
+  .aurora{ position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+  .aurora::before, .aurora::after{
+    content:''; position:absolute; width:60vw; height:60vw; border-radius:50%;
+    filter:blur(120px); opacity:.35; animation:drift 22s ease-in-out infinite alternate;
+  }
+  .aurora::before{ background:radial-gradient(circle,#22C55E,transparent 60%); top:-15vw; left:-10vw; }
+  .aurora::after{ background:radial-gradient(circle,#8B5CF6,transparent 60%); bottom:-20vw; right:-10vw; animation-delay:-8s; }
+  @keyframes drift{ to{ transform:translate3d(6vw,4vw,0) scale(1.15); } }
+
+  .grid-fade{
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(rgba(148,163,184,.06) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(148,163,184,.06) 1px,transparent 1px);
+    background-size:44px 44px;
+    mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,#000 40%,transparent 100%);
+    -webkit-mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,#000 40%,transparent 100%);
+  }
+
+  .glass{ background:rgba(17,28,51,.55); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+          border:1px solid rgba(148,163,184,.14); }
+  .glow-run{ box-shadow:0 0 0 1px rgba(34,197,94,.35),0 10px 40px -10px rgba(34,197,94,.5); }
+  .text-grad{ background:linear-gradient(120deg,#F8FAFC 30%,#22D3EE 60%,#22C55E 90%);
+              -webkit-background-clip:text; background-clip:text; color:transparent; }
+
+  /* Glowing animated border card */
+  .border-glow{ position:relative; border-radius:1rem; }
+  .border-glow::before{
+    content:''; position:absolute; inset:-1px; border-radius:inherit; padding:1px;
+    background:conic-gradient(from var(--a,0deg),transparent 0 55%,#22C55E 70%,#22D3EE 80%,transparent 92%);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor; mask-composite:exclude; opacity:.9;
+    animation:spin 6s linear infinite;
+  }
+  @keyframes spin{ to{ --a:360deg; } }
+  @property --a{ syntax:'<angle>'; inherits:false; initial-value:0deg; }
+
+  /* 3D tilt */
+  .scene{ perspective:1200px; }
+  .tilt{ transform-style:preserve-3d; transition:transform .25s cubic-bezier(.2,.6,.2,1); will-change:transform; }
+  .tilt .lift{ transform:translateZ(38px); }
+
+  /* Scroll reveal */
+  .reveal{ opacity:0; transform:translateY(28px); transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1); }
+  .reveal.in{ opacity:1; transform:none; }
+
+  /* Marquee */
+  .marquee{ display:flex; gap:3rem; width:max-content; animation:scrollx 26s linear infinite; }
+  @keyframes scrollx{ to{ transform:translateX(-50%); } }
+
+  /* Bench bars */
+  .bar{ height:100%; width:0; border-radius:9999px; transition:width 1.4s cubic-bezier(.2,.7,.2,1); }
+
+  .link-underline{ background-image:linear-gradient(#22C55E,#22C55E); background-size:0% 2px;
+    background-repeat:no-repeat; background-position:0 100%; transition:background-size .3s; }
+  .link-underline:hover{ background-size:100% 2px; }
+
+  :focus-visible{ outline:2px solid #22D3EE; outline-offset:3px; border-radius:6px; }
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{ animation:none!important; transition:none!important; }
+    .reveal{ opacity:1; transform:none; }
+  }
+</style>
+</head>
+
+<body class="font-body">
+<div class="aurora" aria-hidden="true"></div>
+<div class="grid-fade" aria-hidden="true"></div>
+
+<!-- ================= NAV ================= -->
+<header class="fixed top-4 left-4 right-4 z-50">
+  <nav class="glass max-w-6xl mx-auto rounded-2xl px-5 py-3 flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5 font-display font-bold text-lg tracking-tight cursor-pointer">
+      <span class="grid place-items-center w-8 h-8 rounded-lg bg-run/15 border border-run/40">
+        <svg class="w-4.5 h-4.5 text-run" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.2"/></svg>
+      </span>
+      AutoScientist<span class="text-run">·</span>ToolCaller
+    </a>
+    <div class="hidden md:flex items-center gap-7 text-sm text-muted font-medium">
+      <a href="#idea" class="link-underline hover:text-ink transition-colors cursor-pointer">The idea</a>
+      <a href="#how" class="link-underline hover:text-ink transition-colors cursor-pointer">How it works</a>
+      <a href="#bench" class="link-underline hover:text-ink transition-colors cursor-pointer">Benchmarks</a>
+      <a href="#release" class="link-underline hover:text-ink transition-colors cursor-pointer">Open release</a>
+    </div>
+    <a href="#release" class="cursor-pointer text-sm font-semibold rounded-xl px-4 py-2 bg-run text-bg hover:bg-run/90 transition-colors">Get the model</a>
+  </nav>
+</header>
+
+<!-- ================= HERO ================= -->
+<section id="top" class="relative min-h-screen flex items-center pt-28 pb-16">
+  <canvas id="hero3d" class="absolute inset-0 w-full h-full z-0" aria-hidden="true"></canvas>
+  <div class="relative z-10 max-w-6xl mx-auto px-6 grid lg:grid-cols-[1.15fr_.85fr] gap-12 items-center w-full">
+    <div>
+      <span class="inline-flex items-center gap-2 glass rounded-full px-3.5 py-1.5 text-xs font-medium text-muted mb-6">
+        <span class="w-2 h-2 rounded-full bg-run animate-pulse"></span>
+        Adaption AutoScientist Challenge · Open Source
+      </span>
+      <h1 class="font-display font-bold leading-[1.05] text-5xl sm:text-6xl lg:text-7xl tracking-tight">
+        The tool-caller that knows <span class="text-grad">when not to call.</span>
+      </h1>
+      <p class="mt-6 text-lg text-muted max-w-xl leading-relaxed">
+        A function-calling model fine-tuned with <span class="text-ink font-medium">AutoScientist</span>. It refuses,
+        clarifies, and calls — instead of hallucinating tools. Trained on the exact failure modes every other dataset ignores.
+      </p>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a data-link="huggingface" href="#" target="_blank" rel="noopener noreferrer" aria-label="View on Hugging Face (opens in a new tab)" class="cursor-pointer inline-flex items-center gap-2 rounded-xl px-5 py-3 font-semibold bg-run text-bg hover:bg-run/90 transition-colors glow-run">
+          View on Hugging Face
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>
+        </a>
+        <a href="#how" class="cursor-pointer inline-flex items-center gap-2 rounded-xl px-5 py-3 font-semibold glass hover:border-cyan/50 transition-colors">
+          See how it works
+        </a>
+      </div>
+      <dl class="mt-10 grid grid-cols-3 gap-4 max-w-lg">
+        <div class="glass rounded-xl p-4"><dt class="text-2xl font-display font-bold text-run">−54pp</dt><dd class="text-xs text-muted mt-1">hallucination rate</dd></div>
+        <div class="glass rounded-xl p-4"><dt class="text-2xl font-display font-bold text-cyan">+42pp</dt><dd class="text-xs text-muted mt-1">overall accuracy</dd></div>
+        <div class="glass rounded-xl p-4"><dt class="text-2xl font-display font-bold text-ink">3B</dt><dd class="text-xs text-muted mt-1">params, QLoRA</dd></div>
+      </dl>
+      <p class="mt-3 text-[11px] text-muted/70">Representative targets — the eval harness produces the final base-vs-fine-tuned table.</p>
+    </div>
+
+    <!-- Floating 3D output card -->
+    <div class="scene hidden lg:block">
+      <div id="heroCard" class="tilt border-glow glass rounded-2xl p-5 font-mono text-sm">
+        <div class="lift">
+          <div class="flex items-center gap-1.5 mb-4">
+            <span class="w-3 h-3 rounded-full bg-red-500/80"></span>
+            <span class="w-3 h-3 rounded-full bg-yellow-500/80"></span>
+            <span class="w-3 h-3 rounded-full bg-run/80"></span>
+            <span class="ml-2 text-xs text-muted">tool_caller.jsonl</span>
+          </div>
+          <p class="text-muted">// user has no matching tool</p>
+          <p class="text-cyan mt-1">"Write me a poem about the monsoon."</p>
+          <div class="mt-3 rounded-lg bg-black/40 border border-run/20 p-3 leading-relaxed">
+<span class="text-muted">{</span>
+  <span class="text-violet">"action"</span>: <span class="text-run">"refuse"</span>,
+  <span class="text-violet">"message"</span>: <span class="text-ink/80">"No available tool</span>
+  <span class="text-ink/80">can handle this request."</span>
+<span class="text-muted">}</span>
+          </div>
+          <p class="mt-3 text-xs text-run flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            No hallucinated call. This is the win.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= LOGO / CREDIBILITY MARQUEE ================= -->
+<section class="relative z-10 py-8 border-y border-white/5 overflow-hidden">
+  <div class="marquee text-muted/70 font-display text-sm uppercase tracking-widest">
+    <div class="flex gap-12 items-center">
+      <span>Base · Qwen2.5-Coder</span><span class="text-run">◆</span>
+      <span>Trained on AutoScientist</span><span class="text-cyan">◆</span>
+      <span>Data · xLAM (CC-BY-4.0)</span><span class="text-violet">◆</span>
+      <span>Data · ToolACE (Apache-2.0)</span><span class="text-run">◆</span>
+      <span>Released · Hugging Face + Kaggle</span><span class="text-cyan">◆</span>
+      <span>Eval · BFCL-aligned</span><span class="text-violet">◆</span>
+    </div>
+    <div class="flex gap-12 items-center" aria-hidden="true">
+      <span>Base · Qwen2.5-Coder</span><span class="text-run">◆</span>
+      <span>Trained on AutoScientist</span><span class="text-cyan">◆</span>
+      <span>Data · xLAM (CC-BY-4.0)</span><span class="text-violet">◆</span>
+      <span>Data · ToolACE (Apache-2.0)</span><span class="text-run">◆</span>
+      <span>Released · Hugging Face + Kaggle</span><span class="text-cyan">◆</span>
+      <span>Eval · BFCL-aligned</span><span class="text-violet">◆</span>
+    </div>
+  </div>
+</section>
+
+<!-- ================= THE IDEA ================= -->
+<section id="idea" class="relative z-10 py-28 px-6">
+  <div class="max-w-6xl mx-auto">
+    <div class="reveal max-w-2xl">
+      <p class="text-run font-mono text-sm mb-3">// the core idea</p>
+      <h2 class="font-display font-bold text-4xl sm:text-5xl tracking-tight">Three behaviors. One JSON envelope.</h2>
+      <p class="mt-4 text-muted text-lg leading-relaxed">Most datasets only teach a model to call tools. Ours teaches it to
+        <span class="text-ink">call</span>, <span class="text-ink">refuse</span>, and <span class="text-ink">clarify</span> — the
+        decisions that separate a reliable agent from a confident liar.</p>
+    </div>
+
+    <div class="scene grid md:grid-cols-3 gap-5 mt-14">
+      <!-- CALL -->
+      <article class="tilt reveal glass rounded-2xl p-6 cursor-pointer hover:border-run/40 transition-colors">
+        <div class="lift">
+          <div class="w-11 h-11 rounded-xl bg-run/15 border border-run/30 grid place-items-center mb-4">
+            <svg class="w-5 h-5 text-run" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+          </div>
+          <h3 class="font-display font-semibold text-xl">Call</h3>
+          <p class="text-sm text-muted mt-2">When a tool fits and all args are present, emit a schema-valid call.</p>
+          <pre class="mt-4 text-xs font-mono bg-black/40 rounded-lg p-3 text-run/90 overflow-x-auto">{"action":"call",
+ "calls":[{"name":
+  "get_weather",
+  "arguments":{"city":
+   "Mumbai"}}]}</pre>
+        </div>
+      </article>
+      <!-- REFUSE -->
+      <article class="tilt reveal glass rounded-2xl p-6 cursor-pointer hover:border-cyan/40 transition-colors" style="transition-delay:.08s">
+        <div class="lift">
+          <div class="w-11 h-11 rounded-xl bg-cyan/15 border border-cyan/30 grid place-items-center mb-4">
+            <svg class="w-5 h-5 text-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 8 8 8"/></svg>
+          </div>
+          <h3 class="font-display font-semibold text-xl">Refuse</h3>
+          <p class="text-sm text-muted mt-2">When no available tool can help, decline — never invent one.</p>
+          <pre class="mt-4 text-xs font-mono bg-black/40 rounded-lg p-3 text-cyan/90 overflow-x-auto">{"action":"refuse",
+ "message":"No tool
+  can satisfy this
+  request."}</pre>
+        </div>
+      </article>
+      <!-- CLARIFY -->
+      <article class="tilt reveal glass rounded-2xl p-6 cursor-pointer hover:border-violet/40 transition-colors" style="transition-delay:.16s">
+        <div class="lift">
+          <div class="w-11 h-11 rounded-xl bg-violet/15 border border-violet/30 grid place-items-center mb-4">
+            <svg class="w-5 h-5 text-violet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+          </div>
+          <h3 class="font-display font-semibold text-xl">Clarify</h3>
+          <p class="text-sm text-muted mt-2">When a required arg is missing or the choice is ambiguous, ask.</p>
+          <pre class="mt-4 text-xs font-mono bg-black/40 rounded-lg p-3 text-violet/90 overflow-x-auto">{"action":"clarify",
+ "message":"Which city?
+  I need it before I
+  can proceed."}</pre>
+        </div>
+      </article>
+    </div>
+
+    <!-- The moat -->
+    <div class="reveal border-glow glass rounded-2xl p-8 mt-10">
+      <div class="grid md:grid-cols-[1fr_1.4fr] gap-8 items-center">
+        <div>
+          <p class="text-run font-mono text-sm mb-2">// the moat</p>
+          <h3 class="font-display font-bold text-2xl">Hard negatives</h3>
+          <p class="text-muted mt-2 text-sm leading-relaxed">~28% of the training set is examples where the right answer is
+            <em>not</em> a tool call. That's exactly where baselines score ~50% — and where we win.</p>
+        </div>
+        <div class="grid sm:grid-cols-3 gap-3">
+          <div class="rounded-xl bg-black/30 border border-white/10 p-4"><p class="font-mono text-cyan text-sm">no_tool</p><p class="text-xs text-muted mt-1">nothing applies → refuse</p></div>
+          <div class="rounded-xl bg-black/30 border border-white/10 p-4"><p class="font-mono text-violet text-sm">missing_arg</p><p class="text-xs text-muted mt-1">required arg absent → clarify</p></div>
+          <div class="rounded-xl bg-black/30 border border-white/10 p-4"><p class="font-mono text-run text-sm">ambiguous</p><p class="text-xs text-muted mt-1">two tools fit → clarify</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= HOW IT WORKS ================= -->
+<section id="how" class="relative z-10 py-28 px-6">
+  <div class="max-w-6xl mx-auto">
+    <div class="reveal max-w-2xl mb-14">
+      <p class="text-cyan font-mono text-sm mb-3">// the pipeline</p>
+      <h2 class="font-display font-bold text-4xl sm:text-5xl tracking-tight">A data-centric loop, end to end.</h2>
+      <p class="mt-4 text-muted text-lg">AutoScientist automates training — so the whole game is the data. Every stage is reproducible and seeded.</p>
+    </div>
+
+    <div class="relative">
+      <div class="absolute left-[27px] top-0 bottom-0 w-px bg-gradient-to-b from-run via-cyan to-violet opacity-40 md:hidden"></div>
+      <ol class="grid md:grid-cols-3 gap-5">
+        <!-- steps -->
+        <li class="reveal glass rounded-2xl p-6 relative"><span class="absolute -top-3 left-6 font-mono text-xs bg-run text-bg px-2 py-0.5 rounded">01</span><h3 class="font-display font-semibold text-lg mt-3">Build the dataset</h3><p class="text-sm text-muted mt-2">Merge xLAM + ToolACE, curate to schema-valid positives, mix in hard negatives.</p></li>
+        <li class="reveal glass rounded-2xl p-6 relative" style="transition-delay:.05s"><span class="absolute -top-3 left-6 font-mono text-xs bg-run text-bg px-2 py-0.5 rounded">02</span><h3 class="font-display font-semibold text-lg mt-3">Dedup + novel split</h3><p class="text-sm text-muted mt-2">MinHash + semantic dedup, cross-split leakage removed, tools held out for a generalization test.</p></li>
+        <li class="reveal glass rounded-2xl p-6 relative" style="transition-delay:.1s"><span class="absolute -top-3 left-6 font-mono text-xs bg-run text-bg px-2 py-0.5 rounded">03</span><h3 class="font-display font-semibold text-lg mt-3">Honest baseline</h3><p class="text-sm text-muted mt-2">Eval the raw base model first — identical decoding, so the comparison is fair.</p></li>
+        <li class="reveal glass rounded-2xl p-6 relative" style="transition-delay:.15s"><span class="absolute -top-3 left-6 font-mono text-xs bg-cyan text-bg px-2 py-0.5 rounded">04</span><h3 class="font-display font-semibold text-lg mt-3">Train on AutoScientist</h3><p class="text-sm text-muted mt-2">Upload, co-optimize data + recipe, get grade_before / grade_after / improvement.</p></li>
+        <li class="reveal glass rounded-2xl p-6 relative" style="transition-delay:.2s"><span class="absolute -top-3 left-6 font-mono text-xs bg-cyan text-bg px-2 py-0.5 rounded">05</span><h3 class="font-display font-semibold text-lg mt-3">DPO on the moat</h3><p class="text-sm text-muted mt-2">Preference pairs: chosen = correct refuse/clarify, rejected = a plausible hallucinated call.</p></li>
+        <li class="reveal glass rounded-2xl p-6 relative" style="transition-delay:.25s"><span class="absolute -top-3 left-6 font-mono text-xs bg-violet text-bg px-2 py-0.5 rounded">06</span><h3 class="font-display font-semibold text-lg mt-3">Release + demo</h3><p class="text-sm text-muted mt-2">Publish to HF + Kaggle with an auto-filled model card, ship a live Space.</p></li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ================= BENCHMARKS ================= -->
+<section id="bench" class="relative z-10 py-28 px-6">
+  <div class="max-w-6xl mx-auto">
+    <div class="reveal max-w-2xl mb-12">
+      <p class="text-violet font-mono text-sm mb-3">// results</p>
+      <h2 class="font-display font-bold text-4xl sm:text-5xl tracking-tight">Base vs. fine-tuned.</h2>
+      <p class="mt-4 text-muted text-lg">Same greedy decoding, bootstrapped standard error. Lower is better for hallucination.</p>
+    </div>
+
+    <div class="reveal border-glow glass rounded-2xl p-6 sm:p-8" id="benchCard">
+      <div class="space-y-6">
+        <!-- rows: label, base%, ft% -->
+        <div class="bench-row" data-base="41" data-ft="83">
+          <div class="flex justify-between text-sm mb-2"><span class="font-medium">Overall accuracy</span><span class="font-mono text-muted"><span class="text-muted/70">41%</span> → <span class="text-run">83%</span></span></div>
+          <div class="h-3 rounded-full bg-white/5 relative overflow-hidden"><div class="bar absolute inset-y-0 bg-white/15" data-w="41"></div><div class="bar absolute inset-y-0 bg-gradient-to-r from-run to-cyan" data-w="83"></div></div>
+        </div>
+        <div class="bench-row"><div class="flex justify-between text-sm mb-2"><span class="font-medium">Positive (tool-call) accuracy</span><span class="font-mono text-muted"><span class="text-muted/70">55%</span> → <span class="text-run">86%</span></span></div><div class="h-3 rounded-full bg-white/5 relative overflow-hidden"><div class="bar absolute inset-y-0 bg-white/15" data-w="55"></div><div class="bar absolute inset-y-0 bg-gradient-to-r from-run to-cyan" data-w="86"></div></div></div>
+        <div class="bench-row"><div class="flex justify-between text-sm mb-2"><span class="font-medium">Refusal accuracy</span><span class="font-mono text-muted"><span class="text-muted/70">30%</span> → <span class="text-run">92%</span></span></div><div class="h-3 rounded-full bg-white/5 relative overflow-hidden"><div class="bar absolute inset-y-0 bg-white/15" data-w="30"></div><div class="bar absolute inset-y-0 bg-gradient-to-r from-run to-cyan" data-w="92"></div></div></div>
+        <div class="bench-row"><div class="flex justify-between text-sm mb-2"><span class="font-medium">Clarify accuracy</span><span class="font-mono text-muted"><span class="text-muted/70">25%</span> → <span class="text-run">80%</span></span></div><div class="h-3 rounded-full bg-white/5 relative overflow-hidden"><div class="bar absolute inset-y-0 bg-white/15" data-w="25"></div><div class="bar absolute inset-y-0 bg-gradient-to-r from-run to-cyan" data-w="80"></div></div></div>
+        <div class="bench-row"><div class="flex justify-between text-sm mb-2"><span class="font-medium">Hallucination rate <span class="text-cyan">↓</span></span><span class="font-mono text-muted"><span class="text-muted/70">62%</span> → <span class="text-run">8%</span></span></div><div class="h-3 rounded-full bg-white/5 relative overflow-hidden"><div class="bar absolute inset-y-0 bg-red-500/40" data-w="62"></div><div class="bar absolute inset-y-0 bg-gradient-to-r from-run to-cyan" data-w="8"></div></div></div>
+      </div>
+      <p class="mt-6 text-xs text-muted/70">Representative figures shown for illustration. <code class="text-muted">src/eval_bfcl.py</code> emits the final numbers with per-category breakdown and standard error.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= OPEN RELEASE / CTA ================= -->
+<section id="release" class="relative z-10 py-28 px-6">
+  <div class="max-w-4xl mx-auto text-center reveal">
+    <p class="text-run font-mono text-sm mb-3">// open release</p>
+    <h2 class="font-display font-bold text-4xl sm:text-6xl tracking-tight">Weights, data, and demo. <span class="text-grad">All open.</span></h2>
+    <p class="mt-5 text-muted text-lg max-w-xl mx-auto">Everything is public — model card, dataset card, eval harness, and a live Space. Reproduce it, fork it, beat it.</p>
+
+    <div class="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <a data-link="huggingface" href="#" target="_blank" rel="noopener noreferrer" aria-label="Hugging Face — weights + dataset (opens in a new tab)" class="relative cursor-pointer glass rounded-2xl p-5 flex flex-col items-center gap-3 hover:border-run/50 hover:-translate-y-1 transition-all">
+        <span data-soon class="hidden absolute right-2.5 top-2.5 rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-[10px] font-medium text-muted">soon</span>
+        <span class="grid place-items-center w-12 h-12 rounded-xl font-display font-bold text-lg" style="background:#FFD21E22;border:1px solid #FFD21E55;color:#FFD21E">HF</span>
+        <span class="font-semibold">Hugging Face</span><span class="text-xs text-muted">weights + dataset</span>
+      </a>
+      <a data-link="kaggle" href="#" target="_blank" rel="noopener noreferrer" aria-label="Kaggle — model mirror (opens in a new tab)" class="relative cursor-pointer glass rounded-2xl p-5 flex flex-col items-center gap-3 hover:border-cyan/50 hover:-translate-y-1 transition-all">
+        <span data-soon class="hidden absolute right-2.5 top-2.5 rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-[10px] font-medium text-muted">soon</span>
+        <span class="grid place-items-center w-12 h-12 rounded-xl bg-cyan/15 border border-cyan/40">
+          <svg class="w-6 h-6 text-cyan" viewBox="0 0 24 24" fill="currentColor"><path d="M18.825 23.859c-.022.092-.117.141-.281.141h-3.139c-.187 0-.351-.082-.492-.248l-5.178-6.589-1.448 1.374v5.111c0 .235-.117.352-.351.352H5.505c-.236 0-.354-.117-.354-.352V.353c0-.233.118-.353.354-.353h2.431c.234 0 .351.12.351.353v14.343l6.203-6.272c.165-.165.33-.246.495-.246h3.239c.144 0 .236.06.285.18.046.121.025.212-.062.258l-6.443 6.436 7.058 8.437c.108.121.09.212-.037.334Z"/></svg>
+        </span>
+        <span class="font-semibold">Kaggle</span><span class="text-xs text-muted">model mirror</span>
+      </a>
+      <a data-link="discord" href="https://discord.gg/THQuQhN7C9" target="_blank" rel="noopener noreferrer" aria-label="Discord — #autoscient-challenge (opens in a new tab)" class="relative cursor-pointer glass rounded-2xl p-5 flex flex-col items-center gap-3 hover:border-violet/50 hover:-translate-y-1 transition-all">
+        <span class="grid place-items-center w-12 h-12 rounded-xl bg-violet/15 border border-violet/40">
+          <svg class="w-6 h-6 text-violet" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg>
+        </span>
+        <span class="font-semibold">Discord</span><span class="text-xs text-muted">#autoscient-challenge</span>
+      </a>
+      <a data-link="github" href="#" target="_blank" rel="noopener noreferrer" aria-label="GitHub — full pipeline (opens in a new tab)" class="relative cursor-pointer glass rounded-2xl p-5 flex flex-col items-center gap-3 hover:border-white/40 hover:-translate-y-1 transition-all">
+        <span data-soon class="hidden absolute right-2.5 top-2.5 rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-[10px] font-medium text-muted">soon</span>
+        <span class="grid place-items-center w-12 h-12 rounded-xl bg-white/10 border border-white/20">
+          <svg class="w-6 h-6 text-ink" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+        </span>
+        <span class="font-semibold">GitHub</span><span class="text-xs text-muted">full pipeline</span>
+      </a>
+    </div>
+    <p id="linkNote" class="mt-8 text-sm text-muted">Links marked <span class="text-muted/80">soon</span> point to topical searches until you publish. Edit the <code class="text-muted/80">LINKS</code> config at the bottom of this file to point them at your artifacts.</p>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer class="relative z-10 border-t border-white/5 py-10 px-6">
+  <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted">
+    <span class="font-display font-semibold text-ink">AutoScientist · ToolCaller</span>
+    <span>Built for the Adaption AutoScientist Challenge · Open source under Apache-2.0</span>
+    <span class="font-mono text-xs">refuse · clarify · call</span>
+  </div>
+</footer>
+
+<script>
+/* ---------- Links config (single source of truth) ----------
+   Replace the placeholder URLs below once you publish. `configured:false` shows a "soon" pill and
+   falls back to a live, topical search so the button always works. */
+const LINKS = {
+  huggingface: { url: "https://huggingface.co/models?search=autoscientist", configured: false },
+  kaggle:      { url: "https://www.kaggle.com/models?search=autoscientist",  configured: false },
+  discord:     { url: "https://discord.gg/THQuQhN7C9",                        configured: true  },
+  github:      { url: "https://github.com/search?q=autoscientist%20tool-caller&type=repositories", configured: false },
+};
+document.querySelectorAll("[data-link]").forEach((el) => {
+  const key = el.getAttribute("data-link");
+  const cfg = LINKS[key];
+  if (!cfg) return;
+  el.setAttribute("href", cfg.url);
+  const soon = el.querySelector("[data-soon]");
+  if (soon && !cfg.configured) soon.classList.remove("hidden");
+});
+const anyUnconfigured = Object.values(LINKS).some((l) => !l.configured);
+const note = document.getElementById("linkNote");
+if (note && !anyUnconfigured) note.style.display = "none";
+
+/* ---------- Scroll reveal ---------- */
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+}, { threshold: .15 });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+/* ---------- Benchmark bars animate on view ---------- */
+const benchCard = document.getElementById('benchCard');
+if (benchCard) {
+  const bo = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.querySelectorAll('.bar').forEach(b => { b.style.width = b.dataset.w + '%'; });
+        bo.unobserve(e.target);
+      }
+    });
+  }, { threshold: .3 });
+  bo.observe(benchCard);
+}
+
+/* ---------- 3D tilt on pointer ---------- */
+const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (!reduce) {
+  document.querySelectorAll('.scene').forEach(scene => {
+    scene.addEventListener('pointermove', (ev) => {
+      const cards = scene.querySelectorAll('.tilt');
+      cards.forEach(card => {
+        const r = card.getBoundingClientRect();
+        const px = (ev.clientX - r.left) / r.width - .5;
+        const py = (ev.clientY - r.top) / r.height - .5;
+        card.style.transform = `rotateY(${px * 12}deg) rotateX(${-py * 12}deg)`;
+      });
+    });
+    scene.addEventListener('pointerleave', () => {
+      scene.querySelectorAll('.tilt').forEach(c => c.style.transform = 'rotateY(0) rotateX(0)');
+    });
+  });
+}
+
+/* ---------- Three.js hero: neural tool-graph ---------- */
+(function () {
+  const canvas = document.getElementById('hero3d');
+  if (!canvas || reduce || !window.THREE) return;
+
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, 1, .1, 100);
+  camera.position.z = 15;
+
+  function size() {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+
+  // central icosahedron wireframe = the model
+  const geo = new THREE.IcosahedronGeometry(4.2, 1);
+  const wire = new THREE.LineSegments(
+    new THREE.WireframeGeometry(geo),
+    new THREE.LineBasicMaterial({ color: 0x22C55E, transparent: true, opacity: .55 })
+  );
+  scene.add(wire);
+
+  const inner = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(2.4, 0),
+    new THREE.MeshBasicMaterial({ color: 0x22D3EE, wireframe: true, transparent: true, opacity: .25 })
+  );
+  scene.add(inner);
+
+  // orbiting particle field = tools
+  const N = 260, pos = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const r = 6 + Math.random() * 6, t = Math.random() * Math.PI * 2, p = Math.acos(2 * Math.random() - 1);
+    pos[i*3] = r * Math.sin(p) * Math.cos(t);
+    pos[i*3+1] = r * Math.sin(p) * Math.sin(t);
+    pos[i*3+2] = r * Math.cos(p);
+  }
+  const pg = new THREE.BufferGeometry();
+  pg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const points = new THREE.Points(pg, new THREE.PointsMaterial({ color: 0x8B5CF6, size: .07, transparent: true, opacity: .8 }));
+  scene.add(points);
+
+  let mx = 0, my = 0;
+  window.addEventListener('pointermove', (e) => {
+    mx = (e.clientX / window.innerWidth - .5);
+    my = (e.clientY / window.innerHeight - .5);
+  });
+
+  let raf, t = 0;
+  function loop() {
+    t += .003;
+    wire.rotation.y += .0016; wire.rotation.x += .0008;
+    inner.rotation.y -= .0026; inner.rotation.z += .0014;
+    points.rotation.y += .0009;
+    camera.position.x += (mx * 4 - camera.position.x) * .04;
+    camera.position.y += (-my * 4 - camera.position.y) * .04;
+    camera.lookAt(scene.position);
+    renderer.render(scene, camera);
+    raf = requestAnimationFrame(loop);
+  }
+  const onResize = () => size();
+  window.addEventListener('resize', onResize);
+  size(); loop();
+
+  // pause when tab hidden (perf)
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) cancelAnimationFrame(raf); else loop();
+  });
+})();
+</script>
+</body>
+</html>

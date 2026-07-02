@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+next-env.d.ts
+.vercel/
+
+# Generated artifacts (regenerable via the pipeline)
+data/
+results/
+web/.env.local
+*.gguf
+
+# OS / editor
+.DS_Store
+*.log

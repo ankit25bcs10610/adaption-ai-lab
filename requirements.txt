@@ -1,0 +1,18 @@
+# Pinned for reproducibility (a judging axis). Bump deliberately, not by accident.
+datasets==3.1.0
+huggingface_hub==0.26.2
+transformers==4.46.3
+torch==2.4.1
+accelerate==1.1.1
+jsonschema==4.23.0
+datasketch==1.6.5            # MinHash / LSH near-dup detection
+model2vec==0.3.3            # fast static embeddings for semantic dedup
+scikit-learn==1.5.2
+numpy==1.26.4
+pyyaml==6.0.2
+tqdm==4.67.0
+kagglehub==0.3.4
+anthropic>=0.40            # Claude LLM-as-judge for the quality filter (src/claude_judge.py)
+matplotlib==3.10.0         # Data-Viz track: chart rendering (src/viz)
+Pillow==11.3.0             # Data-Viz track: image encoding
+adaption                    # Adaption SDK (unpinned; install latest from adaptionlabs.ai)

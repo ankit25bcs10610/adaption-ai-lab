@@ -1,0 +1,74 @@
+# Central config. Everything reads from here so a reviewer can reproduce from one file.
+
+seed: 42
+
+base_model: Qwen/Qwen2.5-Coder-3B-Instruct   # natural fit; small enough for a weak public baseline
+
+dataset:
+  # Permissively licensed sources ONLY (clean for open release).
+  sources:
+    xlam:
+      repo: Salesforce/xlam-function-calling-60k   # CC-BY-4.0 (⚠ re-verify: history of NC→BY flip)
+      max_examples: 4000
+    toolace:
+      repo: Team-ACE/ToolACE                        # Apache-2.0 (clean)
+      max_examples: 3000
+    toucan:
+      repo: Agent-Ark/Toucan-1.5M                   # Apache-2.0 — largest permissive tool-agentic set
+      max_examples: 3000
+      enabled: false                                # opt-in: large download; flip on when ready
+  target_positive: 3500        # curated positive (tool-should-be-called) examples
+  # Research-backed mix: ~10% irrelevance is the swept optimum (more degrades positive calling).
+  # hard_negative_ratio spans no_tool+missing_arg+ambiguous; kinds weights keep no_tool≈10% of total.
+  hard_negative_ratio: 0.22
+  multiturn_ratio: 0.20        # multi-turn is ~30% of BFCL v4 and where small fine-tunes beat GPT-4o
+  schema_drift_ratio: 0.08     # distinctive originality slice: tool schemas that changed under the model
+  novel_tool_frac: 0.15        # hold out 15% of tool NAMES; examples using only them -> test_novel
+  quality_keep_frac: 1.0       # keep top X of positives after quality filter (1.0 = filter off)
+  quality_judge: heuristic     # heuristic (offline) | claude (Anthropic SDK LLM-as-judge)
+  quality_judge_model: claude-opus-4-8  # used when quality_judge=claude (haiku for cheaper bulk scoring)
+  splits:
+    train: 0.85
+    val: 0.10
+    test: 0.05
+
+hard_negatives:
+  kinds:                       # relative weights across the three failure modes
+    no_tool: 0.45              # no available tool can satisfy the request -> refuse (the irrelevance lever)
+    missing_arg: 0.30          # required argument absent -> ask for it (clarify)
+    ambiguous: 0.25            # two plausible tools -> disambiguate (clarify)
+
+multiturn:
+  kinds:                       # BFCL v3/v4 multi-turn failure modes
+    miss_param: 0.4            # user never supplies a required arg -> clarify
+    miss_func: 0.3             # needed tool provided only mid-conversation -> then call
+    long_context: 0.3          # correct tool buried among many distractors -> select correctly
+  long_context_size: 10        # number of distractor tools in long_context examples
+
+schema_drift:
+  kinds:                       # how the tool schema drifted out from under the model
+    add_required: 0.4          # a new required param appeared -> clarify
+    retype_enum: 0.3           # a param gained an enum the query violates -> clarify
+    rename: 0.3                # a required param was renamed -> call with the new name
+
+dedup:
+  minhash_threshold: 0.85      # Jaccard threshold for lexical near-dupes
+  semantic_threshold: 0.90     # cosine threshold for paraphrase near-dupes
+  check_cross_split: true      # kill train/val/test leakage (silent score inflator)
+
+adaption:
+  column_mapping:
+    prompt: prompt
+    completion: completion
+  # job_specification is documented inline in train_adaption.py
+
+eval:
+  max_new_tokens: 512
+  temperature: 0.0             # greedy; identical decoding for base and finetuned (fairness)
+  batch_size: 8
+
+paths:
+  data_dir: data
+  raw_dir: data/raw
+  out_dir: data/out
+  results_dir: results

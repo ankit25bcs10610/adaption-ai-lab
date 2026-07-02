@@ -1,0 +1,4 @@
+# HF Spaces (ZeroGPU): do NOT pin gradio / spaces / huggingface_hub — the platform manages them.
+transformers
+accelerate
+sentencepiece
