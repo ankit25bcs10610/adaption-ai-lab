@@ -318,16 +318,35 @@ def mk_correlation(cd: ChartData, rng: random.Random) -> Optional[QAItem]:
                   {"r": round(r, 3)})
 
 
+def mk_compare_then_compute(cd: ChartData, rng: random.Random) -> Optional[QAItem]:
+    """Compound multi-hop: locate the highest AND lowest, then compute the gap (max − min).
+
+    Two reasoning hops in one question — harder than single-lookup and correct by construction."""
+    if cd.chart_type == "stacked_bar":
+        arr = [sum(cd.values[s][c] for s in range(len(cd.series_names))) for c in range(len(cd.categories))]
+    else:
+        si = 0 if len(cd.series_names) == 1 else rng.randrange(len(cd.series_names))
+        arr = cd.values[si]
+    hi = _unique_argext(arr, cd.dec, True)
+    lo = _unique_argext(arr, cd.dec, False)
+    if hi is None or lo is None or hi == lo:
+        return None
+    ans = _Q(arr[hi] - arr[lo], cd.dec)
+    q = f"By how much does the highest {cd.y_label.lower()} exceed the lowest?"
+    return QAItem("compare_then_compute", q, ans, "numeric",
+                  {"hi": cd.categories[hi], "lo": cd.categories[lo], "value": ans})
+
+
 _MAKERS: Dict[str, List[Callable]] = {
     "bar": [mk_value_lookup, lambda c, r: mk_extremum(c, r, True), lambda c, r: mk_extremum(c, r, False),
-            mk_compare, mk_sum, mk_count, mk_difference, mk_mean],
+            mk_compare, mk_sum, mk_count, mk_difference, mk_mean, mk_compare_then_compute],
     "hbar": [mk_value_lookup, lambda c, r: mk_extremum(c, r, True), lambda c, r: mk_extremum(c, r, False),
-             mk_compare, mk_difference, mk_mean],
+             mk_compare, mk_difference, mk_mean, mk_compare_then_compute],
     # grouped_bar/multiline: extremum & compare now name the series; mean omitted (series-ambiguous)
     "grouped_bar": [mk_value_lookup, lambda c, r: mk_extremum(c, r, True),
                     lambda c, r: mk_extremum(c, r, False), mk_compare],
     "stacked_bar": [lambda c, r: mk_extremum(c, r, True), lambda c, r: mk_extremum(c, r, False),
-                    mk_sum, mk_mean, mk_value_lookup],
+                    mk_sum, mk_mean, mk_value_lookup, mk_compare_then_compute],
     "line": [mk_trend, mk_value_lookup, lambda c, r: mk_extremum(c, r, True), mk_mean],
     "multiline": [mk_value_lookup, lambda c, r: mk_extremum(c, r, True), mk_compare],
     # scatter/area draw no value labels -> mean not extractable; keep only readable kinds

@@ -148,7 +148,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="data/viz")
     ap.add_argument("--n-synth", type=int, default=400)
-    ap.add_argument("--n-indic", type=int, default=200)
+    ap.add_argument("--n-indic", type=int, default=600)  # 3x — the Hindi/Devanagari slice was too thin
+    ap.add_argument("--n-vega", type=int, default=150)   # text-only Vega-Lite spec-reading modality
     ap.add_argument("--n-reachqa", type=int, default=0)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--novel-types", nargs="+", default=["scatter", "area"])
@@ -168,6 +169,10 @@ def main() -> None:
 
     for name, rows in parts.items():
         write_jsonl(os.path.join(args.out, f"{name}.jsonl"), rows)
+    # Vega-Lite spec-reading is a separate (text-only, no-image) modality -> its own file.
+    if args.n_vega:
+        from . import vega_spec
+        write_jsonl(os.path.join(args.out, "vega_spec.jsonl"), vega_spec.generate(args.n_vega, seed=args.seed))
     # Together-style multimodal chat rows for train (inline base64) + Adaption tabular rows
     if render:
         write_jsonl(os.path.join(args.out, "train_chat.jsonl"), [to_chat_row(e) for e in parts["train"]])

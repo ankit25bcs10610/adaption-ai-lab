@@ -143,6 +143,30 @@ def main() -> int:
     ok &= check("evaluate scores correct=1.0", abs(m["relaxed_accuracy"] - 1.0) < 1e-9)
     ok &= check("by_lang breakdown present", "en" in m["by_lang"])
 
+    print("vega_spec (spec-reading modality):")
+    import json as _json
+    from src.viz import vega_spec
+    _vr = vega_spec.generate(40, seed=1)
+    ok &= check("vega_spec generated", len(_vr) > 0)
+    _vbad = 0
+    for r in _vr:
+        data = _json.loads(r["spec"])["data"]["values"]
+        yl = [k for k in data[0] if k != "category"][0]
+        vals = {d["category"]: d[yl] for d in data}
+        k, a = r["qa_kind"], r["answer"]
+        if k == "max" and a != max(vals, key=vals.get): _vbad += 1
+        elif k == "min" and a != min(vals, key=vals.get): _vbad += 1
+        elif k == "compare_then_compute" and a != max(vals.values()) - min(vals.values()): _vbad += 1
+    ok &= check("vega_spec answers correct-by-construction", _vbad == 0)
+    ok &= check("vega_spec is spec (no image) modality", all("spec" in r and "image" not in r for r in _vr))
+    ok &= check("vega_spec determinism", vega_spec.generate(40, seed=1) == _vr)
+
+    print("compound multi-hop QA (synth):")
+    import tempfile as _tf
+    _made = sc.generate(150, _tf.mkdtemp(), seed=3, render=False)
+    _ctc = [e for e in _made if e.get("qa_kind") == "compare_then_compute"]
+    ok &= check("compare_then_compute generated", len(_ctc) > 0)
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 
