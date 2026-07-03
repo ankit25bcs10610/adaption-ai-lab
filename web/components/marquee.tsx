@@ -4,9 +4,10 @@ const items = [
   ["Quality +15.7% · grade C→B", "text-run"],
   ["Data · ToolACE (Apache-2.0)", "text-violet"],
   ["Execution-verified envs", "text-cyan"],
-  ["Decontaminated vs BFCL", "text-violet"],
+  ["Reliable in en · hi · es · fr", "text-violet"],
+  ["Decontaminated vs BFCL", "text-cyan"],
   ["Released · Hugging Face + Kaggle", "text-run"],
-  ["Eval · BFCL v4-aligned", "text-cyan"],
+  ["Eval · BFCL v4-aligned", "text-violet"],
 ] as const;
 
 function Row({ hidden = false }: { hidden?: boolean }) {

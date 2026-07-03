@@ -31,7 +31,8 @@ export function DataViz() {
       >
         A multimodal chart-understanding model trained on a <span className="text-foreground">self-verifying</span>{" "}
         synthetic dataset — every answer computed from the underlying data, so the number on the chart matches the
-        gold by construction. Plus a Devanagari + romanized slice for the HackIndia track.
+        gold by construction. Plus a Devanagari + romanized slice for the HackIndia track, and a text-only
+        Vega-Lite <span className="text-foreground">spec-reading</span> modality.
       </SectionHeader>
 
       <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
@@ -41,6 +42,7 @@ export function DataViz() {
                 {[
                   ["Correct by construction", "Ground-truth is computed from the data, not labeled — no noise to cap accuracy."],
                   ["Hindi + romanized", "Same ground-truth, localized labels & questions; paired en/hi twins for a matched-pair Δ."],
+                  ["Two modalities", "Rendered images and text-only Vega-Lite specs — chart comprehension with and without a VLM."],
                   ["Wide, measurable gap", "On CharXiv, GPT-4o scores ~47% on reasoning vs ~80% human — room to close."],
                 ].map(([h, b]) => (
                   <li key={h} className="flex gap-3">
@@ -61,7 +63,7 @@ export function DataViz() {
                 { kind: "comment", text: "# build the self-verifying chart-QA dataset" },
                 { kind: "cmd", text: "python -m src.viz.build_dataset --out data/viz" },
                 { kind: "cmd", text: "python -m src.viz.gallery --data-dir data/viz" },
-                { kind: "out", text: "→ 471 examples · en + hi · 0 leakage" },
+                { kind: "out", text: "→ image + spec · en / hi / rom · grouped split, 0 leakage" },
               ]}
             />
           </Reveal>
