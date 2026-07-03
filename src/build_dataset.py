@@ -514,6 +514,11 @@ def main() -> None:
     for name, rows in parts.items():
         write_jsonl(os.path.join(out_dir, f"{name}.jsonl"), rows)
     pc_rows = [to_prompt_completion(ex) for ex in parts["train"]]
+    if dcfg.get("reasoning_traces"):
+        from . import reasoning
+        pc_rows = reasoning.apply(pc_rows, parts["train"], seed=seed)
+        print("[build] reasoning_traces: ON — prepended <think> traces to train_pc "
+              "(do NOT also enable the platform reasoning_traces recipe; A/B them instead)")
     write_jsonl(os.path.join(out_dir, "train_pc.jsonl"), pc_rows)
     if novel_test:
         write_jsonl(os.path.join(out_dir, "test_novel.jsonl"), novel_test)

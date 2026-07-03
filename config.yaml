@@ -30,6 +30,8 @@ dataset:
   env_multicall_frac: 0.3      # of env_examples, fraction that are verified 2-3 call trajectories
   env_dpo: 200                 # execution-labeled DPO pairs from src.envs merged into pref.jsonl
   novel_tool_frac: 0.15        # hold out 15% of tool NAMES; examples using only them -> test_novel
+  reasoning_traces: false      # prepend correct-by-construction <think> traces to train_pc (A/B arm;
+                               # if ON, do NOT also enable the platform reasoning_traces recipe)
   quality_keep_frac: 1.0       # keep top X of positives after quality filter (1.0 = filter off)
   quality_judge: heuristic     # heuristic (offline) | claude (Anthropic SDK LLM-as-judge)
   quality_judge_model: claude-opus-4-8  # used when quality_judge=claude (haiku for cheaper bulk scoring)

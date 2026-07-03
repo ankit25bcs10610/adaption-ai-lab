@@ -287,9 +287,21 @@ def main() -> int:
     _mlr = _ml.generate(30, seed=1)
     ok &= check("multilingual generated", len(_mlr) > 0)
     ok &= check("multilingual all correct-by-construction", all(judge(r, target_to_json_str(r["answer"]))["correct"] for r in _mlr))
-    ok &= check("multilingual has hi + hi-rom + en", {r["meta"]["lang"] for r in _mlr} == {"en", "hi", "hi-rom"})
-    ok &= check("multilingual matched twins (pair_id shared across langs)", any(sum(1 for r in _mlr if r["meta"]["pair_id"] == _mlr[0]["meta"]["pair_id"]) == 3 for _ in [0]))
+    ok &= check("multilingual has en + hi + hi-rom + es + fr", {r["meta"]["lang"] for r in _mlr} >= {"en", "hi", "hi-rom", "es", "fr"})
+    ok &= check("multilingual matched twins (pair_id shared across langs)", sum(1 for r in _mlr if r["meta"]["pair_id"] == _mlr[0]["meta"]["pair_id"]) == 5)
     ok &= check("multilingual determinism", _ml.generate(30, seed=1) == _mlr)
+
+    print("reasoning traces:")
+    from src import reasoning as _rz
+    from src.format_utils import strip_think, parse_model_output, to_prompt_completion
+    import random as _rr
+    _rng2 = _rr.Random(0)
+    _rzex = {"tools": [_W], "query": "weather?", "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Mumbai"}}]}, "meta": {}}
+    _tr = _rz.render_trace(_rzex, _rng2)
+    ok &= check("trace is short (<60 tokens)", 0 < len(_tr.split()) <= 60)
+    _pc = _rz.with_trace(to_prompt_completion(_rzex), _rzex, _rng2)
+    ok &= check("completion wrapped with <think>", _pc["completion"].startswith("<think>") and "</think>" in _pc["completion"])
+    ok &= check("firewall recovers envelope after trace", parse_model_output(_pc["completion"])["action"] == "call")
 
     print("reliability_probe:")
     from src.reliability_probe import probe_cases, score, to_markdown as probe_md
