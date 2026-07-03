@@ -37,6 +37,10 @@ Submission status + remaining steps: [`SUBMISSION.md`](SUBMISSION.md). Platform 
 run IDs, evidence): [`docs/AUTOSCIENTIST_USAGE.md`](docs/AUTOSCIENTIST_USAGE.md). Data-quality audit:
 [`docs/DATA_QUALITY_AUDIT.md`](docs/DATA_QUALITY_AUDIT.md).
 
+**Run-day:** the AutoScientist console steps (weights + held-out number) are in
+[`docs/CONSOLE_STEPS.md`](docs/CONSOLE_STEPS.md); once you have weights, one command fills every real
+number and auto-writes the model card: `MODEL=<weights> bash scripts/finalize.sh`.
+
 ---
 
 ## Table of contents

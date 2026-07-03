@@ -6,44 +6,42 @@ language: [en]
 base_model: Qwen/Qwen2.5-Coder-3B-Instruct
 base_model_relation: finetune
 datasets:
-  - YOUR_USERNAME/autoscientist-toolcall-dataset
+  - pandeyankit84/autoscientist-toolcaller-dataset
 tags:
   - function-calling
   - tool-use
+  - agents
   - autoscientist
   - adaption-labs
-  - qlora
 model-index:
-  - name: autoscientist-toolcall
+  - name: autoscientist-toolcaller
     results:
-      - task:
-          type: text-generation
-          name: Function Calling
-        dataset:
-          name: autoscientist-toolcall-test
-          type: YOUR_USERNAME/autoscientist-toolcall-dataset
+      - task: {type: text-generation, name: Function Calling}
+        dataset: {name: autoscientist-toolcaller-test, type: pandeyankit84/autoscientist-toolcaller-dataset}
         metrics:
-          - type: accuracy
-            name: overall_accuracy
-            value: 0.000   # <- fill from results/eval.json
+          - {type: accuracy, name: overall_accuracy, value: 0.000}
 ---
 
-# autoscientist-toolcall
+# autoscientist-toolcaller
 
 A function-calling / tool-use model fine-tuned with **Adaption AutoScientist** for the AutoScientist
-Challenge. Base model: `Qwen/Qwen2.5-Coder-3B-Instruct`.
+Challenge (category: *All Other Domains*). Base model: `Qwen/Qwen2.5-Coder-3B-Instruct`. The dataset
+teaches the decision most tool-use datasets ignore: **when *not* to call a tool.**
 
-## What's different: it knows when *not* to call a tool
+## What's different
 
-The training data mixes standard tool-call examples with a ~28% slice of **hard negatives** — requests
-where the correct behavior is to **refuse** (no applicable tool), **ask for a missing required argument**,
-or **disambiguate** between two plausible tools. Baselines hallucinate tool calls in exactly these cases;
-this model is trained to handle them.
+~40% of the training set is the decisions everyone else skips — **refuse** (no applicable tool),
+**clarify** (a required argument is missing), **disambiguate** (two plausible tools), **resist
+over-refusal** (hedged-but-satisfiable → still call), and **complete every call** (partial-parallel) —
+plus multi-turn (BFCL v4 style), execution-verified environment trajectories, and a schema-drift slice.
+Every synthetic example is correct by construction; the set is deduplicated, decontaminated against
+public probes, and passed a two-pass data-quality audit. Every answer is one JSON envelope:
+`{"action": "call"|"refuse"|"clarify", "calls": [...], "message": "..."}`.
 
 ## Results (base vs. fine-tuned)
 
-Identical greedy decoding for both; standard error is bootstrapped. Reproduce with
-`python -m src.eval_harness` (see repo).
+Held-out test set; identical greedy decoding for both; bootstrapped standard error. Reproduce with
+`bash scripts/finalize.sh` (baseline → multi-seed eval → paired significance → gap decomposition).
 
 <!--METRICS_START-->
 | Metric | Base | Fine-tuned |
@@ -55,47 +53,37 @@ Identical greedy decoding for both; standard error is bootstrapped. Reproduce wi
 | **Hallucination rate on hard negatives** ↓ | 0.000 | 0.000 |
 <!--METRICS_END-->
 
-Adaption AutoScientist `evaluation_summary` (from `results/adaption_run.json`):
-`grade_before`, `grade_after`, `improvement_percent`.
+**Separately** — Adaptive Data's **dataset-quality grade** (this is a *data* metric, not model accuracy):
+`score_before` → `score_after` **7.0 → 8.1, +15.7%, grade C → B**.
+
+## Depth of AutoScientist usage
+
+Adaptive Data recipes (`deduplication` + `reasoning_traces`) + a brand-controls blueprint enforcing
+call/refuse/clarify discipline; the platform-enhanced dataset was consumed. Trained via the AutoScientist
+loop; where run, a second `preference_pairs` objective on the execution-labeled DPO set targets the
+refuse/clarify moat directly. See `docs/AUTOSCIENTIST_USAGE.md`.
 
 ## Intended use
 
-Agent/tool-calling pipelines that need reliable JSON tool calls and safe abstention. Output is a single
-JSON envelope: `{"action":"call"|"refuse"|"clarify", ...}` (see repo `src/format_utils.py`).
+Agent / tool-calling pipelines that need reliable JSON tool calls **and safe abstention**. Feed the
+available tools (JSON Schema) + the user request; the model returns one JSON envelope.
 
 ## Training
 
-- Method: QLoRA (4-bit), co-optimized by AutoScientist; base `Qwen/Qwen2.5-Coder-3B-Instruct`.
-- Data: curated from `Salesforce/xlam-function-calling-60k` (CC-BY-4.0) and `Team-ACE/ToolACE`
-  (Apache-2.0), plus synthesized hard negatives grounded in the real tool schemas. Deduplicated
-  (MinHash + semantic) with cross-split leakage removed.
-- Seed: 42. Full config in `config.yaml`.
-
-## Reproduction
-
-```bash
-pip install -r requirements.txt
-python -m src.build_dataset --config config.yaml
-python -m src.baseline --config config.yaml
-python -m src.train_adaption --config config.yaml
-python -m src.eval_harness --model <finetuned> --data data/out/test.jsonl --out results/eval.json
-```
-
-## Dataset provenance & licensing
-
-Derived only from permissively licensed sources (CC-BY-4.0, Apache-2.0); hard negatives are original.
-Released under Apache-2.0. Attribution to xLAM (Salesforce) and ToolACE preserved in the dataset card.
+- Platform: Adaption AutoScientist on the adapted dataset; base `Qwen/Qwen2.5-Coder-3B-Instruct`. Seed 42.
+- Data: curated from `Team-ACE/ToolACE` (Apache-2.0) + original synthetic hard-negative / multi-turn /
+  schema-drift slices + execution-verified env data. Deduplicated (MinHash + semantic), decontaminated,
+  cross-split leakage removed.
 
 ## Limitations
 
 - English-only in this version.
-- Exact-match argument scoring is strict; semantically-correct-but-differently-formatted args count as
-  misses in eval.
-- Optimized against the Adaption held-out set for this category; generalization beyond tool-calling is
-  not claimed.
+- Optimized for tool-calling reliability; not a general chat model.
+- Relaxed argument matching in eval; strict-format consumers should post-validate the JSON.
 
 ## Links
 
-- Dataset: https://huggingface.co/datasets/YOUR_USERNAME/autoscientist-toolcall-dataset
-- Kaggle model: https://www.kaggle.com/models/YOUR_USERNAME/autoscientist-toolcall
-- Demo Space: https://huggingface.co/spaces/YOUR_USERNAME/autoscientist-toolcall-demo
+- Dataset (HF): https://huggingface.co/datasets/pandeyankit84/autoscientist-toolcaller-dataset
+- Dataset (Kaggle): https://www.kaggle.com/datasets/pandeyankit99/autoscientist-toolcaller-dataset
+- Demo: https://huggingface.co/spaces/pandeyankit84/autoscientist-toolcaller-demo
+- Code: https://github.com/ankit25bcs10610/adaption-ai-lab
