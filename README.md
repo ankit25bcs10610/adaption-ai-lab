@@ -276,7 +276,7 @@ Every module is `py_compile`-clean. The data-viz scorer and synthetic generator 
 
 ## Run-day
 
-The one remaining step is a model-training run on the AutoScientist console (produces weights + a held-out number). Console steps: [`docs/CONSOLE_STEPS.md`](docs/CONSOLE_STEPS.md). Once you have weights, a single command fills every real number and rewrites the model card:
+The one remaining step is a model-training run on the AutoScientist console (produces weights + a held-out number). Full ordered runbook (weights → publish → post → submit): [`docs/RUN_DAY.md`](docs/RUN_DAY.md); console steps: [`docs/CONSOLE_STEPS.md`](docs/CONSOLE_STEPS.md). Once you have weights, a single command fills every real number and rewrites the model card:
 
 ```bash
 MODEL=<weights> bash scripts/finalize.sh
