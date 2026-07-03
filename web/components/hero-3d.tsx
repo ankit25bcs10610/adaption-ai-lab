@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import * as THREE from "three";
 import { useAccent } from "@/components/use-accent";
@@ -89,9 +89,19 @@ export function Hero3D() {
   const reduce = useReducedMotion();
   const { accent } = useAccent();
   const colors = accentById(accent).colors;
-  // Honor a reduced-motion preference by not mounting a WebGL context at all — the global aurora +
-  // grid-fade still provide ambiance, and we save a GPU context on low-power / motion-sensitive setups.
-  if (reduce) return null;
+  // Only mount the WebGL canvas on a desktop-class device (wide viewport + fine pointer). On phones/
+  // touch the continuous rAF + GPU cost hurts INP and battery, and the pointer parallax is meaningless.
+  const [desktop, setDesktop] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px) and (pointer: fine)");
+    const update = () => setDesktop(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  // Honor a reduced-motion preference (and non-desktop) by not mounting a WebGL context at all — the
+  // global aurora + grid-fade still provide ambiance, saving a GPU context on low-power setups.
+  if (reduce || !desktop) return null;
   return (
     <Canvas
       className="absolute inset-0"
