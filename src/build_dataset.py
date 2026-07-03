@@ -585,7 +585,9 @@ def main() -> None:
         "no_tool_rows": n_no_tool, "no_tool_share_of_total": no_tool_share,
         "miss_param_rows": n_miss_param, "mix_ok": mix_ok,
     }
-    stats = {"total": total_rows, "novel_test": len(novel_test), "mix": mix}
+    from . import curriculum as _curriculum
+    stats = {"total": total_rows, "novel_test": len(novel_test), "mix": mix,
+             "difficulty": _curriculum.histogram(all_rows)}  # criterion-4: difficulty distribution
     if contamination is not None:
         stats["contamination"] = contamination
     for name, rows in parts.items():
@@ -595,6 +597,7 @@ def main() -> None:
             "by_hn_kind": dict(Counter(r["meta"].get("hn_kind") for r in rows if r["meta"].get("hn_kind"))),
             "by_mt_kind": dict(Counter(r["meta"].get("mt_kind") for r in rows if r["meta"].get("mt_kind"))),
             "by_sd_kind": dict(Counter(r["meta"].get("sd_kind") for r in rows if r["meta"].get("sd_kind"))),
+            "by_difficulty": dict(Counter(_curriculum.band(_curriculum.difficulty(r)) for r in rows)),
         }
     with open(os.path.join(out_dir, "stats.json"), "w") as f:
         json.dump(stats, f, indent=2)

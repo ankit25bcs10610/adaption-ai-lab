@@ -26,7 +26,7 @@ jobs:
           grep -viE '^(torch|transformers|datasets|accelerate|adaption)([=<>~! ]|$)' requirements.txt > ci-requirements.txt
           pip install -r ci-requirements.txt
 
-      - name: Function-calling suite (160 checks)
+      - name: Function-calling suite (163 checks)
         run: python -m tests.smoke_test
 
       - name: Data-visualization suite (57 checks)

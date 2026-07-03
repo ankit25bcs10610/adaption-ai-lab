@@ -523,6 +523,16 @@ def main() -> int:
     _dk2, _dd2 = _decon([{"query": "totally unrelated: refactor this legacy COBOL payroll module", "meta": {"source": "x"}}], _PROBES)
     ok &= check("clearly-unrelated query kept", len(_dk2) == 1 and len(_dd2) == 0)
 
+    print("by-difficulty eval breakdown (curriculum wiring):")
+    _recs_d = [
+        {"tools": [_W], "query": "weather in Mumbai?", "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Mumbai"}}]}, "meta": {}},
+        {"tools": [_W, _S], "query": "write me a poem about the sea", "answer": {"type": "refuse", "content": "no tool applies"}, "meta": {}},
+    ]
+    _md = evaluate(_recs_d, lambda p: target_to_json_str(_recs_d[0]["answer"]) if "weather" in p.lower() else '{"action":"refuse","message":"none apply"}')
+    ok &= check("evaluate emits by_difficulty", "by_difficulty" in _md)
+    ok &= check("by_difficulty bands cover all records", sum(v["n"] for v in _md["by_difficulty"].values()) == 2)
+    ok &= check("by_difficulty accuracies valid", all(0.0 <= v["accuracy"] <= 1.0 for v in _md["by_difficulty"].values()))
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 

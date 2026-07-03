@@ -155,6 +155,19 @@ def evaluate(
         metrics["by_sd_kind"] = by_sd
         metrics["schema_drift_accuracy"] = sum(sd_bits) / len(sd_bits)
 
+    # Accuracy by difficulty band (easy/medium/hard) — computed on the fly from each example, so it
+    # works without the build having tagged. Shows where the base→fine-tuned gap concentrates
+    # (a fine-tune that helps most on HARD examples is the compelling, honest signal for criterion #1).
+    from .curriculum import band as _band, difficulty as _difficulty
+    dbands = [_band(_difficulty(r)) for r in records]
+    by_diff: Dict[str, Any] = {}
+    for b in ("easy", "medium", "hard"):
+        sub = [int(verdicts[i]["correct"]) for i, bb in enumerate(dbands) if bb == b]
+        if sub:
+            by_diff[b] = {"n": len(sub), "accuracy": sum(sub) / len(sub), "stderr": _bootstrap_se(sub)}
+    if by_diff:
+        metrics["by_difficulty"] = by_diff
+
     if return_records:
         return {"metrics": metrics, "records": details}
     return metrics
