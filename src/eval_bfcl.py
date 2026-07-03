@@ -170,6 +170,26 @@ def judge_bfcl(example: Dict[str, Any], output_text: str, lenient: bool = True) 
     return res
 
 
+# Approximate BFCL-v4-style category emphasis (multi-turn + irrelevance carry the most weight). This is
+# a documented, CONFIGURABLE proxy — the real leaderboard weights differ — reported as a weighted proxy
+# alongside the flat micro-average so the aggregate isn't just an artifact of our own test-set category mix.
+BFCL_WEIGHTS: Dict[str, float] = {
+    "simple": 0.15, "multiple": 0.15, "parallel": 0.15,
+    "multi_turn": 0.30, "irrelevance": 0.15, "clarify": 0.10,
+}
+
+
+def weighted_accuracy(per_cat: Dict[str, Dict[str, Any]], weights: Dict[str, float] = None) -> float:
+    """BFCL-like weighted aggregate over per-category accuracies, renormalized over categories that
+    actually have examples. Pure — testable without a model."""
+    weights = weights or BFCL_WEIGHTS
+    present = {c: per_cat[c]["accuracy"] for c in per_cat if per_cat.get(c, {}).get("accuracy") is not None}
+    wsum = sum(weights.get(c, 0.0) for c in present)
+    if not wsum:
+        return None
+    return sum(weights.get(c, 0.0) * present[c] for c in present) / wsum
+
+
 def evaluate_bfcl(
     records: List[Dict[str, Any]],
     generate_fn,
@@ -204,6 +224,10 @@ def evaluate_bfcl(
         "n": len(records),
         "overall_accuracy": (sum(all_bits) / len(all_bits)) if all_bits else 0.0,
         "overall_stderr": _bootstrap_se(all_bits),
+        # BFCL-like weighted proxy (renormalized over present categories) — not the flat micro-average,
+        # so it isn't skewed by our own sampling mix. Weights are documented + configurable.
+        "weighted_accuracy": weighted_accuracy(per_cat),
+        "category_weights": BFCL_WEIGHTS,
         "hallucination_rate": (hard_halluc / hard_total) if hard_total else 0.0,
         "by_category": per_cat,
     }

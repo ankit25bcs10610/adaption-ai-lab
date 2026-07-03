@@ -510,6 +510,19 @@ def main() -> int:
     ok &= check("evaluate_multilingual: oracle -> every lang acc 1.0", all(v["accuracy"] == 1.0 for v in _mm["by_lang"].values()))
     ok &= check("evaluate_multilingual: oracle -> Δ == 0 all langs", all(d["delta_vs_en"] == 0.0 for d in _mm["matched_pair_delta_vs_en"].values()))
 
+    print("BFCL weighted aggregate + expanded decontam probes (rigor #3):")
+    from src.eval_bfcl import weighted_accuracy, BFCL_WEIGHTS
+    ok &= check("BFCL weights sum to 1.0", abs(sum(BFCL_WEIGHTS.values()) - 1.0) < 1e-9)
+    _wa = weighted_accuracy({"simple": {"accuracy": 1.0}, "multi_turn": {"accuracy": 0.0}})
+    ok &= check("weighted_accuracy renormalizes over present cats", abs(_wa - (0.15 / 0.45)) < 1e-9)
+    ok &= check("weighted_accuracy None when no data", weighted_accuracy({"simple": {"accuracy": None}}) is None)
+    from src.decontaminate import DEFAULT_PROBES as _PROBES, decontaminate as _decon
+    ok &= check("decontam probe fixture expanded (>60)", len(_PROBES) > 60)
+    _dk, _dd = _decon([{"query": _PROBES[7], "meta": {"source": "x"}}], _PROBES)  # verbatim probe as a train row
+    ok &= check("verbatim probe dropped at DEFAULT thresholds", len(_dd) == 1 and len(_dk) == 0)
+    _dk2, _dd2 = _decon([{"query": "totally unrelated: refactor this legacy COBOL payroll module", "meta": {"source": "x"}}], _PROBES)
+    ok &= check("clearly-unrelated query kept", len(_dk2) == 1 and len(_dd2) == 0)
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 

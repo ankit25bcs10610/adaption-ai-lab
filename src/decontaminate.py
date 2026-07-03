@@ -55,6 +55,58 @@ DEFAULT_PROBES: List[str] = [
     "Cancel my subscription to the premium plan.",
     "Find the cheapest hotel in Las Vegas for this weekend.",
     "What is the current price of Bitcoin in USD?",
+    # parallel (multi-call)
+    "Get the weather in Berlin and the current time in Tokyo.",
+    "Compare the stock prices of Google and Amazon.",
+    "Book a table for two on Saturday and add it to my calendar.",
+    # multiple / tool-selection
+    "I want to either text or email Sarah that I'm running late.",
+    "Find a nearby pharmacy or order the medicine online.",
+    # irrelevance / chit-chat / creative (must refuse — no applicable tool)
+    "Write a short story about a dragon who learns to code.",
+    "What do you think about modern art?",
+    "Tell me a fun fact about deep space.",
+    "Give me some advice on staying motivated at work.",
+    "Recommend a novel similar to Dune.",
+    # multi-turn follow-ups
+    "Actually, move that meeting to 4pm instead.",
+    "No, use the other credit card for that order.",
+    "Change the destination to Denver.",
+    # smart home / IoT
+    "Turn off the living room lights and set the thermostat to 68.",
+    "Lock the front door and arm the security system.",
+    # database / CRM
+    "Update the shipping address for order 98765.",
+    "Create a new contact for Jane Doe with her phone number.",
+    "Delete the calendar event titled Sprint Review.",
+    # media
+    "Skip to the next track and lower the volume.",
+    "Pause the movie and turn on subtitles.",
+    # maps / travel
+    "How long will it take to drive from Austin to Houston?",
+    "Find gas stations along my route to the beach.",
+    # finance
+    "Transfer 500 dollars from checking to savings.",
+    "What is my current credit card balance?",
+    # productivity
+    "Summarize the attached quarterly document.",
+    "Add a to-do item to buy groceries after work.",
+    # weather variants
+    "Will it rain tomorrow in Denver?",
+    "What is the humidity in Miami right now?",
+    # math / units
+    "What is 15 percent of 240?",
+    "Convert 5 miles to kilometers.",
+    "What is the square root of 144?",
+    # sports / misc
+    "Get the score of last night's Lakers game.",
+    "What are the opening hours of the nearest post office?",
+    "Check whether my package has been delivered yet.",
+    "Start a 10 minute timer for the pasta.",
+    "Find a highly rated sushi place open now.",
+    "What's on my schedule for tomorrow morning?",
+    "Mute all notifications until 9am.",
+    "Show me the unread emails from my manager.",
 ]
 
 
