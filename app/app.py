@@ -113,8 +113,9 @@ with gr.Blocks(title="AutoScientist Tool-Caller", theme=gr.themes.Soft(primary_h
     gr.Markdown(
         "# AutoScientist Tool-Caller — live demo\n"
         "The tool-caller that knows **when *not* to call**. Toggle a tool off and re-run — a valid "
-        "**call** becomes a **refusal**. Faithful deterministic simulation of the model's decision logic "
-        "(no GPU). [Model](https://huggingface.co/pandeyankit84/autoscientist-toolcaller) · "
+        "**call** becomes a **refusal**. This is a **faithful deterministic simulator** of the decision "
+        "logic (no GPU) — *not the trained model; weights pending the AutoScientist run.* "
+        "[Model card](https://huggingface.co/pandeyankit84/autoscientist-toolcaller) · "
         "[Dataset](https://huggingface.co/datasets/pandeyankit84/autoscientist-toolcaller-dataset)"
     )
     with gr.Row():

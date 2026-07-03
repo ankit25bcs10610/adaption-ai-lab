@@ -317,11 +317,35 @@
   <div class="max-w-6xl mx-auto">
     <div class="reveal max-w-2xl mb-12">
       <p class="text-violet font-mono text-sm mb-3">// results</p>
-      <h2 class="font-display font-bold text-4xl sm:text-5xl tracking-tight">Base vs. fine-tuned.</h2>
-      <p class="mt-4 text-muted text-lg">Same greedy decoding, bootstrapped standard error. Lower is better for hallucination.</p>
+      <h2 class="font-display font-bold text-4xl sm:text-5xl tracking-tight">Measured wins, honest targets.</h2>
+      <p class="mt-4 text-muted text-lg">The dataset is the product — so we lead with what the platform actually measured, and clearly mark what still needs a training run.</p>
     </div>
 
-    <div class="reveal border-glow glass rounded-2xl p-6 sm:p-8" id="benchCard">
+    <div class="grid gap-6 lg:grid-cols-2 mb-6">
+      <div class="reveal border-glow glass rounded-2xl p-6 sm:p-8">
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-run/15 px-2.5 py-1 text-xs font-medium text-run">● Measured</span>
+        <h3 class="mt-4 font-display text-xl font-semibold">Dataset-quality grade (Adaptive Data)</h3>
+        <p class="mt-1 text-sm text-muted">A data-centric platform grades the <em>dataset</em>. This is the improvement it reported.</p>
+        <div class="mt-6 flex items-end gap-4"><div class="font-display text-6xl font-bold text-grad">+15.7%</div><div class="pb-2 font-mono text-sm text-muted">score 7.0 → <span class="text-run">8.1</span></div></div>
+        <div class="mt-5 flex items-center gap-3 font-mono text-sm"><span class="rounded-md border border-white/15 px-2.5 py-1 text-muted">grade C</span><span class="text-muted">→</span><span class="rounded-md border border-run/40 bg-run/10 px-2.5 py-1 font-semibold text-run">grade B</span></div>
+      </div>
+      <div class="reveal glass rounded-2xl p-6 sm:p-8">
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-cyan/15 px-2.5 py-1 text-xs font-medium text-cyan">● Measured</span>
+        <h3 class="mt-4 font-display text-xl font-semibold">The data-quality audit</h3>
+        <p class="mt-1 text-sm text-muted">A two-pass bug hunt on the build pipeline — the moat had nearly shipped empty.</p>
+        <ul class="mt-5 space-y-3 text-sm">
+          <li class="flex justify-between border-b border-white/10 pb-2"><span>Refuse cases (no_tool)</span><span class="font-mono"><span class="text-muted/70">8</span> → <span class="text-run font-semibold">239</span></span></li>
+          <li class="flex justify-between border-b border-white/10 pb-2"><span>Disambiguate cases</span><span class="font-mono"><span class="text-muted/70">0</span> → <span class="text-run font-semibold">133</span></span></li>
+          <li class="flex justify-between"><span>Schema-invalid gold calls</span><span class="font-mono"><span class="text-muted/70">36%</span> → <span class="text-run font-semibold">0%</span></span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="reveal glass rounded-2xl p-6 sm:p-8" id="benchCard">
+      <div class="flex items-center gap-2 mb-6">
+        <span class="inline-flex items-center rounded-full bg-violet/15 px-2.5 py-1 text-xs font-medium text-violet">Target</span>
+        <h3 class="font-display text-xl font-semibold">Base vs. fine-tuned model</h3>
+      </div>
       <div class="space-y-6">
         <!-- rows: label, base%, ft% -->
         <div class="bench-row" data-base="41" data-ft="83">
@@ -333,7 +357,7 @@
         <div class="bench-row"><div class="flex justify-between text-sm mb-2"><span class="font-medium">Clarify accuracy</span><span class="font-mono text-muted"><span class="text-muted/70">25%</span> → <span class="text-run">80%</span></span></div><div class="h-3 rounded-full bg-white/5 relative overflow-hidden"><div class="bar absolute inset-y-0 bg-white/15" data-w="25"></div><div class="bar absolute inset-y-0 bg-gradient-to-r from-run to-cyan" data-w="80"></div></div></div>
         <div class="bench-row"><div class="flex justify-between text-sm mb-2"><span class="font-medium">Hallucination rate <span class="text-cyan">↓</span></span><span class="font-mono text-muted"><span class="text-muted/70">62%</span> → <span class="text-run">8%</span></span></div><div class="h-3 rounded-full bg-white/5 relative overflow-hidden"><div class="bar absolute inset-y-0 bg-red-500/40" data-w="62"></div><div class="bar absolute inset-y-0 bg-gradient-to-r from-run to-cyan" data-w="8"></div></div></div>
       </div>
-      <p class="mt-6 text-xs text-muted/70">Representative figures shown for illustration. <code class="text-muted">src/eval_bfcl.py</code> emits the final numbers with per-category breakdown and standard error.</p>
+      <p class="mt-6 text-xs text-muted/70"><strong>Illustrative targets</strong> — the model table becomes real only after the AutoScientist training run on the improved dataset. The one-command harness (baseline → multi-seed eval → paired significance → decomposition) then emits the final numbers with confidence intervals.</p>
     </div>
   </div>
 </section>

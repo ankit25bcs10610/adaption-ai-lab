@@ -26,7 +26,7 @@ const cards = [
     href: links.huggingface,
     configured: linkConfigured.huggingface,
     label: "Hugging Face",
-    sub: "weights + dataset",
+    sub: "model card + dataset",
     hover: "hover:border-run/50",
     icon: (
       <span

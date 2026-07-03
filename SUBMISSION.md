@@ -36,7 +36,7 @@ Plus (HackIndia track, necessary): **join the WhatsApp channel** and the **Disco
 
 ## Judging criteria → where we're strong
 
-1. **Measurable improvement over baseline** — Adaptive Data **+15.7% (C→B)** now; official held-out number after the console AutoScientist run.
+1. **Measurable improvement over baseline (held-out)** — ⏳ **pending the AutoScientist training run** (that produces the official per-category held-out model number). Note: the **+15.7% (C→B)** figure is Adaptive Data's **dataset-quality grade** (counts under criterion 2), *not* a model accuracy — we do not claim the eligibility gate on it.
 2. **Dataset quality & originality** — the strongest axis: refuse/clarify/over-refusal/partial-parallel moat, execution-verified env data, schema-drift slice, decontamination, a documented **two-pass data-quality audit** (`docs/DATA_QUALITY_AUDIT.md`) that found + fixed real defects (no_tool 8→239; 36%→0% invalid golds).
 3. **Real-world impact** — reliable tool-calling (safe abstention) is a core agent-safety problem; the viz track adds Hindi/Devanagari chart-QA.
 4. **Depth of AutoScientist usage** — Adaptive Data recipes (dedup + reasoning traces) + brand-controls blueprint; enhanced dataset consumed; reproducible one-command pipeline.

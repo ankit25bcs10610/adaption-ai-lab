@@ -13,20 +13,21 @@ tags:
   - agents
   - autoscientist
   - adaption-labs
-model-index:
-  - name: autoscientist-toolcaller
-    results:
-      - task: {type: text-generation, name: Function Calling}
-        dataset: {name: autoscientist-toolcaller-test, type: pandeyankit84/autoscientist-toolcaller-dataset}
-        metrics:
-          - {type: accuracy, name: dataset_quality_improvement_percent, value: 15.7}
+# NOTE: no model-index block yet — the only measured number so far is the Adaptive Data DATASET-quality
+# grade (+15.7%, C→B), which is NOT a model accuracy. A model-index (held-out accuracy) will be added
+# after the AutoScientist training run produces weights + the official per-category held-out number.
 ---
 
 # autoscientist-toolcaller
 
-A function-calling / tool-use model fine-tuned with **Adaption AutoScientist** for the AutoScientist
-Challenge (category: *All Other Domains*). It is trained to make the decision most tool-use datasets
-ignore: **when *not* to call a tool.**
+> **Status: weights pending.** This repository currently ships the **dataset**, the eval harness, and a
+> deterministic **behavior demo** (a simulator, not the trained model). The trained weights come from the
+> AutoScientist training run and will be added here, together with the official per-category **held-out**
+> number. The headline below is Adaptive Data's **dataset-quality** grade — *not* a model accuracy.
+
+A function-calling / tool-use model + dataset for the AutoScientist Challenge (category:
+*All Other Domains*). The dataset teaches a model the decision most tool-use datasets ignore:
+**when *not* to call a tool.**
 
 > **Adaptive Data result (real).** On the **fixed** function-calling set (2,440 rows, after the
 > data-quality audit), the platform's evaluation reports **7.0 → 8.1, +15.7%, grade C → B**
