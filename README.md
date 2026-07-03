@@ -27,7 +27,7 @@ The AutoScientist Challenge automates the model-training loop, so the competitiv
 | **Function-Calling** (`src/`) | All Other Domains | A tool-use model that **refuses and clarifies** instead of hallucinating a call | Hard negatives (no-tool / missing-arg / ambiguous) + multi-turn + schema-drift + a 5-language reliability slice |
 | **Data Visualization** (`src/viz/`) | Data Visualization | A chart-reader that competes where text-only entrants can't — **and speaks Hindi** | Self-verifying synthetic chart generator + Devanagari/romanized slice + a text-only Vega-Lite spec-reading modality |
 
-Everything is **offline-testable**: heavy deps (`torch`, `transformers`, `datasets`, the Adaption SDK) are lazily imported, so the correctness-critical logic runs on stdlib + `numpy` alone. `python -m tests.smoke_test` and `python -m tests.viz.test_viz` pass with **211 checks, zero downloads, zero keys**.
+Everything is **offline-testable**: the heavy ML stack (`torch`, `transformers`, `datasets`, the Adaption SDK) is lazily imported, so the correctness-critical logic runs on a handful of light deps (`numpy`, `jsonschema`, `pyyaml`, …) with **no LLM/VLM weights and no API keys**. `python -m tests.smoke_test` and `python -m tests.viz.test_viz` pass **211 checks** — and now run on every push via [CI](https://github.com/ankit25bcs10610/adaption-ai-lab/actions/workflows/tests.yml).
 
 ---
 
