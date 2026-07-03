@@ -293,10 +293,10 @@ def main() -> int:
 
     print("reasoning traces:")
     from src import reasoning as _rz
-    from src.format_utils import strip_think, parse_model_output, to_prompt_completion
     import random as _rr
     _rng2 = _rr.Random(0)
-    _rzex = {"tools": [_W], "query": "weather?", "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Mumbai"}}]}, "meta": {}}
+    _rzW = {"name": "get_weather", "description": "weather", "parameters": {"type": "object", "properties": {"city": {"type": "string"}}, "required": ["city"]}}
+    _rzex = {"tools": [_rzW], "query": "weather?", "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Mumbai"}}]}, "meta": {}}
     _tr = _rz.render_trace(_rzex, _rng2)
     ok &= check("trace is short (<60 tokens)", 0 < len(_tr.split()) <= 60)
     _pc = _rz.with_trace(to_prompt_completion(_rzex), _rzex, _rng2)
