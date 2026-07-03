@@ -65,7 +65,7 @@ export function Playground() {
                       type="checkbox"
                       checked={t.enabled}
                       onChange={() => toggle(t.name)}
-                      className="mt-1 h-4 w-4 cursor-pointer accent-[#22C55E]"
+                      className="mt-1 h-4 w-4 cursor-pointer accent-run"
                       aria-label={`Toggle ${t.name}`}
                     />
                     <span>

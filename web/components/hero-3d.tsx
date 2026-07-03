@@ -4,9 +4,11 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import { useReducedMotion } from "framer-motion";
 import * as THREE from "three";
+import { useAccent } from "@/components/use-accent";
+import { accentById } from "@/lib/themes";
 
-/** The model core: a green wireframe icosahedron + cyan inner shell. */
-function Core({ animate }: { animate: boolean }) {
+/** The model core: a wireframe icosahedron (primary accent) + inner shell (secondary accent). */
+function Core({ animate, colors }: { animate: boolean; colors: readonly string[] }) {
   const wire = useRef<THREE.LineSegments>(null);
   const inner = useRef<THREE.Mesh>(null);
 
@@ -31,17 +33,17 @@ function Core({ animate }: { animate: boolean }) {
   return (
     <group>
       <lineSegments ref={wire} geometry={wireGeo}>
-        <lineBasicMaterial color="#22C55E" transparent opacity={0.55} />
+        <lineBasicMaterial color={colors[0]} transparent opacity={0.55} />
       </lineSegments>
       <mesh ref={inner} geometry={innerGeo}>
-        <meshBasicMaterial color="#22D3EE" wireframe transparent opacity={0.25} />
+        <meshBasicMaterial color={colors[1]} wireframe transparent opacity={0.25} />
       </mesh>
     </group>
   );
 }
 
 /** Orbiting particle field = the tools. */
-function Tools({ animate }: { animate: boolean }) {
+function Tools({ animate, color }: { animate: boolean; color: string }) {
   const ref = useRef<THREE.Points>(null);
   const positions = useMemo(() => {
     const N = 260;
@@ -66,7 +68,7 @@ function Tools({ animate }: { animate: boolean }) {
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
       </bufferGeometry>
-      <pointsMaterial color="#8B5CF6" size={0.07} transparent opacity={0.8} sizeAttenuation />
+      <pointsMaterial color={color} size={0.07} transparent opacity={0.8} sizeAttenuation />
     </points>
   );
 }
@@ -85,6 +87,8 @@ function Parallax({ animate }: { animate: boolean }) {
 
 export function Hero3D() {
   const reduce = useReducedMotion();
+  const { accent } = useAccent();
+  const colors = accentById(accent).colors;
   // Honor a reduced-motion preference by not mounting a WebGL context at all — the global aurora +
   // grid-fade still provide ambiance, and we save a GPU context on low-power / motion-sensitive setups.
   if (reduce) return null;
@@ -96,8 +100,8 @@ export function Hero3D() {
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       aria-hidden
     >
-      <Core animate />
-      <Tools animate />
+      <Core animate colors={colors} />
+      <Tools animate color={colors[2]} />
       <Parallax animate />
     </Canvas>
   );

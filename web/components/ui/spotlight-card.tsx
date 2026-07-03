@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 export function SpotlightCard({
   children,
   className,
-  color = "34, 197, 94", // run green (rgb)
+  color = "var(--run)", // themed primary accent; pass e.g. "var(--violet)" to override
 }: {
   children: ReactNode;
   className?: string;
@@ -35,7 +35,7 @@ export function SpotlightCard({
         className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
         style={{
           background:
-            "radial-gradient(320px circle at var(--x, 50%) var(--y, 0), rgba(var(--c), 0.16), transparent 60%)",
+            "radial-gradient(320px circle at var(--x, 50%) var(--y, 0), rgb(var(--c) / 0.16), transparent 60%)",
         }}
       />
       <div className="relative">{children}</div>

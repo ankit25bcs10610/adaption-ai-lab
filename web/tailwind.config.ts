@@ -19,10 +19,11 @@ const config: Config = {
         muted: "hsl(var(--muted))",
         "muted-foreground": "hsl(var(--muted-foreground))",
         ring: "hsl(var(--ring))",
-        // brand accents — constant across themes ("code dark + run green")
-        run: "#22C55E",
-        cyan: "#22D3EE",
-        violet: "#8B5CF6",
+        // brand accents — driven by CSS vars so the theme picker can recolor the whole site.
+        // Values are RGB triplets (e.g. "34 197 94") set per-theme via [data-accent] in globals.css.
+        run: "rgb(var(--run) / <alpha-value>)",
+        cyan: "rgb(var(--cyan) / <alpha-value>)",
+        violet: "rgb(var(--violet) / <alpha-value>)",
       },
       fontFamily: {
         display: ["var(--font-display)", "sans-serif"],

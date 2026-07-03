@@ -37,7 +37,7 @@ export function DataViz() {
 
       <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
           <Reveal>
-            <SpotlightCard className="h-full rounded-2xl glass p-6" color="139, 92, 246">
+            <SpotlightCard className="h-full rounded-2xl glass p-6" color="var(--violet)">
               <ul className="space-y-4 text-sm">
                 {[
                   ["Correct by construction", "Ground-truth is computed from the data, not labeled — no noise to cap accuracy."],
@@ -74,7 +74,7 @@ export function DataViz() {
             <Reveal key={c.src} delay={i * 0.05}>
               <SpotlightCard
                 className="rounded-2xl glass p-3 transition-transform hover:-translate-y-1"
-                color={c.lang === "hi" ? "139, 92, 246" : "34, 197, 94"}
+                color={c.lang === "hi" ? "var(--violet)" : "var(--run)"}
               >
                 <Image
                   src={c.src}

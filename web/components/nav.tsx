@@ -6,6 +6,7 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemePicker } from "@/components/theme-picker";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -85,6 +86,7 @@ export function Nav() {
           </div>
 
           <div className="flex items-center gap-2">
+            <ThemePicker />
             <ThemeToggle />
             <Button asChild size="sm" className="hidden sm:inline-flex">
               <a href="#release">Get the model</a>

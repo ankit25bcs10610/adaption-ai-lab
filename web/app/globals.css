@@ -19,6 +19,11 @@
     --muted: 215 20% 92%;
     --muted-foreground: 215 16% 40%;
     --ring: 187 85% 53%;
+    /* Accent triplets (primary / secondary / tertiary). Default = Emerald. The theme picker
+       swaps these via [data-accent] below; every `run`/`cyan`/`violet` utility follows them. */
+    --run: 34 197 94;
+    --cyan: 34 211 238;
+    --violet: 139 92 246;
   }
 
   /* Dark theme — the primary design ("code dark + run green") */
@@ -31,6 +36,14 @@
     --muted-foreground: 215 20% 65%;
     --ring: 187 85% 53%;
   }
+
+  /* Accent themes — orthogonal to dark/light. Set on <html data-accent="…"> by the picker
+     (persisted in localStorage; applied pre-paint by the inline script in layout.tsx).
+     Each triplet is chosen so near-black text stays AA-legible on the primary accent. */
+  [data-accent="violet"] { --run: 139 92 246; --cyan: 34 211 238;  --violet: 244 114 182; }
+  [data-accent="amber"]  { --run: 245 158 11; --cyan: 251 113 133; --violet: 167 139 250; }
+  [data-accent="ocean"]  { --run: 59 130 246; --cyan: 6 182 212;   --violet: 34 197 94;   }
+  [data-accent="rose"]   { --run: 244 63 94;  --cyan: 168 85 247;  --violet: 34 211 238;  }
 
   * {
     @apply border-border;
@@ -46,10 +59,10 @@
     text-rendering: optimizeLegibility;
   }
   ::selection {
-    background: rgba(34, 197, 94, 0.3);
+    background: rgb(var(--run) / 0.3);
   }
   :focus-visible {
-    outline: 2px solid #22d3ee;
+    outline: 2px solid rgb(var(--cyan));
     outline-offset: 3px;
     border-radius: 6px;
   }
@@ -138,9 +151,9 @@
     background: currentColor;
     opacity: 0.9;
   }
-  .eyebrow-run { color: #22c55e; }
-  .eyebrow-cyan { color: #22d3ee; }
-  .eyebrow-violet { color: #8b5cf6; }
+  .eyebrow-run { color: rgb(var(--run)); }
+  .eyebrow-cyan { color: rgb(var(--cyan)); }
+  .eyebrow-violet { color: rgb(var(--violet)); }
 
   /* Recessed code surface — code reads as carved into the glass, not a flat hole punched in it.
      Radius rule: outer cards rounded-2xl · insets rounded-xl · pills rounded-full. */
@@ -162,14 +175,14 @@
   }
 
   .text-grad {
-    background: linear-gradient(120deg, hsl(var(--foreground)) 30%, #22d3ee 60%, #22c55e 90%);
+    background: linear-gradient(120deg, hsl(var(--foreground)) 30%, rgb(var(--cyan)) 60%, rgb(var(--run)) 90%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
 
   .glow-run {
-    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35), 0 10px 40px -10px rgba(34, 197, 94, 0.5);
+    box-shadow: 0 0 0 1px rgb(var(--run) / 0.35), 0 10px 40px -10px rgb(var(--run) / 0.5);
   }
 
   /* Conic glowing animated border (21st.dev-style) */
@@ -186,8 +199,8 @@
     background: conic-gradient(
       from var(--a),
       transparent 0 55%,
-      #22c55e 70%,
-      #22d3ee 80%,
+      rgb(var(--run)) 70%,
+      rgb(var(--cyan)) 80%,
       transparent 92%
     );
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -217,12 +230,12 @@
     animation: drift 22s ease-in-out infinite alternate;
   }
   .aurora::before {
-    background: radial-gradient(circle, #22c55e, transparent 60%);
+    background: radial-gradient(circle, rgb(var(--run)), transparent 60%);
     top: -15vw;
     left: -10vw;
   }
   .aurora::after {
-    background: radial-gradient(circle, #8b5cf6, transparent 60%);
+    background: radial-gradient(circle, rgb(var(--violet)), transparent 60%);
     bottom: -20vw;
     right: -10vw;
     animation-delay: -8s;
@@ -241,7 +254,7 @@
   }
 
   .link-underline {
-    background-image: linear-gradient(#22c55e, #22c55e);
+    background-image: linear-gradient(rgb(var(--run)), rgb(var(--run)));
     background-size: 0% 2px;
     background-repeat: no-repeat;
     background-position: 0 100%;
