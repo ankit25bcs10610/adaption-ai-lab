@@ -282,6 +282,15 @@ def main() -> int:
     ok &= check("multiseed aggregates 3 seeds", agg["seeds"] == 3)
     ok &= check("identical seeds -> zero gap std", agg["gap"]["std"] < 1e-9)
 
+    print("multilingual:")
+    from src import multilingual as _ml
+    _mlr = _ml.generate(30, seed=1)
+    ok &= check("multilingual generated", len(_mlr) > 0)
+    ok &= check("multilingual all correct-by-construction", all(judge(r, target_to_json_str(r["answer"]))["correct"] for r in _mlr))
+    ok &= check("multilingual has hi + hi-rom + en", {r["meta"]["lang"] for r in _mlr} == {"en", "hi", "hi-rom"})
+    ok &= check("multilingual matched twins (pair_id shared across langs)", any(sum(1 for r in _mlr if r["meta"]["pair_id"] == _mlr[0]["meta"]["pair_id"]) == 3 for _ in [0]))
+    ok &= check("multilingual determinism", _ml.generate(30, seed=1) == _mlr)
+
     print("reliability_probe:")
     from src.reliability_probe import probe_cases, score, to_markdown as probe_md
     from src.format_utils import build_eval_prompt as _bep, target_to_json_str as _tjs

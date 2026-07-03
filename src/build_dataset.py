@@ -468,8 +468,16 @@ def main() -> None:
         sd = schema_drift.generate(pool, n_sd, cfg["schema_drift"]["kinds"], seed=seed)
         print(f"[build] schema-drift: requested {n_sd}, got {len(sd)}")
 
+    # multilingual slice (matched en/hi/hi-rom twins) — uses Adaptive Data's 242-language strength
+    mlx: List[Dict[str, Any]] = []
+    ml_n = dcfg.get("multilingual_examples", 0)
+    if ml_n:
+        from . import multilingual
+        mlx = multilingual.generate(ml_n, seed=seed)
+        print(f"[build] multilingual: +{len(mlx)} (en/hi/hi-rom)")
+
     # 4. Combine + dedup
-    combined = positives + hard + mt + sd
+    combined = positives + hard + mt + sd + mlx
     combined = dedup.dedup_all(
         combined,
         minhash_threshold=cfg["dedup"]["minhash_threshold"],

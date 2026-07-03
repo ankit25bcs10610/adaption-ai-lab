@@ -49,6 +49,9 @@ def _dedup_group(ex: Dict[str, Any]) -> str:
         return kind
     if meta.get("source") == "env":
         return "env"  # execution-verified env rows dedup among themselves, not vs base positives
+    if meta.get("source") == "multilingual":
+        # keep per-language twins distinct from each other + from base positives
+        return "ml-" + (meta.get("lang") or "")
     return ""
 
 

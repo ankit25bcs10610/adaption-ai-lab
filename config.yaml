@@ -25,6 +25,7 @@ dataset:
   hard_negative_ratio: 0.22    # no_tool + missing_arg + ambiguous (refuse/clarify moat)
   multiturn_ratio: 0.20        # multi-turn is ~30% of BFCL v4 and where small fine-tunes beat GPT-4o
   schema_drift_ratio: 0.08     # distinctive originality slice: tool schemas that changed under the model
+  multilingual_examples: 150   # matched en/hi/hi-romanized tool-calling twins (Adaptive Data 242-lang lever)
   env_examples: 300            # execution-verified examples from src.envs (correct-by-construction)
   env_multicall_frac: 0.3      # of env_examples, fraction that are verified 2-3 call trajectories
   env_dpo: 200                 # execution-labeled DPO pairs from src.envs merged into pref.jsonl
