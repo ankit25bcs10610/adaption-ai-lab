@@ -9,7 +9,7 @@
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![Live site](https://img.shields.io/badge/live_site-vercel-000000?logo=vercel&logoColor=white)](https://autoscientist-toolcaller.vercel.app)
-[![Tests](https://img.shields.io/badge/tests-211%20passing-22C55E)](#testing)
+[![CI](https://github.com/ankit25bcs10610/adaption-ai-lab/actions/workflows/tests.yml/badge.svg)](https://github.com/ankit25bcs10610/adaption-ai-lab/actions/workflows/tests.yml)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](#license--acknowledgements)
 
 [**Live site**](https://autoscientist-toolcaller.vercel.app) · [In-browser demo](https://huggingface.co/spaces/pandeyankit84/autoscientist-toolcaller-demo) · [Datasets](#live-artifacts-published--open) · [Data-quality audit](docs/DATA_QUALITY_AUDIT.md) · [Submission status](SUBMISSION.md)
