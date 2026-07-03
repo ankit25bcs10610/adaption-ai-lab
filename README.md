@@ -8,11 +8,11 @@
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
-[![Tests](https://img.shields.io/badge/tests-198%20passing-22C55E)](#testing)
-[![Data quality](https://img.shields.io/badge/Adaptive%20Data-C%20%E2%86%92%20B%20(%2B15.7%25)-8B5CF6)](#the-result-so-far)
+[![Live site](https://img.shields.io/badge/live_site-vercel-000000?logo=vercel&logoColor=white)](https://autoscientist-toolcaller.vercel.app)
+[![CI](https://github.com/ankit25bcs10610/adaption-ai-lab/actions/workflows/tests.yml/badge.svg)](https://github.com/ankit25bcs10610/adaption-ai-lab/actions/workflows/tests.yml)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](#license--acknowledgements)
 
-[**Live demo**](https://huggingface.co/spaces/pandeyankit84/autoscientist-toolcaller-demo) · [Datasets](#live-artifacts-published--open) · [Data-quality audit](docs/DATA_QUALITY_AUDIT.md) · [Submission status](SUBMISSION.md)
+[**Live site**](https://autoscientist-toolcaller.vercel.app) · [In-browser demo](https://huggingface.co/spaces/pandeyankit84/autoscientist-toolcaller-demo) · [Datasets](#live-artifacts-published--open) · [Data-quality audit](docs/DATA_QUALITY_AUDIT.md) · [Submission status](SUBMISSION.md)
 
 </div>
 
@@ -39,13 +39,16 @@ The build pipeline was adversarially audited, then re-graded on the platform:
 
 | | Before | After |
 |---|---|---|
-| **Adaptive Data quality grade** | C (7.0) | **B (8.1)** — **+15.7%** |
+| Adaptive Data grade — fixed set (`c4923b7f`, partial run¹) | C (7.0) | **B (8.1)** · **+15.7%** |
+| Adaptive Data grade — earlier 250-row set (`a99c0c96`, completed) | B− (8.0) | B (8.8) · +10.0% |
 | Refuse cases (`no_tool`) | 8 | **239** |
 | Clarify cases (`miss_param`) | 1 | **36** |
 | Disambiguate cases | 0 | **133** |
 | Schema-invalid gold calls | 36% | **0%** |
 
-The middle rows are the whole thesis: the "refuse / clarify / disambiguate" moat was being *generated and then silently discarded by dedup* until the audit caught it. Full before/after in [`docs/DATA_QUALITY_AUDIT.md`](docs/DATA_QUALITY_AUDIT.md).
+> ¹ The **+15.7%** grade was returned on **1,000 of the 2,440** fixed-set rows — the free-tier processing cap — so it's a strong signal, not yet a completed full-set grade (that finishes with the console run). The **completed** 250-row run (+10%, grade B) corroborates the audit-driven gain.
+
+The audit-count rows are the whole thesis: the "refuse / clarify / disambiguate" moat was being *generated and then silently discarded by dedup* until the audit caught it. Full before/after in [`docs/DATA_QUALITY_AUDIT.md`](docs/DATA_QUALITY_AUDIT.md).
 
 ### Live artifacts (published, open)
 
@@ -54,7 +57,8 @@ The middle rows are the whole thesis: the "refuse / clarify / disambiguate" moat
 | Tool-calling dataset | [dataset](https://huggingface.co/datasets/pandeyankit84/autoscientist-toolcaller-dataset) · [model card](https://huggingface.co/pandeyankit84/autoscientist-toolcaller) | [dataset](https://www.kaggle.com/datasets/pandeyankit99/autoscientist-toolcaller-dataset) |
 | Chart-QA dataset | [dataset](https://huggingface.co/datasets/pandeyankit84/autoscientist-chartqa-dataset) | [dataset](https://www.kaggle.com/datasets/pandeyankit99/autoscientist-chartqa-dataset) |
 
-**▶️ Live demo** — [call / refuse / clarify, in your browser](https://huggingface.co/spaces/pandeyankit84/autoscientist-toolcaller-demo).
+**▶️ Live site** — the full experience at **[autoscientist-toolcaller.vercel.app](https://autoscientist-toolcaller.vercel.app)** (3D hero, interactive tool-call playground, 5 accent themes).
+**Interactive demo** — [call / refuse / clarify, in your browser](https://huggingface.co/spaces/pandeyankit84/autoscientist-toolcaller-demo) (Gradio Space).
 
 ---
 
@@ -175,7 +179,7 @@ python -m src.fill_model_card  --username <you>       # auto-fill MODEL_CARD.md 
 
 **Data-quality audit — two adversarial passes.** Because the dataset *is* the product, the build was audited before release. Pass 1 caught the refuse/clarify moat being generated and then silently discarded by dedup (`no_tool` **8 → 239**, `miss_param` **1 → 36**, `ambiguous` **0 → 133**), plus a slice-mixing undershoot and a DPO poison-pair risk. Pass 2 caught a schema-drift poison bug (**36% of `rename` gold calls were schema-invalid → 0%**), added over-refusal-trap and partial-parallel slices, execution-verified multi-call trajectories, a leakage **decontamination** pass, and a blocking release preflight. `stats.json` carries `mix` (intended-vs-realized shares + `mix_ok`) and `contamination` blocks. Full write-up: [`docs/DATA_QUALITY_AUDIT.md`](docs/DATA_QUALITY_AUDIT.md).
 
-Sources are permissively licensed: `Salesforce/xlam-function-calling-60k` (CC-BY-4.0), `Team-ACE/ToolACE` (Apache-2.0), optional `Agent-Ark/Toucan-1.5M` (Apache-2.0). Base model: `Qwen/Qwen2.5-Coder-3B-Instruct`. Full strategy: [`docs/WINNING.md`](docs/WINNING.md).
+The **only active** positives source is `Team-ACE/ToolACE` (Apache-2.0). `Salesforce/xlam-function-calling-60k` (CC-BY-4.0) and `Agent-Ark/Toucan-1.5M` (Apache-2.0) are supported but **disabled by default** (opt-in, gated) — so the shipped dataset is clean Apache-2.0. Base model: `Qwen/Qwen2.5-Coder-3B-Instruct`. Full strategy: [`docs/WINNING.md`](docs/WINNING.md).
 
 ---
 
@@ -262,6 +266,6 @@ Submission status and remaining checklist: [`SUBMISSION.md`](SUBMISSION.md) · p
 
 ## License & acknowledgements
 
-Code and generated datasets are released under **Apache-2.0**. Third-party data retains its upstream license (xLAM CC-BY-4.0; ToolACE / Toucan / ReachQA Apache-2.0 / MIT) with attribution preserved in the dataset cards. Built for the Adaption AutoScientist Challenge × HackIndia.
+Code and generated datasets are released under **Apache-2.0**. The active data source is ToolACE (Apache-2.0); the optional, disabled-by-default sources retain their upstream license (xLAM CC-BY-4.0; Toucan / ReachQA Apache-2.0 / MIT), with attribution preserved in the dataset cards when enabled. Built for the Adaption AutoScientist Challenge × HackIndia.
 
 <div align="center"><sub>🤖 Engineered with <a href="https://claude.com/claude-code">Claude Code</a></sub></div>

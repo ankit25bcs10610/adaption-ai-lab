@@ -71,7 +71,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               "try{var a=localStorage.getItem('accent');if(a)document.documentElement.setAttribute('data-accent',a);}catch(e){}",
           }}
         />
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+        {/* Dark-only: the design is dark-first; a light variant isn't fully built and the accent
+            themes only meet WCAG AA on the dark canvas. forcedTheme locks it while keeping the
+            accent picker (an orthogonal axis) fully functional. */}
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} forcedTheme="dark">
           {children}
         </ThemeProvider>
       </body>
