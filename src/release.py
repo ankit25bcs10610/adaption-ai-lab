@@ -14,8 +14,10 @@ from __future__ import annotations
 import argparse
 import os
 
-# Placeholder markers that must NEVER survive into a published card.
-_PLACEHOLDERS = ["YOUR_USERNAME", "<user>", "<you>", "value: 0.000", "0.000", "<- fill", "← fill", "TODO", "FIXME"]
+# Placeholder markers that must NEVER survive into a published card. Uses a precise sentinel
+# (__PENDING__) rather than "0.000", which would false-positive-block a legitimately-strong card
+# (e.g. a real 0.000 hallucination rate after fine-tuning).
+_PLACEHOLDERS = ["YOUR_USERNAME", "<user>", "<you>", "__PENDING__", "<- fill", "← fill", "TODO", "FIXME"]
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 

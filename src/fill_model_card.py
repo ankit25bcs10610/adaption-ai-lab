@@ -87,10 +87,10 @@ def main() -> None:
         flags=re.DOTALL,
     )
 
-    # YAML model-index value = fine-tuned overall accuracy
+    # YAML model-index value = fine-tuned overall accuracy (replace the numeric OR __PENDING__ sentinel)
     acc = ft.get("overall_accuracy")
     if acc is not None:
-        text = re.sub(r"value:\s*[\d.]+", f"value: {acc:.3f}", text, count=1)
+        text = re.sub(r"value:\s*(?:[\d.]+|__PENDING__)", f"value: {acc:.3f}", text, count=1)
 
     text = text.replace("YOUR_USERNAME", args.username)
 

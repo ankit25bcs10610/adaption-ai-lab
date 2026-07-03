@@ -19,7 +19,7 @@ model-index:
       - task: {type: text-generation, name: Function Calling}
         dataset: {name: autoscientist-toolcaller-test, type: pandeyankit84/autoscientist-toolcaller-dataset}
         metrics:
-          - {type: accuracy, name: overall_accuracy, value: 0.000}
+          - {type: accuracy, name: overall_accuracy, value: __PENDING__}
 ---
 
 # autoscientist-toolcaller
@@ -46,11 +46,11 @@ Held-out test set; identical greedy decoding for both; bootstrapped standard err
 <!--METRICS_START-->
 | Metric | Base | Fine-tuned |
 |---|---|---|
-| Overall accuracy | 0.000 ± 0.000 | 0.000 ± 0.000 |
-| Positive (tool-call) accuracy | 0.000 | 0.000 |
-| Refusal accuracy | 0.000 | 0.000 |
-| Clarify accuracy | 0.000 | 0.000 |
-| **Hallucination rate on hard negatives** ↓ | 0.000 | 0.000 |
+| Overall accuracy | __PENDING__ | __PENDING__ |
+| Positive (tool-call) accuracy | __PENDING__ | __PENDING__ |
+| Refusal accuracy | __PENDING__ | __PENDING__ |
+| Clarify accuracy | __PENDING__ | __PENDING__ |
+| **Hallucination rate on hard negatives** ↓ | __PENDING__ | __PENDING__ |
 <!--METRICS_END-->
 
 **Separately** — Adaptive Data's **dataset-quality grade** (this is a *data* metric, not model accuracy):

@@ -435,6 +435,8 @@ def main() -> int:
         open(_os2.path.join(_td, _n), "w").write("{}\n")
     ok &= check("preflight flags placeholder card", any("placeholder" in p for p in preflight(_td, card_paths=["clean text with YOUR_USERNAME here\n"], check_manifest=False)))
     ok &= check("preflight passes clean card + artifacts", preflight(_td, card_paths=["all real numbers, no markers\n"], check_manifest=False) == [])
+    ok &= check("preflight flags unfilled __PENDING__ card", any("__PENDING__" in p for p in preflight(_td, card_paths=["overall_accuracy value: __PENDING__\n"], check_manifest=False)))
+    ok &= check("preflight allows a real 0.000 metric (no false-positive)", preflight(_td, card_paths=["Hallucination rate 0.000 after fine-tuning; overall 0.912\n"], check_manifest=False) == [])
     _td2 = _tf.mkdtemp()  # missing artifacts
     ok &= check("preflight flags missing artifact", any("missing artifact" in p for p in preflight(_td2, card_paths=["clean\n"], check_manifest=False)))
 
