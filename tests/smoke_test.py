@@ -303,6 +303,23 @@ def main() -> int:
     ok &= check("completion wrapped with <think>", _pc["completion"].startswith("<think>") and "</think>" in _pc["completion"])
     ok &= check("firewall recovers envelope after trace", parse_model_output(_pc["completion"])["action"] == "call")
 
+    print("curriculum (difficulty + ordering):")
+    from src import curriculum as _cur
+    _easy = {"tools": [_rzW], "query": "x", "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Mumbai"}}]}, "meta": {}}
+    _hard = {"tools": [_rzW, _rzW, _rzW, _rzW], "query": "x", "answer": {"type": "tool_call", "calls": [{"name": "a", "arguments": {"p": 1}}, {"name": "b", "arguments": {"q": 2}}]}, "meta": {"sd_kind": "rename"}}
+    ok &= check("harder example scores higher", _cur.difficulty(_hard) > _cur.difficulty(_easy))
+    ok &= check("curriculum orders easy->hard", _cur.curriculum_order([_hard, _easy]) == [1, 0])
+    _h = _cur.histogram([_easy, _hard])
+    ok &= check("histogram has bands + mean", "by_band" in _h and _h["n"] == 2)
+
+    print("error explorer:")
+    from src.eval_report import render_error_explorer
+    _errs = [{"category": "irrelevance", "reason": "hallucinated_call", "query": "write a poem",
+              "gold": {"type": "refuse"}, "output": '{"action":"call","calls":[{"name":"x"}]}'}]
+    _eh = render_error_explorer(_errs)
+    ok &= check("error explorer renders failures", "Error explorer" in _eh and "hallucinated_call" in _eh)
+    ok &= check("error explorer empty -> empty string", render_error_explorer([]) == "")
+
     print("reliability_probe:")
     from src.reliability_probe import probe_cases, score, to_markdown as probe_md
     from src.format_utils import build_eval_prompt as _bep, target_to_json_str as _tjs
