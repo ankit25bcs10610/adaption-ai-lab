@@ -89,6 +89,41 @@ def args_match_lenient(pred: Dict[str, Any], gold: Dict[str, Any]) -> bool:
     return True
 
 
+def _distinct_calls(calls: List[Dict[str, Any]]) -> int:
+    """Count distinct calls by normalized (name, arguments) — so a repeated identical call counts once."""
+    seen = set()
+    for c in calls:
+        seen.add((c.get("name"), json.dumps(normalize_value(c.get("arguments", {})), sort_keys=True)))
+    return len(seen)
+
+
+def _perfect_matching(pred_calls: List[Dict[str, Any]], gold_calls: List[Dict[str, Any]], matcher) -> bool:
+    """True iff every predicted call can be assigned to a DISTINCT gold call (name + args match) — a
+    proper bijection found via augmenting paths (Kuhn's). Replaces greedy first-hit removal, which is
+    order-dependent and can miss a valid assignment (false negative) when acceptable-value sets overlap."""
+    n = len(gold_calls)
+    if len(pred_calls) != n:
+        return False
+    adj: List[List[int]] = [
+        [pi for pi, pc in enumerate(pred_calls)
+         if pc.get("name") == g["name"] and matcher(pc.get("arguments", {}), g.get("arguments", {}))]
+        for g in gold_calls
+    ]
+    assigned_to = [-1] * len(pred_calls)  # predicted index -> gold index it currently fills
+
+    def _augment(gi: int, seen: set) -> bool:
+        for pi in adj[gi]:
+            if pi in seen:
+                continue
+            seen.add(pi)
+            if assigned_to[pi] == -1 or _augment(assigned_to[pi], seen):
+                assigned_to[pi] = gi
+                return True
+        return False
+
+    return sum(_augment(gi, set()) for gi in range(n)) == n
+
+
 # --------------------------------------------------------------------------------------
 # Judging (lenient by default; set lenient=False to fall back to strict equality)
 # --------------------------------------------------------------------------------------
@@ -114,22 +149,17 @@ def judge_bfcl(example: Dict[str, Any], output_text: str, lenient: bool = True) 
         gold_calls = gold["calls"]
         if len(pred_calls) != len(gold_calls):
             return res
-        remaining = list(gold_calls)
         for pc in pred_calls:
             ok, _ = validate_call(pc, tools)
             if not ok:
                 return res
-            matcher = args_match_lenient if lenient else (lambda a, b: a == b)
-            hit = next(
-                (g for g in remaining
-                 if g["name"] == pc.get("name")
-                 and matcher(pc.get("arguments", {}), g.get("arguments", {}))),
-                None,
-            )
-            if hit is None:
-                return res
-            remaining.remove(hit)
-        res["correct"] = not remaining
+        matcher = args_match_lenient if lenient else (lambda a, b: a == b)
+        # Proper bijection (not greedy), AND the prediction must contain at least as many DISTINCT
+        # calls as the gold — so a duplicated call can't be credited against two distinct golds.
+        res["correct"] = (
+            _perfect_matching(pred_calls, gold_calls, matcher)
+            and _distinct_calls(pred_calls) >= _distinct_calls(gold_calls)
+        )
         return res
 
     # hard negative

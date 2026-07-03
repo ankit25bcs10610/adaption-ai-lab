@@ -354,20 +354,39 @@ def carve_novel_tools(
     return train_pool, novel_test, novel
 
 
+def _split_group_key(ex: Dict[str, Any], i: int) -> str:
+    """Group key so matched examples land in ONE split. Multilingual twins share a `pair_id`
+    (identical gold, different-language query); if one twin leaked into test while another sat in
+    train the model could memorize the shared gold and inflate the held-out multilingual number —
+    and the cross-split dedup guard misses it because the query TEXT differs. Ungrouped rows get a
+    unique key, so they split individually exactly as before."""
+    meta = ex.get("meta", {}) or {}
+    pid = meta.get("pair_id")
+    if pid is not None:
+        return f"{meta.get('source', '')}:pair:{pid}"
+    return f"solo:{i}"
+
+
 def split(
     examples: List[Dict[str, Any]], ratios: Dict[str, float], seed: int
 ) -> Dict[str, List[Dict[str, Any]]]:
-    rng = random.Random(seed)
-    shuffled = examples[:]
-    rng.shuffle(shuffled)
-    n = len(shuffled)
+    """Group-aware split: matched twins (shared pair_id) never straddle train/val/test. Slicing is
+    over GROUPS (a twin-set counts once); solo rows are their own group, so their split is unchanged.
+    Deterministic: groups are keyed in example order, then the key list is shuffled with `seed`."""
+    groups: Dict[str, List[Dict[str, Any]]] = {}
+    for i, ex in enumerate(examples):
+        groups.setdefault(_split_group_key(ex, i), []).append(ex)
+    keys = list(groups.keys())
+    random.Random(seed).shuffle(keys)
+    n = len(keys)
     n_train = int(n * ratios["train"])
     n_val = int(n * ratios["val"])
-    return {
-        "train": shuffled[:n_train],
-        "val": shuffled[n_train : n_train + n_val],
-        "test": shuffled[n_train + n_val :],
+    buckets = {
+        "train": keys[:n_train],
+        "val": keys[n_train : n_train + n_val],
+        "test": keys[n_train + n_val :],
     }
+    return {name: [ex for k in ks for ex in groups[k]] for name, ks in buckets.items()}
 
 
 def write_jsonl(path: str, rows: List[Dict[str, Any]]) -> None:

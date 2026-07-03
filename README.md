@@ -9,7 +9,7 @@
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![Live site](https://img.shields.io/badge/live_site-vercel-000000?logo=vercel&logoColor=white)](https://autoscientist-toolcaller.vercel.app)
-[![Tests](https://img.shields.io/badge/tests-198%20passing-22C55E)](#testing)
+[![Tests](https://img.shields.io/badge/tests-211%20passing-22C55E)](#testing)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](#license--acknowledgements)
 
 [**Live site**](https://autoscientist-toolcaller.vercel.app) · [In-browser demo](https://huggingface.co/spaces/pandeyankit84/autoscientist-toolcaller-demo) · [Datasets](#live-artifacts-published--open) · [Data-quality audit](docs/DATA_QUALITY_AUDIT.md) · [Submission status](SUBMISSION.md)
@@ -27,7 +27,7 @@ The AutoScientist Challenge automates the model-training loop, so the competitiv
 | **Function-Calling** (`src/`) | All Other Domains | A tool-use model that **refuses and clarifies** instead of hallucinating a call | Hard negatives (no-tool / missing-arg / ambiguous) + multi-turn + schema-drift + a 5-language reliability slice |
 | **Data Visualization** (`src/viz/`) | Data Visualization | A chart-reader that competes where text-only entrants can't — **and speaks Hindi** | Self-verifying synthetic chart generator + Devanagari/romanized slice + a text-only Vega-Lite spec-reading modality |
 
-Everything is **offline-testable**: heavy deps (`torch`, `transformers`, `datasets`, the Adaption SDK) are lazily imported, so the correctness-critical logic runs on stdlib + `numpy` alone. `python -m tests.smoke_test` and `python -m tests.viz.test_viz` pass with **198 checks, zero downloads, zero keys**.
+Everything is **offline-testable**: heavy deps (`torch`, `transformers`, `datasets`, the Adaption SDK) are lazily imported, so the correctness-critical logic runs on stdlib + `numpy` alone. `python -m tests.smoke_test` and `python -m tests.viz.test_viz` pass with **211 checks, zero downloads, zero keys**.
 
 ---
 
@@ -107,7 +107,7 @@ The audit-count rows are the whole thesis: the "refuse / clarify / disambiguate"
 ├── web/                       # Next.js 14 + react-three-fiber landing page (in-browser tool-call playground)
 ├── site/                      # Zero-build single-file landing page (Three.js)
 ├── app/                       # Gradio demo (function-calling)
-├── tests/                     # Offline suites — tests/smoke_test.py (141) · tests/viz/test_viz.py (57)
+├── tests/                     # Offline suites — tests/smoke_test.py (154) · tests/viz/test_viz.py (57)
 ├── docs/                      # WINNING · DATA_QUALITY_AUDIT · AUTOSCIENTIST_USAGE · DATASHEET · CONSOLE_STEPS …
 ├── scripts/                   # run_all.sh (full pipeline) · finalize.sh (one-command run-day)
 └── requirements.txt · config.yaml
@@ -125,7 +125,7 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
 # Offline test suites — no downloads, no API keys
-python -m tests.smoke_test        # function-calling   → ALL PASS (141)
+python -m tests.smoke_test        # function-calling   → ALL PASS (154)
 python -m tests.viz.test_viz      # data-visualization → ALL PASS (57)
 ```
 
@@ -222,7 +222,7 @@ The site keeps **measured** numbers (the +15.7% grade, the audit) strictly separ
 Both suites are fully offline (no model downloads, no API keys) and exercise the correctness-critical logic — scorers, ground-truth generation, determinism, and every edge case surfaced by adversarial review.
 
 ```bash
-python -m tests.smoke_test      # 141 checks — function-calling
+python -m tests.smoke_test      # 154 checks — function-calling
 python -m tests.viz.test_viz    #  57 checks — data-visualization (scorer edge cases + synth GT + split integrity)
 ```
 

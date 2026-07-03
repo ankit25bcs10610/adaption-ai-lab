@@ -459,6 +459,57 @@ def main() -> int:
     _orig = list(extract_enhanced(_raw, prefer_enhanced=False))
     ok &= check("original mode ignores enhanced", _orig[0] == {"prompt": "P", "completion": "C"})
 
+    print("multilingual split leak-guard (pair_id grouping):")
+    from src.build_dataset import split as _bsplit
+    _ml_rows = _ml.generate(50, seed=3)  # matched twins, one pair_id per 5-language set
+    _solo = [{"tools": [_W], "query": f"q{i}", "answer": {"type": "refuse", "content": "x"},
+              "meta": {"source": "toolace", "hn_kind": None}} for i in range(40)]
+    _ratios = {"train": 0.7, "val": 0.15, "test": 0.15}
+    _parts = _bsplit(_ml_rows + _solo, _ratios, seed=7)
+    _placement: dict = {}
+    for _name, _rows in _parts.items():
+        for _r in _rows:
+            _pid = _r["meta"].get("pair_id")
+            if _pid is not None:
+                _placement.setdefault(_pid, set()).add(_name)
+    ok &= check("no multilingual pair_id straddles splits", bool(_placement) and all(len(v) == 1 for v in _placement.values()))
+    ok &= check("split preserves every row", sum(len(v) for v in _parts.values()) == len(_ml_rows) + len(_solo))
+    ok &= check("split deterministic", {k: len(v) for k, v in _bsplit(_ml_rows + _solo, _ratios, seed=7).items()}
+                == {k: len(v) for k, v in _parts.items()})
+
+    print("BFCL parallel bijection matcher:")
+    _f = {"name": "f", "description": "f", "parameters": {"type": "object", "properties": {"x": {"type": "integer"}}, "required": ["x"]}}
+    # gold: G1 accepts x in {1,2}; G2 requires x==1. pred [x=1, x=2] has a valid 1-to-1 (P->G2, P->G1)
+    # that GREEDY first-hit would miss -> the bijection matcher must accept it.
+    _bex = {"tools": [_f], "query": "do both", "answer": {"type": "tool_call", "calls": [
+        {"name": "f", "arguments": {"x": {"_acceptable": [1, 2]}}}, {"name": "f", "arguments": {"x": 1}}]}, "meta": {}}
+    _bpred = target_to_json_str({"type": "tool_call", "calls": [{"name": "f", "arguments": {"x": 1}}, {"name": "f", "arguments": {"x": 2}}]})
+    ok &= check("bijection accepts valid match greedy would miss", judge_bfcl(_bex, _bpred)["correct"])
+    # over-credit guard: two DISTINCT golds, but a DUPLICATED prediction must NOT satisfy both.
+    _bex2 = {"tools": [_f], "query": "two", "answer": {"type": "tool_call", "calls": [
+        {"name": "f", "arguments": {"x": 1}}, {"name": "f", "arguments": {"x": {"_acceptable": [1, 2]}}}]}, "meta": {}}
+    _dup = target_to_json_str({"type": "tool_call", "calls": [{"name": "f", "arguments": {"x": 1}}, {"name": "f", "arguments": {"x": 1}}]})
+    ok &= check("duplicated call not credited to two distinct golds", not judge_bfcl(_bex2, _dup)["correct"])
+    _ok2 = target_to_json_str({"type": "tool_call", "calls": [{"name": "f", "arguments": {"x": 1}}, {"name": "f", "arguments": {"x": 2}}]})
+    ok &= check("distinct correct parallel still passes", judge_bfcl(_bex2, _ok2)["correct"])
+
+    print("multilingual Δaccuracy evaluator:")
+    from src.eval_multilingual import _delta_metrics, evaluate_multilingual
+    _oracle_bits = {(p, l): 1 for p in range(1, 6) for l in ("en", "hi", "es")}
+    _dm = _delta_metrics(_oracle_bits)
+    ok &= check("Δ metrics: languages present", set(_dm["languages"]) == {"en", "hi", "es"})
+    ok &= check("Δ metrics: oracle Δ(hi−en) == 0", _dm["matched_pair_delta_vs_en"]["hi"]["delta_vs_en"] == 0.0)
+    _fail_hi = {(p, l): (0 if l == "hi" else 1) for p in range(1, 6) for l in ("en", "hi")}
+    _dmf = _delta_metrics(_fail_hi)
+    ok &= check("Δ metrics: fails-only-hi -> Δ(hi−en) == -1", _dmf["matched_pair_delta_vs_en"]["hi"]["delta_vs_en"] == -1.0)
+    ok &= check("Δ metrics: hi accuracy 0.0", _dmf["by_lang"]["hi"]["accuracy"] == 0.0)
+    _mlrecs = _ml.generate(30, seed=5)
+    _outs = iter([target_to_json_str(r["answer"]) for r in _mlrecs])
+    _mm = evaluate_multilingual(_mlrecs, lambda p: next(_outs))
+    ok &= check("evaluate_multilingual: 5 languages measured", set(_mm["languages"]) >= {"en", "hi", "hi-rom", "es", "fr"})
+    ok &= check("evaluate_multilingual: oracle -> every lang acc 1.0", all(v["accuracy"] == 1.0 for v in _mm["by_lang"].values()))
+    ok &= check("evaluate_multilingual: oracle -> Δ == 0 all langs", all(d["delta_vs_en"] == 0.0 for d in _mm["matched_pair_delta_vs_en"].values()))
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 
