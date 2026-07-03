@@ -34,6 +34,10 @@ cp "$RESULTS/eval_$S1.json" "$RESULTS/eval.json"
 cp "$RESULTS/eval_bfcl_$S1.json" "$RESULTS/eval_bfcl.json" 2>/dev/null || true
 FT="$RESULTS/ft_$S1/predictions.jsonl"; BASEP="$RESULTS/base/predictions.jsonl"
 
+echo "==> [2b/7] Multilingual matched-pair Δaccuracy(lang−en) — the HackIndia robustness number"
+python3 -m src.eval_multilingual --model "$MODEL" $ADAPTER_ARG --data "$DATA/test.jsonl" \
+  --out "$RESULTS/eval_multilingual.json" | tee "$RESULTS/multilingual.txt" || true
+
 echo "==> [3/7] Novel-tools holdout (generalization)"
 [ -f "$DATA/test_novel.jsonl" ] && python3 -m src.eval_harness --model "$MODEL" $ADAPTER_ARG --data "$DATA/test_novel.jsonl" --out "$RESULTS/eval_novel.json" || true
 
@@ -57,7 +61,7 @@ echo ""
 echo "===================== HEADLINE ====================="
 cat "$RESULTS/HEADLINE.txt"
 echo "===================================================="
-echo "Filled: MODEL_CARD.md · $RESULTS/report.html · eval_decompose.json · robustness.md"
+echo "Filled: MODEL_CARD.md · $RESULTS/report.html · eval_decompose.json · robustness.md · eval_multilingual.json"
 echo "Publish weights next:"
 echo "  python -m src.release hf-model     --repo pandeyankit84/autoscientist-toolcaller --dir <weights>"
 echo "  python -m src.release kaggle-model --slug pandeyankit99/autoscientist-toolcaller --dir <weights>"

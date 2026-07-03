@@ -31,13 +31,19 @@ client.datasets.run(
 
 ## 2. Measured result (real, held-out quality grade)
 
-| Run (dataset_id) | rows | score before → after | Δ | grade |
-|---|---|---|---|---|
-| `c4923b7f-3ee7-4691-bb1f-b47a85cf5097` | 2,440 | **7.0 → 8.1** | **+15.7%** | C → B |
-| `a99c0c96-ff5b-490a-9aa9-372ea62d79d4` | 250 | 8.0 → 8.8 | +10.0% | B |
+**Dataset lineage — single source of truth.** The published open dataset (HF + Kaggle) is **3,174 rows**;
+the platform-graded runs below are earlier / curated **snapshots** of it, not separate datasets.
+
+| Run (dataset_id) | rows | status | score before → after | Δ | grade |
+|---|---|---|---|---|---|
+| `a99c0c96-ff5b-490a-9aa9-372ea62d79d4` | 250 | ✅ **completed** | 8.0 → 8.8 | +10.0% | B |
+| `c4923b7f-3ee7-4691-bb1f-b47a85cf5097` (post-audit fix) | 2,440 | ⚠️ **partial** — graded on 1,000/2,440 (free-tier cap) | **7.0 → 8.1** | **+15.7%** | C → B |
+| `d92279d3-90c5-4da7-aef3-e506aa291cd6` (cleaned + diversified) | 2,557 | ⏳ **pending** — full grade completes on the console run | — | — | — |
 
 `improvement_percent` comes from `datasets.get_evaluation` (`score_before` / `score_after`, grade A–E).
 This is Adaptive Data's **dataset-quality** grade — the data-centric platform's measurable improvement.
+The **+15.7%** is a strong *partial-run* signal; the **completed** 250-row run (+10%, B) corroborates it,
+and `d92279d3`'s full-set grade is the run-day deliverable (it's the ID staged for submission).
 
 ## 3. Platform value-add is real, not nominal
 

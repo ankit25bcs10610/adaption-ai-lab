@@ -71,7 +71,7 @@ After the fixes, on the same config and seed:
 - Realized source shares — positives **57.6%**, hard-negative **18.9%**, multi-turn **14.3%**,
   schema-drift **9.1%** — now track the intended mix instead of collapsing toward positives.
 - `no_tool` sits at **8.1% of the total set**, inside the ~10% research optimum band; `mix_ok` passes.
-- Total examples: **2,935** across `train / val / test` (+ a novel-tools holdout).
+- Total examples: **3,174** (the published HF/Kaggle set) across `train / val / test` (+ a novel-tools holdout).
 
 Regression tests were added for each fix (`tests/smoke_test.py`: Hammer construction excludes the
 gold tool, the `<think>` firewall, the DPO poison guard), so the moat can't silently empty out again.

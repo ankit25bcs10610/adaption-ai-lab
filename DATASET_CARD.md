@@ -21,10 +21,11 @@ A curated function-calling / tool-use dataset for the Adaption AutoScientist Cha
 distinguishing feature is a large slice of **hard negatives** and reliability-focused cases — where the
 correct behavior is *not* a plain tool call.
 
-> **Adaptive Data quality (real):** on the **fixed** set (`c4923b7f…`, 2,440 rows) the platform reports
-> **7.0 → 8.1, +15.7%, grade C → B**; an earlier 250-row run (`a99c0c96…`, completed) scored
-> **8.0 → 8.8, +10.0%, grade B**. This is the platform's dataset-quality grade — the data-centric
-> "measurable improvement."
+> **Adaptive Data quality (real):** on the **fixed** set (`c4923b7f…`, graded on 1,000 of 2,440 rows
+> under the free-tier cap) the platform reports **7.0 → 8.1, +15.7%, grade C → B**; an earlier 250-row
+> run (`a99c0c96…`, **completed**) scored **8.0 → 8.8, +10.0%, grade B**. This is the platform's
+> dataset-quality grade — the data-centric "measurable improvement." Full dataset lineage (incl. the
+> cleaned `d92279d3…` set staged for submission) is in [`docs/AUTOSCIENTIST_USAGE.md`](docs/AUTOSCIENTIST_USAGE.md).
 
 ## Composition
 
@@ -38,7 +39,8 @@ Each row is one example (canonical format in `src/format_utils.py`):
 ```
 
 Splits: `train` / `val` / `test`, plus `test_novel` (examples using tools **never seen in training** — a
-generalization test). **~2,935 examples** total after dedup. Per-source/kind counts and a `mix` block
+generalization test). **3,174 examples** in the published set (HF + Kaggle; platform-graded snapshots
+were smaller — see the lineage table in `docs/AUTOSCIENTIST_USAGE.md`). Per-source/kind counts and a `mix` block
 (intended-vs-realized shares + a `mix_ok` guard) are in `stats.json`.
 
 Slices (counts across all splits):
