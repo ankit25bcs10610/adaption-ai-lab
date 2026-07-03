@@ -303,6 +303,17 @@ def main() -> int:
     ok &= check("completion wrapped with <think>", _pc["completion"].startswith("<think>") and "</think>" in _pc["completion"])
     ok &= check("firewall recovers envelope after trace", parse_model_output(_pc["completion"])["action"] == "call")
 
+    print("toucan parser (#8, offline):")
+    from src.build_dataset import _toucan_row_to_example
+    _trow = {"tools": [{"type": "function", "function": {"name": "ping", "description": "p", "parameters": {"type": "object", "properties": {"host": {"type": "string"}}, "required": ["host"]}}}],
+             "messages": [{"role": "user", "content": "ping it"},
+                          {"role": "assistant", "content": "", "tool_calls": [{"type": "function", "function": {"name": "ping", "arguments": '{"host":"example.com"}'}}]}]}
+    _tex = _toucan_row_to_example(_trow)
+    ok &= check("toucan row parses to example", _tex is not None and _tex["answer"]["calls"][0]["name"] == "ping")
+    ok &= check("toucan unwraps function tools", _tex["tools"][0]["name"] == "ping" and "function" not in _tex["tools"][0])
+    ok &= check("toucan gold valid vs schema", validate_answer(_tex["answer"], _tex["tools"])[0])
+    ok &= check("toucan handles JSON-string fields", _toucan_row_to_example({"tools": json.dumps(_trow["tools"]), "messages": json.dumps(_trow["messages"])}) is not None)
+
     print("curriculum (difficulty + ordering):")
     from src import curriculum as _cur
     _easy = {"tools": [_rzW], "query": "x", "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Mumbai"}}]}, "meta": {}}

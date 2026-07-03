@@ -16,8 +16,9 @@ dataset:
       max_examples: 3000
     toucan:
       repo: Agent-Ark/Toucan-1.5M                   # Apache-2.0 — largest permissive tool-agentic set
-      max_examples: 3000
-      enabled: false                                # opt-in: large download; flip on when ready
+      config: SFT                                    # required config (SFT | Qwen3 | OSS | Kimi-K2)
+      max_examples: 2000
+      enabled: false                                # opt-in: STREAMS ~max_examples rows (flip on for scale)
   target_positive: 3500        # curated positive (tool-should-be-called) examples
   # Research-backed mix: ~10% irrelevance is the swept optimum (more degrades positive calling).
   # Shares are SHARED-denominator (see build_dataset step 3): realized ≈ intended, so with

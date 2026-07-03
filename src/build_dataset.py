@@ -15,7 +15,7 @@ import os
 import random
 import re
 from collections import Counter
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import yaml
 
@@ -181,57 +181,74 @@ def load_toolace(repo: str, limit: int) -> List[Dict[str, Any]]:
     return out
 
 
-def load_toucan(repo: str, limit: int) -> List[Dict[str, Any]]:
+def _toucan_row_to_example(row: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Parse one Toucan SFT row -> canonical example, or None if unparseable. Handles JSON-string
+    fields and OpenAI function-wrapped tools/calls. Pure (no network) so it's unit-testable."""
+    tools = row.get("tools") or row.get("available_tools") or row.get("functions")
+    if isinstance(tools, str):
+        tools = _load_json_field(tools)
+    if isinstance(tools, list):  # unwrap {"type":"function","function":{...}}
+        tools = [t.get("function", t) if isinstance(t, dict) else t for t in tools]
+    msgs = row.get("messages") or row.get("conversations")
+    if isinstance(msgs, str):
+        msgs = _load_json_field(msgs)
+    if not (tools and msgs):
+        return None
+    user_msg, calls = None, None
+    for turn in msgs:
+        if not isinstance(turn, dict):
+            continue
+        role = turn.get("role") or turn.get("from")
+        content = turn.get("content") or turn.get("value")
+        if role in ("user", "human"):
+            user_msg = content
+        elif role in ("assistant", "gpt"):
+            tc = turn.get("tool_calls") or _load_json_field(content)
+            if tc and user_msg:
+                calls = tc
+                break
+    if not (user_msg and calls):
+        return None
+    if isinstance(calls, dict):
+        calls = [calls]
+    norm_calls = []
+    for c in calls:
+        fn = c.get("function", c) if isinstance(c, dict) else {}
+        name = fn.get("name")
+        if name:
+            args = fn.get("arguments", fn.get("parameters", {}))
+            norm_calls.append({"name": name, "arguments": _load_json_field(args) or {}})
+    if not norm_calls:
+        return None
+    return {
+        "tools": _normalize_tools(tools),
+        "query": user_msg,
+        "answer": {"type": "tool_call", "calls": norm_calls},
+        "meta": {"source": "toucan", "hn_kind": None},
+    }
+
+
+def load_toucan(repo: str, limit: int, config: str = "SFT") -> List[Dict[str, Any]]:
     """Toucan-1.5M (Apache-2.0): real MCP-server tool-calling trajectories. Defensive field parsing.
 
-    Layouts vary; we extract the first user query, the available tools, and the first assistant tool
-    call. Rows we can't parse are skipped rather than crashing.
+    Toucan requires a config name (SFT / Qwen3 / OSS / Kimi-K2). SFT rows are
+    {question, tools (function-wrapped), messages}; messages/tools may be JSON strings. We STREAM (so we
+    only fetch ~`limit` rows, not the full multi-GB set), extract the first user query + first assistant
+    tool call, and skip rows we can't parse rather than crashing.
     """
     from datasets import load_dataset
 
     try:
-        ds = load_dataset(repo, split="train", streaming=True)
-    except Exception as e:  # gated / offline / renamed
-        print(f"[build] Toucan skipped ({e})")
+        ds = load_dataset(repo, config, split="train", streaming=True) if config \
+            else load_dataset(repo, split="train", streaming=True)
+    except Exception as e:  # gated / offline / renamed / missing config
+        print(f"[build] Toucan skipped ({type(e).__name__}: {str(e)[:80]})")
         return []
     out: List[Dict[str, Any]] = []
     for row in ds:
-        tools = _load_json_field(row.get("tools") or row.get("available_tools") or row.get("functions"))
-        msgs = row.get("messages") or row.get("conversations")
-        if not (tools and msgs):
-            continue
-        user_msg, calls = None, None
-        for turn in msgs:
-            role = turn.get("role") or turn.get("from")
-            content = turn.get("content") or turn.get("value")
-            if role in ("user", "human"):
-                user_msg = content
-            elif role in ("assistant", "gpt"):
-                tc = turn.get("tool_calls") or _load_json_field(content)
-                if tc and user_msg:
-                    calls = tc
-                    break
-        if not (user_msg and calls):
-            continue
-        if isinstance(calls, dict):
-            calls = [calls]
-        norm_calls = []
-        for c in calls:
-            fn = c.get("function", c) if isinstance(c, dict) else {}
-            name = fn.get("name")
-            if name:
-                args = fn.get("arguments", fn.get("parameters", {}))
-                norm_calls.append({"name": name, "arguments": _load_json_field(args) or {}})
-        if not norm_calls:
-            continue
-        out.append(
-            {
-                "tools": _normalize_tools(tools),
-                "query": user_msg,
-                "answer": {"type": "tool_call", "calls": norm_calls},
-                "meta": {"source": "toucan", "hn_kind": None},
-            }
-        )
+        ex = _toucan_row_to_example(row)
+        if ex is not None:
+            out.append(ex)
         if len(out) >= limit:
             break
     print(f"[build] Toucan: loaded {len(out)}")
@@ -385,7 +402,8 @@ def main() -> None:
     toucan_cfg = dcfg["sources"].get("toucan", {})
     if toucan_cfg.get("enabled"):
         try:
-            positives += load_toucan(toucan_cfg["repo"], toucan_cfg["max_examples"])
+            positives += load_toucan(toucan_cfg["repo"], toucan_cfg["max_examples"],
+                                      config=toucan_cfg.get("config", "SFT"))
         except Exception as e:
             print(f"[build] source 'toucan' skipped ({type(e).__name__})")
 
