@@ -67,6 +67,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="config.yaml")
     ap.add_argument("--dry-run", action="store_true", help="estimate cost only, don't train")
+    ap.add_argument("--preference", action="store_true",
+                    help="second objective: train on pref.jsonl with training_type=preference_pairs (DPO)")
     args = ap.parse_args()
     cfg = yaml.safe_load(open(args.config))
 
@@ -86,13 +88,19 @@ def main() -> None:
     _patch_httpx_timeout(900.0)
     client = Adaption(api_key=api_key, timeout=httpx.Timeout(900.0, connect=10.0))
 
-    train_pc = os.path.join(cfg["paths"]["out_dir"], "train_pc.jsonl")
-    if not os.path.exists(train_pc):
-        raise SystemExit(f"{train_pc} not found — run: python -m src.build_dataset first")
+    # Objective: instruction (train_pc.jsonl) or preference-pairs (pref.jsonl: prompt/chosen/rejected).
+    if args.preference:
+        upload_path = os.path.join(cfg["paths"]["out_dir"], "pref.jsonl")
+        training_type = "preference_pairs"
+    else:
+        upload_path = os.path.join(cfg["paths"]["out_dir"], "train_pc.jsonl")
+        training_type = "instruction_dataset"
+    if not os.path.exists(upload_path):
+        raise SystemExit(f"{upload_path} not found — run build_dataset / build_preference first")
 
     # 1. Upload -----------------------------------------------------------------
-    print(f"[adaption] uploading {train_pc} ...")
-    dataset = client.datasets.upload_file(train_pc)  # CSV/JSON/JSONL/Parquet supported
+    print(f"[adaption] uploading {upload_path} (objective: {training_type}) ...")
+    dataset = client.datasets.upload_file(upload_path)  # CSV/JSON/JSONL/Parquet supported
     dataset_id = getattr(dataset, "dataset_id", None) or getattr(dataset, "id", dataset)
     print(f"[adaption] dataset_id = {dataset_id}")
 
@@ -103,7 +111,9 @@ def main() -> None:
             break
         time.sleep(3)
 
-    column_mapping = cfg["adaption"]["column_mapping"]
+    # preference pairs carry prompt/chosen/rejected (the platform maps chosen/rejected by convention);
+    # instruction data uses the configured prompt/completion mapping.
+    column_mapping = {"prompt": "prompt"} if args.preference else cfg["adaption"]["column_mapping"]
     # The reliable-tool-calling objective lives in the brand_controls blueprint (system prompt applied
     # to every generated completion). run() has no base_model/objective — AutoScientist selects the model.
     recipe_specification = {"recipes": {"deduplication": True, "reasoning_traces": True}}
@@ -125,6 +135,7 @@ def main() -> None:
         recipe_specification=recipe_specification,
         brand_controls=brand_controls,
         job_specification=job_specification,
+        training_type=training_type,
         estimate=True,
     )
     print("[adaption] estimate:", _summ(est))
@@ -132,13 +143,14 @@ def main() -> None:
         return
 
     # 3. Run + wait -------------------------------------------------------------
-    print("[adaption] launching AutoScientist run ...")
+    print(f"[adaption] launching AutoScientist run (training_type={training_type}) ...")
     run = client.datasets.run(
         dataset_id,
         column_mapping=column_mapping,
         recipe_specification=recipe_specification,
         brand_controls=brand_controls,
         job_specification=job_specification,
+        training_type=training_type,
     )
     run_id = getattr(run, "id", run)
     # wait_for_completion polls by DATASET id (the SDK tracks the run against its dataset), not run id.
