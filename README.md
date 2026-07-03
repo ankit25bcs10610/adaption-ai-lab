@@ -122,12 +122,19 @@ git clone https://github.com/ankit25bcs10610/adaption-ai-lab.git
 cd adaption-ai-lab
 
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt        # full, pinned pipeline (canonical install)
 
 # Offline test suites — no downloads, no API keys
 python -m tests.smoke_test        # function-calling   → ALL PASS (154)
 python -m tests.viz.test_viz      # data-visualization → ALL PASS (57)
 ```
+
+> **Note:** there is no `pip install autoscientist-toolcaller` on PyPI — this is a repo you clone.
+> Optionally install it as an editable package to get a clean import path and an `autoscientist` CLI:
+> ```bash
+> pip install -e .                 # + `pip install -r requirements.txt` for the full pipeline
+> autoscientist --help             # build · eval · eval-multilingual · report · release · …
+> ```
 
 Credentials are read from the environment only when you reach the training / release steps:
 

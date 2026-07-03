@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=77.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autoscientist-toolcaller"
+version = "0.1.0"
+description = "Data-centric function-calling + chart-QA datasets and eval harness for the Adaption AutoScientist Challenge."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Ankit Pandey" }]
+keywords = [
+    "function-calling", "tool-use", "LLM", "agents", "BFCL",
+    "chart-qa", "multimodal", "hindi", "dataset", "autoscientist",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Operating System :: OS Independent",
+]
+
+# Minimal core — enough to import the package and run the offline test suites + dataset build
+# orchestration. Heavy model/training deps are lazily imported; install the FULL pinned pipeline with
+# `pip install -r requirements.txt` (the canonical, reproducible install).
+dependencies = [
+    "numpy>=1.26,<3",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+viz = ["matplotlib>=3.8", "Pillow>=10"]
+
+[project.urls]
+Homepage = "https://autoscientist-toolcaller.vercel.app"
+Repository = "https://github.com/ankit25bcs10610/adaption-ai-lab"
+"Live demo" = "https://huggingface.co/spaces/pandeyankit84/autoscientist-toolcaller-demo"
+Dataset = "https://huggingface.co/datasets/pandeyankit84/autoscientist-toolcaller-dataset"
+
+[project.scripts]
+autoscientist = "src.cli:main"
+
+[tool.setuptools]
+# `src` is the import package (all code imports `from src....`); ship it and its viz subpackage.
+packages = ["src", "src.viz"]
