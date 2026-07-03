@@ -41,16 +41,16 @@ dataset:
 hard_negatives:
   kinds:                       # relative weights across the failure modes (within the HN slice)
     no_tool: 0.45              # no available tool can satisfy the request -> refuse (the irrelevance lever)
-    missing_arg: 0.16          # required argument absent -> ask for it (clarify)
-    ambiguous: 0.12            # two plausible tools -> disambiguate (clarify)
+    missing_arg: 0.14          # required argument absent -> ask for it (clarify)
+    ambiguous: 0.10            # two plausible tools -> disambiguate (clarify)
     over_refusal: 0.15         # hedged BUT satisfiable -> MUST call (counterweight to refusal bias)
-    partial_parallel: 0.12     # two intents in one request -> gold is TWO calls (call completeness)
+    partial_parallel: 0.16     # two intents in one request -> gold is TWO calls (BFCL v4 weights parallel/agentic)
 
 multiturn:
-  kinds:                       # BFCL v3/v4 multi-turn failure modes
-    miss_param: 0.4            # user never supplies a required arg -> clarify
-    miss_func: 0.3             # needed tool provided only mid-conversation -> then call
-    long_context: 0.3          # correct tool buried among many distractors -> select correctly
+  kinds:                       # BFCL v3/v4 multi-turn failure modes (v4 is ~30% multi-turn + 40% agentic)
+    miss_param: 0.35           # user never supplies a required arg -> clarify
+    miss_func: 0.30            # needed tool provided only mid-conversation -> then call
+    long_context: 0.35         # correct tool buried among many distractors -> select correctly (agentic-ish)
   long_context_size: 10        # number of distractor tools in long_context examples
 
 schema_drift:
