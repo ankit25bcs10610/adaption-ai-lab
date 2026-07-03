@@ -1,11 +1,12 @@
 # Publishing to PyPI (optional)
 
 The repo is packaged (`pyproject.toml`) and **PyPI-ready** — both the wheel and sdist build cleanly and
-pass `twine check`. Publishing itself needs a **PyPI account + API token** (an outward-facing step), so it
-isn't automated here.
+pass `twine check`, and the import package is cleanly named **`autoscientist_toolcaller`** (no `src`
+namespace-collision risk). Publishing itself needs a **PyPI account + API token** (an outward-facing
+step), so it isn't automated here.
 
-> **Before you publish publicly, read the caveat at the bottom.** For local use you don't need PyPI at
-> all — `pip install -e .` from a clone is the recommended flow (see the README Quickstart).
+> For local use you don't need PyPI — `pip install -e .` from a clone, or
+> `pip install git+https://github.com/ankit25bcs10610/adaption-ai-lab.git`, both work (see the README).
 
 ## Steps
 
@@ -28,17 +29,14 @@ TWINE_USERNAME=__token__ TWINE_PASSWORD=pypi-XXXXXXXX python -m twine upload dis
 ```
 
 Create the token at <https://pypi.org/manage/account/token/> (scope it to this project after the first
-upload). After a successful upload, `pip install autoscientist-toolcaller` works for anyone, and the
+upload). After a successful upload, **`pip install autoscientist-toolcaller`** works for anyone, and the
 `autoscientist` console command is installed.
 
-## ⚠️ Caveat before a *public* release
+## Notes
 
-The import package is literally named **`src`** (all code does `from src....`). That's fine for a local
-editable install, but publishing a public wheel means anyone who installs it gets a top-level `src`
-package on their path — a **namespace-collision risk** with other projects. Options:
-
-- **Local only (recommended for the hackathon):** don't publish to PyPI; use `pip install -e .` from a clone.
-- **Publish anyway:** acceptable for a personal/demo package, but expect the `src` name to be flagged.
-- **Rename first (cleanest for a real public package):** rename `src/` → `autoscientist_toolcaller/`, update
-  imports (`from src.` → `from autoscientist_toolcaller.`) across `src/`, `tests/`, `src/cli.py`, and the
-  `[tool.setuptools] packages` list, then publish. This is a mechanical but repo-wide change — ask and I'll do it.
+- The distribution name is `autoscientist-toolcaller`; the import name is `autoscientist_toolcaller`
+  (`import autoscientist_toolcaller`, `python -m autoscientist_toolcaller.build_dataset`, or the
+  `autoscientist` CLI).
+- Core install pulls only `numpy` + `pyyaml`; the full training/eval pipeline still uses
+  `pip install -r requirements.txt` (the pinned, reproducible set).
+- Bump `version` in `pyproject.toml` before each new upload — PyPI rejects re-uploading an existing version.

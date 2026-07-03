@@ -27,9 +27,9 @@ dataset:
   multiturn_ratio: 0.20        # multi-turn is ~30% of BFCL v4 and where small fine-tunes beat GPT-4o
   schema_drift_ratio: 0.08     # distinctive originality slice: tool schemas that changed under the model
   multilingual_examples: 150   # matched en/hi/hi-romanized tool-calling twins (Adaptive Data 242-lang lever)
-  env_examples: 300            # execution-verified examples from src.envs (correct-by-construction)
+  env_examples: 300            # execution-verified examples from autoscientist_toolcaller.envs (correct-by-construction)
   env_multicall_frac: 0.3      # of env_examples, fraction that are verified 2-3 call trajectories
-  env_dpo: 200                 # execution-labeled DPO pairs from src.envs merged into pref.jsonl
+  env_dpo: 200                 # execution-labeled DPO pairs from autoscientist_toolcaller.envs merged into pref.jsonl
   novel_tool_frac: 0.15        # hold out 15% of tool NAMES; examples using only them -> test_novel
   reasoning_traces: false      # prepend correct-by-construction <think> traces to train_pc (A/B arm;
                                # if ON, do NOT also enable the platform reasoning_traces recipe)

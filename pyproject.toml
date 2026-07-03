@@ -45,8 +45,8 @@ Repository = "https://github.com/ankit25bcs10610/adaption-ai-lab"
 Dataset = "https://huggingface.co/datasets/pandeyankit84/autoscientist-toolcaller-dataset"
 
 [project.scripts]
-autoscientist = "src.cli:main"
+autoscientist = "autoscientist_toolcaller.cli:main"
 
 [tool.setuptools]
-# `src` is the import package (all code imports `from src....`); ship it and its viz subpackage.
-packages = ["src", "src.viz"]
+# The import package + its viz subpackage (all code imports `from autoscientist_toolcaller....`).
+packages = ["autoscientist_toolcaller", "autoscientist_toolcaller.viz"]

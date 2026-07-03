@@ -29,7 +29,7 @@ correct behavior is *not* a plain tool call.
 
 ## Composition
 
-Each row is one example (canonical format in `src/format_utils.py`):
+Each row is one example (canonical format in `autoscientist_toolcaller/format_utils.py`):
 
 ```json
 {"tools": [ {"name","description","parameters"} ],
@@ -45,7 +45,7 @@ were smaller — see the lineage table in `docs/AUTOSCIENTIST_USAGE.md`). Per-so
 
 Slices (counts across all splits):
 - **positives** — real tool-call examples curated from ToolACE (schema-validated), plus a small slice
-  of **execution-verified** examples from deterministic tool environments (`src/envs.py`).
+  of **execution-verified** examples from deterministic tool environments (`autoscientist_toolcaller/envs.py`).
 - **hard negatives** — `no_tool` → refuse (~**213–263**, held at ~**8–9% of the total set**, the research
   optimum); `missing_arg` / `ambiguous` → clarify; `over_refusal` → **must call** (hedged-but-satisfiable
   requests, the counterweight to refusal bias); `partial_parallel` → **two calls** (call completeness).
@@ -64,7 +64,7 @@ BFCL/ToolACE-style probes and dropped on overlap; a `contamination` block is rec
 **Platform-enhanced variant.** Adaptive Data (data-centric) rewrites each row into a richer
 `enhanced_prompt` / `enhanced_completion` — in the completed run it revised **100%** of completions
 (e.g. flagging *both* an invalid enum *and* a missing required argument where the original flagged only
-one). Fetch it with `python -m src.fetch_improved --dataset-id <id>` to get a clean enhanced
+one). Fetch it with `python -m autoscientist_toolcaller.fetch_improved --dataset-id <id>` to get a clean enhanced
 prompt/completion file to train on; this is the artifact behind the platform's quality-grade gain.
 
 > **Data-quality audit.** An adversarial audit of the build pipeline caught the refuse/clarify moat
@@ -93,4 +93,4 @@ Supervised fine-tuning (and preference tuning) of function-calling models that m
 
 ## Reproduction
 
-`python -m src.build_dataset --config config.yaml`  (repo: https://github.com/ankit25bcs10610/adaption-ai-lab)
+`python -m autoscientist_toolcaller.build_dataset --config config.yaml`  (repo: https://github.com/ankit25bcs10610/adaption-ai-lab)

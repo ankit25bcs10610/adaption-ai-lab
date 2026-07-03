@@ -1,14 +1,14 @@
 # Depth of AutoScientist / Adaptive Data usage
 
 How this submission uses Adaption's platform end-to-end (judging criterion #4). Everything here is real
-and reproducible from `src/train_adaption.py` + `config.yaml`.
+and reproducible from `autoscientist_toolcaller/train_adaption.py` + `config.yaml`.
 
 ## 1. Adaptive Data — data adaptation + evaluation (SDK)
 
 The dataset is uploaded and run through Adaptive Data with an explicit recipe and brand-controls, then
 the platform grades it on its held-out quality evaluation.
 
-**Exact call** (`src/train_adaption.py`):
+**Exact call** (`autoscientist_toolcaller/train_adaption.py`):
 ```python
 client.datasets.run(
     dataset_id,
@@ -47,7 +47,7 @@ and `d92279d3`'s full-set grade is the run-day deliverable (it's the ID staged f
 
 ## 3. Platform value-add is real, not nominal
 
-We downloaded the platform's processed output (`src/fetch_improved.py`) and inspected it. Adaptive Data
+We downloaded the platform's processed output (`autoscientist_toolcaller/fetch_improved.py`) and inspected it. Adaptive Data
 rewrites each row into a richer `enhanced_prompt` / `enhanced_completion` and attaches a `row_embedding`:
 - **100% of completions were revised.** Example: where our original clarify flagged only an invalid enum,
   the enhanced completion flagged **both** the invalid enum **and** a missing required argument.
@@ -58,15 +58,15 @@ rewrites each row into a richer `enhanced_prompt` / `enhanced_completion` and at
 The Python SDK is dataset-centric; the model-training loop that co-optimizes data + recipe and emits
 **weights** runs in the AutoScientist console (adaptionlabs.ai/app) on the adapted dataset. That run
 produces the trained weights and the per-category held-out model number, which are then published to the
-HF model repo + a Kaggle model. Our local harness (`scripts/run_all.sh`, `src/eval_*`) provides the
+HF model repo + a Kaggle model. Our local harness (`scripts/run_all.sh`, `autoscientist_toolcaller/eval_*`) provides the
 matching offline baseline→eval→decomposition→report so the platform number can be corroborated.
 
 ## 5. Reproduce
 
 ```bash
 export ADAPTION_API_KEY=pt_live_...      # your key
-python -m src.build_dataset --config config.yaml     # build + adapt-ready prompt/completion
-python -m src.train_adaption --config config.yaml    # upload -> estimate -> run -> print evaluation_summary
-python -m src.fetch_improved --dataset-id <id>       # download the platform's enhanced dataset
+python -m autoscientist_toolcaller.build_dataset --config config.yaml     # build + adapt-ready prompt/completion
+python -m autoscientist_toolcaller.train_adaption --config config.yaml    # upload -> estimate -> run -> print evaluation_summary
+python -m autoscientist_toolcaller.fetch_improved --dataset-id <id>       # download the platform's enhanced dataset
 ```
 Uploads use a widened httpx timeout (multi-MB uploads) and `wait_for_completion(dataset_id)`.

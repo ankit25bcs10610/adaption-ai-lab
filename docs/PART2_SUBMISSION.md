@@ -30,6 +30,6 @@ Fields mirror the Part 1 form. ✅ = ready to paste · ✍️ = you fill · ⏳ 
 ## Before you submit
 1. Run **AutoScientist training** on `d92279d3` → weights + held-out number (`docs/CONSOLE_STEPS.md`).
 2. `MODEL=<weights> bash scripts/finalize.sh` → fills MODEL_CARD + report with real numbers.
-3. Publish weights to HF + Kaggle (I can run `src/release.py` for you).
+3. Publish weights to HF + Kaggle (I can run `autoscientist_toolcaller/release.py` for you).
 4. Post on LinkedIn + X; join the WhatsApp channel (necessary).
 5. Paste this sheet into the Part 2 form.

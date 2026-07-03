@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import sys
 
-from src.viz import synth_charts as sc
-from src.viz.eval_chart import evaluate, judge_chart, relaxed_match
-from src.viz.format_utils import answer_to_text, image_to_data_uri
+from autoscientist_toolcaller.viz import synth_charts as sc
+from autoscientist_toolcaller.viz.eval_chart import evaluate, judge_chart, relaxed_match
+from autoscientist_toolcaller.viz.format_utils import answer_to_text, image_to_data_uri
 
 
 def check(name, cond):
@@ -118,7 +118,7 @@ def main() -> int:
     ok &= check("mean dropped from scatter/area", sc.mk_mean not in sc._MAKERS["scatter"] and sc.mk_mean not in sc._MAKERS["area"])
 
     print("build_dataset — image-group split (no leakage):")
-    from src.viz.build_dataset import split as viz_split
+    from autoscientist_toolcaller.viz.build_dataset import split as viz_split
     twoq = [
         {"image": "img/a.png", "question": "q1", "answer": "X", "chart_type": "bar", "qa_kind": "max", "meta": {}},
         {"image": "img/a.png", "question": "q2", "answer": "Y", "chart_type": "bar", "qa_kind": "sum", "meta": {}},
@@ -145,7 +145,7 @@ def main() -> int:
 
     print("vega_spec (spec-reading modality):")
     import json as _json
-    from src.viz import vega_spec
+    from autoscientist_toolcaller.viz import vega_spec
     _vr = vega_spec.generate(40, seed=1)
     ok &= check("vega_spec generated", len(_vr) > 0)
     _vbad = 0

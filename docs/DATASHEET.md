@@ -42,7 +42,7 @@ Following *Datasheets for Datasets* (Gebru et al., 2021). Companion to `DATASET_
 ## Distribution & maintenance
 - **Where:** Hugging Face + Kaggle (both public), plus the reproducible builder in the repo.
 - **License:** Apache-2.0. **Provenance:** ToolACE attribution preserved.
-- **Reproduce/verify:** `python -m src.build_dataset` → `stats.json`; `python -m src.manifest --verify`
+- **Reproduce/verify:** `python -m autoscientist_toolcaller.build_dataset` → `stats.json`; `python -m autoscientist_toolcaller.manifest --verify`
   checks SHA-256 of every artifact against the committed manifest.
 
 ## Known limitations

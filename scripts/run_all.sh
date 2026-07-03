@@ -20,17 +20,17 @@ SEEDS="${SEEDS:-42}"
 mkdir -p "$RESULTS"
 
 echo "==> [1/9] Build dataset (curate, dedup, decontaminate, split)"
-python3 -m src.build_dataset --config config.yaml
+python3 -m autoscientist_toolcaller.build_dataset --config config.yaml
 
 echo "==> [2/9] Build preference pairs (+ execution-labeled env DPO)"
-python3 -m src.build_preference --config config.yaml --split train
+python3 -m autoscientist_toolcaller.build_preference --config config.yaml --split train
 
 if [ -z "${SKIP_TRAIN:-}" ] && [ -n "${ADAPTION_API_KEY:-}" ]; then
   echo "==> [3/9] Adaption AutoScientist run"
-  python3 -m src.train_adaption --config config.yaml || echo "   (train_adaption failed; retry later)"
+  python3 -m autoscientist_toolcaller.train_adaption --config config.yaml || echo "   (train_adaption failed; retry later)"
   # Fetch the platform's improved (enhanced) dataset — the actual data-centric deliverable.
   if [ -n "${IMPROVED_DATASET_ID:-}" ]; then
-    python3 -m src.fetch_improved --dataset-id "$IMPROVED_DATASET_ID" \
+    python3 -m autoscientist_toolcaller.fetch_improved --dataset-id "$IMPROVED_DATASET_ID" \
       --out data/adaptive_out/enhanced_train_pc.jsonl || echo "   (fetch_improved skipped)"
   fi
 else
@@ -41,35 +41,35 @@ if [ -n "${MODEL:-}" ]; then
   ADAPTER_ARG=""; [ -n "${ADAPTER:-}" ] && ADAPTER_ARG="--adapter ${ADAPTER}"
 
   echo "==> [4/9] Baseline (untuned $BASE_MODEL) — honest 'before'"
-  python3 -m src.baseline --config config.yaml --model "$BASE_MODEL" --out "$RESULTS/baseline.json" || true
-  python3 -m src.error_analysis --model "$BASE_MODEL" --data "$DATA/test.jsonl" --out-dir "$RESULTS/base" || true
+  python3 -m autoscientist_toolcaller.baseline --config config.yaml --model "$BASE_MODEL" --out "$RESULTS/baseline.json" || true
+  python3 -m autoscientist_toolcaller.error_analysis --model "$BASE_MODEL" --data "$DATA/test.jsonl" --out-dir "$RESULTS/base" || true
 
   echo "==> [5/9] Multi-seed eval of the fine-tuned model (seeds: $SEEDS)"
   PAIR_ARGS=""
   for s in $SEEDS; do
     echo "   -- seed $s"
-    python3 -m src.eval_bfcl --model "$MODEL" $ADAPTER_ARG --data "$DATA/test.jsonl" --out "$RESULTS/eval_bfcl_$s.json" || true
-    python3 -m src.error_analysis --model "$MODEL" $ADAPTER_ARG --data "$DATA/test.jsonl" --out-dir "$RESULTS/ft_$s" || true
+    python3 -m autoscientist_toolcaller.eval_bfcl --model "$MODEL" $ADAPTER_ARG --data "$DATA/test.jsonl" --out "$RESULTS/eval_bfcl_$s.json" || true
+    python3 -m autoscientist_toolcaller.error_analysis --model "$MODEL" $ADAPTER_ARG --data "$DATA/test.jsonl" --out-dir "$RESULTS/ft_$s" || true
     PAIR_ARGS="$PAIR_ARGS --pair $RESULTS/base/predictions.jsonl,$RESULTS/ft_$s/predictions.jsonl"
   done
 
   echo "==> [6/9] Statistics: paired gap + decomposition + robustness (multi-seed)"
-  python3 -m src.eval_stats --base "$RESULTS/base/predictions.jsonl" --finetuned "$RESULTS/ft_42/predictions.jsonl" --out "$RESULTS/eval_stats.json" || true
-  python3 -m src.eval_decompose --base "$RESULTS/base/predictions.jsonl" --finetuned "$RESULTS/ft_42/predictions.jsonl" $PAIR_ARGS --out "$RESULTS/eval_decompose.json" || true
-  python3 -m src.robustness_table --base "$RESULTS/base/predictions.jsonl" --finetuned "$RESULTS/ft_42/predictions.jsonl" --out "$RESULTS/robustness.md" || true
+  python3 -m autoscientist_toolcaller.eval_stats --base "$RESULTS/base/predictions.jsonl" --finetuned "$RESULTS/ft_42/predictions.jsonl" --out "$RESULTS/eval_stats.json" || true
+  python3 -m autoscientist_toolcaller.eval_decompose --base "$RESULTS/base/predictions.jsonl" --finetuned "$RESULTS/ft_42/predictions.jsonl" $PAIR_ARGS --out "$RESULTS/eval_decompose.json" || true
+  python3 -m autoscientist_toolcaller.robustness_table --base "$RESULTS/base/predictions.jsonl" --finetuned "$RESULTS/ft_42/predictions.jsonl" --out "$RESULTS/robustness.md" || true
 
   echo "==> [7/9] Reliability probe"
-  python3 -m src.reliability_probe --model "$MODEL" $ADAPTER_ARG --out "$RESULTS/reliability_probe.md" || true
+  python3 -m autoscientist_toolcaller.reliability_probe --model "$MODEL" $ADAPTER_ARG --out "$RESULTS/reliability_probe.md" || true
 else
   echo "==> [4-7/9] Model eval SKIPPED (set MODEL=<hf-id-or-path> to run baseline/eval/probe)"
 fi
 
 echo "==> [8/9] HTML report + BFCL export"
-python3 -m src.eval_report --out "$RESULTS/report.html" || true
-python3 -m src.export_bfcl --data "$DATA/test.jsonl" --out-dir "$RESULTS/bfcl" || true
+python3 -m autoscientist_toolcaller.eval_report --out "$RESULTS/report.html" || true
+python3 -m autoscientist_toolcaller.export_bfcl --data "$DATA/test.jsonl" --out-dir "$RESULTS/bfcl" || true
 
 echo "==> [9/9] Reproducibility manifest + release preflight"
-python3 -m src.manifest --out-dir "$DATA" --config config.yaml --manifest "$RESULTS/manifest.json"
-python3 -m src.release preflight --dir "$DATA" || echo "   (preflight reported blockers — fill cards / eval before publishing)"
+python3 -m autoscientist_toolcaller.manifest --out-dir "$DATA" --config config.yaml --manifest "$RESULTS/manifest.json"
+python3 -m autoscientist_toolcaller.release preflight --dir "$DATA" || echo "   (preflight reported blockers — fill cards / eval before publishing)"
 
 echo "==> DONE. Artifacts in $RESULTS/ (report.html, eval_decompose.json, manifest.json, bfcl/)"

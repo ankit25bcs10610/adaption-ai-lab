@@ -56,4 +56,4 @@ Plus (HackIndia track, necessary): **join the WhatsApp channel** and the **Disco
 
 Everything else — dataset, audit, cards, eval harness, reproducibility, and the live demo — is built and
 committed. Once you drop a HF write token + Kaggle creds, publishing both artifacts to both platforms is
-a single command each (see `README.md` → pipeline, gated by `python -m src.release preflight`).
+a single command each (see `README.md` → pipeline, gated by `python -m autoscientist_toolcaller.release preflight`).

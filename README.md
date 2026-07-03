@@ -40,8 +40,8 @@ The AutoScientist Challenge automates the model-training loop, so the competitiv
 
 | Track | Category | The bet | Originality lever |
 |---|---|---|---|
-| **Function-Calling** (`src/`) | All Other Domains | A tool-use model that **refuses and clarifies** instead of hallucinating a call | Hard negatives (no-tool / missing-arg / ambiguous) + multi-turn + schema-drift + a 5-language reliability slice |
-| **Data Visualization** (`src/viz/`) | Data Visualization | A chart-reader that competes where text-only entrants can't — **and speaks Hindi** | Self-verifying synthetic chart generator + Devanagari/romanized slice + a text-only Vega-Lite spec-reading modality |
+| **Function-Calling** (`autoscientist_toolcaller/`) | All Other Domains | A tool-use model that **refuses and clarifies** instead of hallucinating a call | Hard negatives (no-tool / missing-arg / ambiguous) + multi-turn + schema-drift + a 5-language reliability slice |
+| **Data Visualization** (`autoscientist_toolcaller/viz/`) | Data Visualization | A chart-reader that competes where text-only entrants can't — **and speaks Hindi** | Self-verifying synthetic chart generator + Devanagari/romanized slice + a text-only Vega-Lite spec-reading modality |
 
 Everything is **offline-testable**: the heavy ML stack (`torch`, `transformers`, `datasets`, the Adaption SDK) is lazily imported, so the correctness-critical logic runs on a handful of light deps (`numpy`, `jsonschema`, `pyyaml`, …) with **no LLM/VLM weights and no API keys**. `python -m tests.smoke_test` and `python -m tests.viz.test_viz` pass **222 checks** — and now run on every push via [CI](https://github.com/ankit25bcs10610/adaption-ai-lab/actions/workflows/tests.yml).
 
@@ -97,7 +97,7 @@ The audit-count rows are the whole thesis: the "refuse / clarify / disambiguate"
 
 ```
 .
-├── src/                       # Function-calling track
+├── autoscientist_toolcaller/                       # Function-calling track
 │   ├── build_dataset.py         xLAM + ToolACE + Toucan → curate → hard-neg / multi-turn / drift → dedup → split
 │   ├── hard_negatives.py        no-tool / missing-arg / ambiguous generators  ← the moat
 │   ├── multiturn.py             BFCL miss_param / miss_func / long_context
@@ -167,7 +167,7 @@ export ANTHROPIC_API_KEY=...            # optional: Claude LLM-as-judge quality 
 
 **Thesis.** Most function-calling datasets contain only examples where a tool *should* be called. But real agents — and the Berkeley Function-Calling Leaderboard's irrelevance category — punish a model for inventing a call when none applies, or guessing a missing argument. Almost nobody trains for that. That gap is the entire edge.
 
-**One JSON envelope for every decision** (`src/format_utils.py`):
+**One JSON envelope for every decision** (`autoscientist_toolcaller/format_utils.py`):
 
 ```json
 {
@@ -181,16 +181,16 @@ export ANTHROPIC_API_KEY=...            # optional: Claude LLM-as-judge quality 
 **Pipeline**
 
 ```bash
-python -m src.build_dataset    --config config.yaml   # build, curate, dedup, DECONTAMINATE, split
-python -m src.build_preference --config config.yaml   # DPO pairs (+ execution-labeled env pairs)
-python -m src.baseline         --config config.yaml   # honest "before" number
-python -m src.train_adaption   --config config.yaml   # Adaption AutoScientist run
-python -m src.eval_bfcl        --model <finetuned> --data data/out/test.jsonl
-python -m src.eval_decompose   --base results/baseline_pred.jsonl --finetuned results/pred.jsonl
-python -m src.reliability_probe --model <finetuned>   # legible call/refuse/clarify/over-refusal probe
-python -m src.eval_report                             # HTML: significance + decomposition + confusion + drift
-python -m src.release preflight                       # blocks publish on missing artifacts / placeholders
-python -m src.fill_model_card  --username <you>       # auto-fill MODEL_CARD.md from results/*.json
+python -m autoscientist_toolcaller.build_dataset    --config config.yaml   # build, curate, dedup, DECONTAMINATE, split
+python -m autoscientist_toolcaller.build_preference --config config.yaml   # DPO pairs (+ execution-labeled env pairs)
+python -m autoscientist_toolcaller.baseline         --config config.yaml   # honest "before" number
+python -m autoscientist_toolcaller.train_adaption   --config config.yaml   # Adaption AutoScientist run
+python -m autoscientist_toolcaller.eval_bfcl        --model <finetuned> --data data/out/test.jsonl
+python -m autoscientist_toolcaller.eval_decompose   --base results/baseline_pred.jsonl --finetuned results/pred.jsonl
+python -m autoscientist_toolcaller.reliability_probe --model <finetuned>   # legible call/refuse/clarify/over-refusal probe
+python -m autoscientist_toolcaller.eval_report                             # HTML: significance + decomposition + confusion + drift
+python -m autoscientist_toolcaller.release preflight                       # blocks publish on missing artifacts / placeholders
+python -m autoscientist_toolcaller.fill_model_card  --username <you>       # auto-fill MODEL_CARD.md from results/*.json
 ```
 
 **What makes the data original**
@@ -215,13 +215,13 @@ The **only active** positives source is `Team-ACE/ToolACE` (Apache-2.0). `Salesf
 3. **Vega-Lite spec-reading** (`viz/vega_spec.py`) — a *text-only* modality where the "chart" is a Vega-Lite JSON spec and the model answers from `data.values`. No pixels, no VLM, same relaxed scorer — a second, cheaper axis of chart comprehension.
 
 ```bash
-python -m src.viz.build_dataset --out data/viz --n-synth 400 --n-indic 600 --n-vega 150
-python -m src.viz.gallery       --data-dir data/viz --n 18     # browsable HTML gallery
-python -m src.viz.baseline      --model Qwen/Qwen3-VL-8B-Instruct --data data/viz/test.jsonl
-python -m src.viz.train_adaption --data data/viz/train_tab.jsonl --dry-run
+python -m autoscientist_toolcaller.viz.build_dataset --out data/viz --n-synth 400 --n-indic 600 --n-vega 150
+python -m autoscientist_toolcaller.viz.gallery       --data-dir data/viz --n 18     # browsable HTML gallery
+python -m autoscientist_toolcaller.viz.baseline      --model Qwen/Qwen3-VL-8B-Instruct --data data/viz/test.jsonl
+python -m autoscientist_toolcaller.viz.train_adaption --data data/viz/train_tab.jsonl --dry-run
 ```
 
-Primary data: `hewei2001/ReachQA` (MIT). Base VLM: `Qwen/Qwen3-VL-8B-Instruct` or `google/gemma-3-4b-it` (LoRA). See [`src/viz/README.md`](src/viz/README.md).
+Primary data: `hewei2001/ReachQA` (MIT). Base VLM: `Qwen/Qwen3-VL-8B-Instruct` or `google/gemma-3-4b-it` (LoRA). See [`autoscientist_toolcaller/viz/README.md`](autoscientist_toolcaller/viz/README.md).
 
 ---
 

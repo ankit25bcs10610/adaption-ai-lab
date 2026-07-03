@@ -64,7 +64,7 @@ refusal / clarify / hallucination-rate / novel-tools-holdout accuracy) requires 
 the improved dataset, which needs a GPU. The harness is ready and one-command: `bash scripts/run_all.sh`
 with `MODEL=<hf-id>` runs baseline → multi-seed eval → paired significance (`eval_stats`) → gap
 **decomposition** (`eval_decompose`) → robustness-delta → reliability probe → HTML report. Numbers land
-in `results/` and auto-fill via `python -m src.fill_model_card`.
+in `results/` and auto-fill via `python -m autoscientist_toolcaller.fill_model_card`.
 
 ## Intended use
 

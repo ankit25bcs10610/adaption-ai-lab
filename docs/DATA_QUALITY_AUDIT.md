@@ -30,7 +30,7 @@ Eight training rows cannot teach abstention. The claim and the data had diverged
    some tool description, so nearly every candidate was discarded.
    *Fix:* a grounded **Hammer construction** — take a real positive and remove the tool it needs from
    the offered set, so the request is genuinely unsatisfiable → refuse. The guard now compares
-   *content words*, not the first token. (`src/hard_negatives.py`)
+   *content words*, not the first token. (`autoscientist_toolcaller/hard_negatives.py`)
 
 2. **Dedup collapsed templated slices because it keyed on the query text alone.**
    The Hammer `no_tool` reuses a real positive's query (with different tools + a *refuse* answer), and
@@ -38,12 +38,12 @@ Eight training rows cannot teach abstention. The claim and the data had diverged
    Query-only dedup treated all of these as duplicates and deleted them.
    *Fix:* dedup on the **full training signature** — `answer-type + tool-set + query`. Two rows are
    duplicates only when the request, the tools on offer, *and* the required behavior all match.
-   (`src/dedup.py`)
+   (`autoscientist_toolcaller/dedup.py`)
 
 3. **`miss_param` selected tools uniformly, but only tools with a required arg can build one.**
    Most tools have no required arg to withhold, so `make_miss_param` returned `None` ~99% of the time
    and the slice starved to a single row.
-   *Fix:* pre-filter the pool to tools with ≥1 required arg before sampling. (`src/multiturn.py`)
+   *Fix:* pre-filter the pool to tools with ≥1 required arg before sampling. (`autoscientist_toolcaller/multiturn.py`)
 
 ## Two more defects the same audit caught
 
@@ -51,13 +51,13 @@ Eight training rows cannot teach abstention. The claim and the data had diverged
    (`n = base · r/(1−r)`); with four additive slices, every realized share fell below target
    (positives drifted to ~62%, hard negatives to ~17% instead of 22%). Replaced with a **shared
    denominator** so realized ≈ intended, and `stats.json` now records intended-vs-realized shares
-   plus a `mix_ok` guard that fails loudly if the moat drifts out of band. (`src/build_dataset.py`)
+   plus a `mix_ok` guard that fails loudly if the moat drifts out of band. (`autoscientist_toolcaller/build_dataset.py`)
 
 5. **DPO could emit poison pairs.** A "corrupted" negative that swapped to a synonym tool, or dropped
    a merely-*optional* argument, could accidentally still be correct — training the model *toward* the
    rejected sample. Added a `_confirmed_wrong` gate + rejection sampling: every `rejected` is now
    provably not the correct answer (different tool, missing *required* arg, or changed required
-   value), and `drop_arg` only ever drops required args. (`src/build_preference.py`)
+   value), and `drop_arg` only ever drops required args. (`autoscientist_toolcaller/build_preference.py`)
 
 (Two correctness bugs outside the data path were fixed in the same pass: a `<think>` reasoning block
 could be mis-parsed as the answer JSON during eval — now the parser reads only after `</think>`; and
@@ -76,7 +76,7 @@ After the fixes, on the same config and seed:
 Regression tests were added for each fix (`tests/smoke_test.py`: Hammer construction excludes the
 gold tool, the `<think>` firewall, the DPO poison guard), so the moat can't silently empty out again.
 
-Reproduce: `python -m src.build_dataset --config config.yaml` then inspect `data/out/stats.json`
+Reproduce: `python -m autoscientist_toolcaller.build_dataset --config config.yaml` then inspect `data/out/stats.json`
 (`mix` block).
 
 ---
@@ -90,7 +90,7 @@ notably another confirmed poison bug:
   `"example"` / `"ACME-42"` for every required argument, ignoring declared type/enum — so integer and
   enum fields received invalid values. Those gold calls are graded through the validator, so they were
   literally teaching the model to emit invalid calls. Fixed by centralizing a type/enum-aware
-  `sample_value()` (`src/format_utils.py`, shared with multi-turn) and adding a `validate_answer`
+  `sample_value()` (`autoscientist_toolcaller/format_utils.py`, shared with multi-turn) and adding a `validate_answer`
   drop-guard in `schema_drift.generate()`. Now **0** invalid rename golds.
 
 Four new correct-by-construction slices/defenses were added on top:
@@ -100,9 +100,9 @@ Four new correct-by-construction slices/defenses were added on top:
   to over-abstain. (A model that refuses here scores 0.)
 - **Partial-parallel** (`partial_parallel`, 77 rows) — two intents in one request; the gold is **two**
   calls. The only slice that stresses call *completeness*.
-- **Execution-verified multi-call trajectories** (`src/envs.py`) — 2–3 order-independent calls verified
+- **Execution-verified multi-call trajectories** (`autoscientist_toolcaller/envs.py`) — 2–3 order-independent calls verified
   by replaying them against a deterministic environment.
-- **Decontamination** (`src/decontaminate.py`) — every training query is checked (n-gram + embedding)
+- **Decontamination** (`autoscientist_toolcaller/decontaminate.py`) — every training query is checked (n-gram + embedding)
   against public BFCL/ToolACE-style probes and dropped on overlap; a `contamination` block lands in
   `stats.json`. This defends the held-out claim against leakage.
 
@@ -112,4 +112,4 @@ and the execution-labeled env DPO pairs — previously generated but **never con
 into `pref.jsonl` with the hardest confirmed-wrong negative selected per pair.
 
 All of the above is regression-tested in `tests/smoke_test.py` and gated for release by a blocking
-`src/release.py` preflight (missing artifacts / placeholders / missing LICENSE).
+`autoscientist_toolcaller/release.py` preflight (missing artifacts / placeholders / missing LICENSE).

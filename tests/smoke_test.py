@@ -9,15 +9,15 @@ from __future__ import annotations
 import json
 import sys
 
-from src import hard_negatives
-from src.eval_harness import evaluate, judge
-from src.format_utils import (
+from autoscientist_toolcaller import hard_negatives
+from autoscientist_toolcaller.eval_harness import evaluate, judge
+from autoscientist_toolcaller.format_utils import (
     build_system_prompt,
     parse_model_output,
     target_to_json_str,
     to_prompt_completion,
 )
-from src.schema_validator import validate_answer, validate_call
+from autoscientist_toolcaller.schema_validator import validate_answer, validate_call
 
 TOOLS = [
     {
@@ -128,7 +128,7 @@ def main() -> int:
     ok &= check("return_records shape", "metrics" in detailed and len(detailed["records"]) == 2)
 
     print("eval_bfcl:")
-    from src.eval_bfcl import args_match_lenient, categorize, judge_bfcl, normalize_value
+    from autoscientist_toolcaller.eval_bfcl import args_match_lenient, categorize, judge_bfcl, normalize_value
     ok &= check("categorize simple", categorize({"tools": [TOOLS[0]], "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {}}]}}) == "simple")
     ok &= check("categorize multiple", categorize({"tools": TOOLS, "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {}}]}}) == "multiple")
     ok &= check("categorize parallel", categorize({"tools": TOOLS, "answer": {"type": "tool_call", "calls": [{"name": "a", "arguments": {}}, {"name": "b", "arguments": {}}]}}) == "parallel")
@@ -139,14 +139,14 @@ def main() -> int:
     ok &= check("lenient judge correct", judge_bfcl(pos, target_to_json_str(pos["answer"]))["correct"])
 
     print("bfcl_handler (envelope translation):")
-    from src.bfcl_handler import translate, is_no_call
+    from autoscientist_toolcaller.bfcl_handler import translate, is_no_call
     ok &= check("call -> decoded ast", translate('{"action":"call","calls":[{"name":"f","arguments":{"a":1}}]}') == [{"f": {"a": 1}}])
     ok &= check("refuse -> empty (no call)", translate('{"action":"refuse","message":"x"}') == [])
     ok &= check("is_no_call on clarify", is_no_call('{"action":"clarify","message":"x"}'))
     ok &= check("think block firewalled in handler", translate('<think>{z}</think>{"action":"call","calls":[{"name":"g","arguments":{}}]}') == [{"g": {}}])
 
     print("export_bfcl:")
-    from src.export_bfcl import to_bfcl_prompt, to_bfcl_answer
+    from autoscientist_toolcaller.export_bfcl import to_bfcl_prompt, to_bfcl_answer
     _ex = {"tools": TOOLS, "query": "weather?", "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Mumbai"}}]}}
     _p = to_bfcl_prompt(_ex, "BFCL_v4_simple_0")
     _a = to_bfcl_answer(_ex, "BFCL_v4_simple_0")
@@ -155,7 +155,7 @@ def main() -> int:
     ok &= check("irrelevance answer empty", to_bfcl_answer({"tools": TOOLS, "query": "poem?", "answer": {"type": "refuse", "content": "x"}}, "i")["ground_truth"] == [])
 
     print("quality_filter:")
-    from src.quality_filter import filter_examples, heuristic_score
+    from autoscientist_toolcaller.quality_filter import filter_examples, heuristic_score
     good_ex = {"tools": TOOLS, "query": "what is the weather in Mumbai city today", "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Mumbai"}}]}}
     junk_ex = {"tools": TOOLS, "query": "x", "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "string"}}]}}
     ok &= check("good scores higher than junk", heuristic_score(good_ex) > heuristic_score(junk_ex))
@@ -163,7 +163,7 @@ def main() -> int:
     ok &= check("filter keeps the good one", kept == [good_ex])
 
     print("build_preference:")
-    from src.build_preference import build_pairs
+    from autoscientist_toolcaller.build_preference import build_pairs
     hn_ex = {"tools": TOOLS, "query": "poem?", "answer": {"type": "refuse", "content": "no tool"}, "meta": {"hn_kind": "no_tool"}}
     pairs = build_pairs([pos, hn_ex], seed=1)
     ok &= check("pairs built", len(pairs) == 2)
@@ -172,17 +172,17 @@ def main() -> int:
     ok &= check("preference determinism", build_pairs([pos, hn_ex], seed=1) == pairs)
     # Poison guard: no pair may have rejected == chosen, and every positive's rejected is a real error.
     ok &= check("no poison pair (chosen==rejected)", all(p["chosen"] != p["rejected"] for p in pairs))
-    from src.build_preference import _confirmed_wrong
+    from autoscientist_toolcaller.build_preference import _confirmed_wrong
     ok &= check("positive rejected is confirmed wrong", _confirmed_wrong(pos, json.loads(pairs[0]["rejected"])))
 
     print("multiturn:")
-    from src import multiturn as mt
-    from src.format_utils import build_eval_prompt
+    from autoscientist_toolcaller import multiturn as mt
+    from autoscientist_toolcaller.format_utils import build_eval_prompt
     mts = mt.generate(TOOLS, 12, {"miss_param": 0.4, "miss_func": 0.3, "long_context": 0.3}, seed=2)
     ok &= check("multiturn generated", len(mts) > 0)
     ok &= check("all have history", all(e.get("history") for e in mts))
     ok &= check("mt determinism", mt.generate(TOOLS, 12, {"miss_param": 0.4, "miss_func": 0.3, "long_context": 0.3}, seed=2) == mts)
-    from src.eval_bfcl import categorize as cat2
+    from autoscientist_toolcaller.eval_bfcl import categorize as cat2
     ok &= check("categorized multi_turn", all(cat2(e) == "multi_turn" for e in mts))
     ok &= check("eval prompt includes history", "Conversation so far" in build_eval_prompt(mts[0]))
     # a miss_func example's gold is a call and should judge correct when echoed back
@@ -191,7 +191,7 @@ def main() -> int:
         ok &= check("miss_func judged correct", judge(mf, target_to_json_str(mf["answer"]))["correct"])
 
     print("schema_drift:")
-    from src import schema_drift as sd
+    from autoscientist_toolcaller import schema_drift as sd
     sds = sd.generate(TOOLS, 12, {"add_required": 0.4, "retype_enum": 0.3, "rename": 0.3}, seed=3)
     ok &= check("schema_drift generated", len(sds) > 0)
     ok &= check("sd determinism", sd.generate(TOOLS, 12, {"add_required": 0.4, "retype_enum": 0.3, "rename": 0.3}, seed=3) == sds)
@@ -206,7 +206,7 @@ def main() -> int:
         ok &= check("add_required -> clarify", ar["answer"]["type"] == "clarify")
 
     print("eval_report:")
-    from src.eval_report import confusion_from_predictions, render_html
+    from autoscientist_toolcaller.eval_report import confusion_from_predictions, render_html
     preds = [
         {"gold": "call", "pred": "call"}, {"gold": "call", "pred": "call"},
         {"gold": "refuse", "pred": "call"}, {"gold": "refuse", "pred": "refuse"},
@@ -225,7 +225,7 @@ def main() -> int:
     ok &= check("html has category bar", "Per-category" in html)
 
     print("fill_model_card:")
-    from src.fill_model_card import build_metrics_block
+    from autoscientist_toolcaller.fill_model_card import build_metrics_block
     blk = build_metrics_block({"overall_accuracy": 0.4, "overall_stderr": 0.02, "hallucination_rate": 0.6},
                               {"overall_accuracy": 0.8, "overall_stderr": 0.02, "hallucination_rate": 0.1},
                               {"evaluation_summary": {"improvement_percent": 37}})
@@ -233,7 +233,7 @@ def main() -> int:
     ok &= check("metrics block has improvement", "37" in blk)
 
     print("eval_stats:")
-    from src.eval_stats import bootstrap_ci, mcnemar, paired_gap
+    from autoscientist_toolcaller.eval_stats import bootstrap_ci, mcnemar, paired_gap
     ci = bootstrap_ci([1] * 80 + [0] * 20)
     ok &= check("bootstrap_ci mean=0.8", abs(ci["mean"] - 0.8) < 1e-9)
     ok &= check("bootstrap_ci brackets mean", ci["lo"] <= ci["mean"] <= ci["hi"])
@@ -249,7 +249,7 @@ def main() -> int:
     ok &= check("no gap -> p=1", paired_gap([1, 0, 1, 0], [1, 0, 1, 0])["p_value"] == 1.0)
 
     print("robustness_table:")
-    from src.robustness_table import robustness
+    from autoscientist_toolcaller.robustness_table import robustness
     base_p = ([{"category": "simple", "correct": True}] * 9 + [{"category": "simple", "correct": False}]
               + [{"category": "multi_turn", "correct": True}] * 4 + [{"category": "multi_turn", "correct": False}] * 6)
     ft_p = ([{"category": "simple", "correct": True}] * 9 + [{"category": "simple", "correct": False}]
@@ -259,7 +259,7 @@ def main() -> int:
     ok &= check("ft more robust (smaller drop)", r["mean_ft_drop"] < r["mean_base_drop"])
 
     print("eval_decompose (gap decomposition):")
-    from src.eval_decompose import decompose, aggregate_seeds, to_html as dec_html
+    from autoscientist_toolcaller.eval_decompose import decompose, aggregate_seeds, to_html as dec_html
     drows = ([{"category": "simple", "base": 1, "ft": 1}] * 8 + [{"category": "simple", "base": 0, "ft": 1}] * 2
              + [{"category": "irrelevance", "base": 0, "ft": 1}] * 6 + [{"category": "irrelevance", "base": 0, "ft": 0}] * 4
              + [{"category": "multi_turn", "base": 1, "ft": 1}] * 3 + [{"category": "multi_turn", "base": 0, "ft": 1}] * 5)
@@ -283,7 +283,7 @@ def main() -> int:
     ok &= check("identical seeds -> zero gap std", agg["gap"]["std"] < 1e-9)
 
     print("multilingual:")
-    from src import multilingual as _ml
+    from autoscientist_toolcaller import multilingual as _ml
     _mlr = _ml.generate(30, seed=1)
     ok &= check("multilingual generated", len(_mlr) > 0)
     ok &= check("multilingual all correct-by-construction", all(judge(r, target_to_json_str(r["answer"]))["correct"] for r in _mlr))
@@ -292,7 +292,7 @@ def main() -> int:
     ok &= check("multilingual determinism", _ml.generate(30, seed=1) == _mlr)
 
     print("reasoning traces:")
-    from src import reasoning as _rz
+    from autoscientist_toolcaller import reasoning as _rz
     import random as _rr
     _rng2 = _rr.Random(0)
     _rzW = {"name": "get_weather", "description": "weather", "parameters": {"type": "object", "properties": {"city": {"type": "string"}}, "required": ["city"]}}
@@ -304,7 +304,7 @@ def main() -> int:
     ok &= check("firewall recovers envelope after trace", parse_model_output(_pc["completion"])["action"] == "call")
 
     print("toucan parser (#8, offline):")
-    from src.build_dataset import _toucan_row_to_example
+    from autoscientist_toolcaller.build_dataset import _toucan_row_to_example
     _trow = {"tools": [{"type": "function", "function": {"name": "ping", "description": "p", "parameters": {"type": "object", "properties": {"host": {"type": "string"}}, "required": ["host"]}}}],
              "messages": [{"role": "user", "content": "ping it"},
                           {"role": "assistant", "content": "", "tool_calls": [{"type": "function", "function": {"name": "ping", "arguments": '{"host":"example.com"}'}}]}]}
@@ -315,7 +315,7 @@ def main() -> int:
     ok &= check("toucan handles JSON-string fields", _toucan_row_to_example({"tools": json.dumps(_trow["tools"]), "messages": json.dumps(_trow["messages"])}) is not None)
 
     print("curriculum (difficulty + ordering):")
-    from src import curriculum as _cur
+    from autoscientist_toolcaller import curriculum as _cur
     _easy = {"tools": [_rzW], "query": "x", "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Mumbai"}}]}, "meta": {}}
     _hard = {"tools": [_rzW, _rzW, _rzW, _rzW], "query": "x", "answer": {"type": "tool_call", "calls": [{"name": "a", "arguments": {"p": 1}}, {"name": "b", "arguments": {"q": 2}}]}, "meta": {"sd_kind": "rename"}}
     ok &= check("harder example scores higher", _cur.difficulty(_hard) > _cur.difficulty(_easy))
@@ -324,7 +324,7 @@ def main() -> int:
     ok &= check("histogram has bands + mean", "by_band" in _h and _h["n"] == 2)
 
     print("error explorer:")
-    from src.eval_report import render_error_explorer
+    from autoscientist_toolcaller.eval_report import render_error_explorer
     _errs = [{"category": "irrelevance", "reason": "hallucinated_call", "query": "write a poem",
               "gold": {"type": "refuse"}, "output": '{"action":"call","calls":[{"name":"x"}]}'}]
     _eh = render_error_explorer(_errs)
@@ -332,8 +332,8 @@ def main() -> int:
     ok &= check("error explorer empty -> empty string", render_error_explorer([]) == "")
 
     print("reliability_probe:")
-    from src.reliability_probe import probe_cases, score, to_markdown as probe_md
-    from src.format_utils import build_eval_prompt as _bep, target_to_json_str as _tjs
+    from autoscientist_toolcaller.reliability_probe import probe_cases, score, to_markdown as probe_md
+    from autoscientist_toolcaller.format_utils import build_eval_prompt as _bep, target_to_json_str as _tjs
     _cases = probe_cases()
     _gold = {_bep(ex): _tjs(ex["answer"]) for ex in _cases}
     oracle = score(lambda p: _gold.get(p, '{"action":"refuse","message":"?"}'))
@@ -345,8 +345,8 @@ def main() -> int:
     ok &= check("probe markdown renders", "Reliability probe" in probe_md(oracle))
 
     print("envs (execution-verified):")
-    from src.envs import CalendarEnv, CartEnv
-    from src.envs import generate as env_gen, generate_dpo as env_dpo
+    from autoscientist_toolcaller.envs import CalendarEnv, CartEnv
+    from autoscientist_toolcaller.envs import generate as env_gen, generate_dpo as env_dpo
     cart = CartEnv()
     s1, aok, _ = cart.apply(cart.blank(), {"name": "add_item", "arguments": {"item": "apples", "quantity": 3}})
     ok &= check("cart add verified", aok and s1["items"]["apples"] == 3)
@@ -368,7 +368,7 @@ def main() -> int:
 
     # ---- round-2 advanced upgrades -------------------------------------------------------------
     print("schema_drift poison guard (#1):")
-    from src.format_utils import sample_value
+    from autoscientist_toolcaller.format_utils import sample_value
     import random as _r
     _rng = _r.Random(0)
     ok &= check("sample_value enum -> member", sample_value({"type": "string", "enum": ["a", "b"]}, _rng) in ("a", "b"))
@@ -395,27 +395,27 @@ def main() -> int:
     ok &= check("partial_parallel skips with <2 positives", hard_negatives.generate([_W, _S], 5, {"partial_parallel": 1.0}, seed=1, positives=[_pA]) == [])
 
     print("env multicall (#4):")
-    from src.envs import generate_multicall
+    from autoscientist_toolcaller.envs import generate_multicall
     _mc = generate_multicall(8, seed=1)
     ok &= check("multicall 2-3 verified calls", _mc and all(2 <= len(e["answer"]["calls"]) <= 3 and validate_answer(e["answer"], e["tools"])[0] for e in _mc))
     ok &= check("multicall drop-one is WRONG", not judge(_mc[0], target_to_json_str({"type": "tool_call", "calls": _mc[0]["answer"]["calls"][:-1]}))["correct"])
     ok &= check("multicall determinism", generate_multicall(8, seed=1) == _mc)
 
     print("pref hardness + env merge (#5):")
-    from src.build_preference import _hardness
+    from autoscientist_toolcaller.build_preference import _hardness
     _chosen = {"action": "call", "calls": [{"name": "f", "arguments": {"a": 1, "b": 2}}]}
     _nearmiss = {"action": "call", "calls": [{"name": "f", "arguments": {"a": 1, "b": 9}}]}
     _swap = {"action": "call", "calls": [{"name": "g", "arguments": {"a": 1, "b": 2}}]}
     ok &= check("near-miss harder (smaller dist) than tool swap", _hardness(_chosen, _nearmiss) < _hardness(_chosen, _swap))
 
     print("decontamination (#6):")
-    from src.decontaminate import decontaminate, DEFAULT_PROBES
+    from autoscientist_toolcaller.decontaminate import decontaminate, DEFAULT_PROBES
     _rows = [{"query": DEFAULT_PROBES[0], "meta": {"source": "toolace"}},
              {"query": "Completely unrelated: parse this XML config file for me.", "meta": {"source": "toolace"}}]
     _kept, _dropped = decontaminate(_rows, DEFAULT_PROBES, ngram_threshold=0.5, cos_threshold=0.95)
     ok &= check("decontam drops the contaminated row", len(_dropped) == 1 and len(_kept) == 1)
     ok &= check("decontam keeps the unrelated row", _kept[0]["query"].startswith("Completely unrelated"))
-    from src.dedup import _embed_model
+    from autoscientist_toolcaller.dedup import _embed_model
     ok &= check("embed model cached (same object)", _embed_model() is _embed_model())
 
     print("schema-drift eval + worst-seed (#7):")
@@ -424,11 +424,11 @@ def main() -> int:
     ok &= check("evaluate reports by_sd_kind", "by_sd_kind" in _m and "rename" in _m["by_sd_kind"])
     ok &= check("schema_drift_accuracy present", _m.get("schema_drift_accuracy") == 1.0)
     _agg = {"seeds": 2, "base_acc": {"mean": 0.5, "std": 0.0}, "ft_acc": {"mean": 0.7, "std": 0.0}, "gap": {"mean": 0.2, "std": 0.05}, "worst_seed_overall_gap": 0.15, "worst_seed_index": 1}
-    from src.eval_decompose import seeds_to_markdown as _sm
+    from autoscientist_toolcaller.eval_decompose import seeds_to_markdown as _sm
     ok &= check("worst-seed in banner", "worst seed" in _sm(_agg))
 
     print("release preflight (#8):")
-    from src.release import preflight
+    from autoscientist_toolcaller.release import preflight
     import tempfile as _tf, os as _os2
     _td = _tf.mkdtemp()
     for _n in ("train.jsonl", "val.jsonl", "test.jsonl", "stats.json"):
@@ -441,7 +441,7 @@ def main() -> int:
     ok &= check("preflight flags missing artifact", any("missing artifact" in p for p in preflight(_td2, card_paths=["clean\n"], check_manifest=False)))
 
     print("reproducibility manifest:")
-    from src.manifest import write as _mwrite, verify as _mverify
+    from autoscientist_toolcaller.manifest import write as _mwrite, verify as _mverify
     _mpath = _os2.path.join(_td, "manifest.json")
     _mwrite(out_dir=_td, config_path="config.yaml", manifest_path=_mpath)
     ok &= check("manifest verifies clean", _mverify(_td, _mpath) == [])
@@ -451,7 +451,7 @@ def main() -> int:
     ok &= check("preflight blocks on manifest mismatch", any("changed" in p or "manifest" in p for p in preflight(_td, card_paths=["clean\n"], manifest_path=_mpath)))
 
     print("fetch_improved (platform deliverable):")
-    from src.fetch_improved import extract_enhanced
+    from autoscientist_toolcaller.fetch_improved import extract_enhanced
     _raw = [{"prompt": "P", "completion": "C", "enhanced_prompt": "EP", "enhanced_completion": "EC", "row_embedding": [0.1]},
             {"prompt": "P2", "completion": "C2"}]  # second row has no enhanced fields
     _enh = list(extract_enhanced(_raw, prefer_enhanced=True))
@@ -462,7 +462,7 @@ def main() -> int:
     ok &= check("original mode ignores enhanced", _orig[0] == {"prompt": "P", "completion": "C"})
 
     print("multilingual split leak-guard (pair_id grouping):")
-    from src.build_dataset import split as _bsplit
+    from autoscientist_toolcaller.build_dataset import split as _bsplit
     _ml_rows = _ml.generate(50, seed=3)  # matched twins, one pair_id per 5-language set
     _solo = [{"tools": [_W], "query": f"q{i}", "answer": {"type": "refuse", "content": "x"},
               "meta": {"source": "toolace", "hn_kind": None}} for i in range(40)]
@@ -496,7 +496,7 @@ def main() -> int:
     ok &= check("distinct correct parallel still passes", judge_bfcl(_bex2, _ok2)["correct"])
 
     print("multilingual Δaccuracy evaluator:")
-    from src.eval_multilingual import _delta_metrics, evaluate_multilingual
+    from autoscientist_toolcaller.eval_multilingual import _delta_metrics, evaluate_multilingual
     _oracle_bits = {(p, l): 1 for p in range(1, 6) for l in ("en", "hi", "es")}
     _dm = _delta_metrics(_oracle_bits)
     ok &= check("Δ metrics: languages present", set(_dm["languages"]) == {"en", "hi", "es"})
@@ -513,12 +513,12 @@ def main() -> int:
     ok &= check("evaluate_multilingual: oracle -> Δ == 0 all langs", all(d["delta_vs_en"] == 0.0 for d in _mm["matched_pair_delta_vs_en"].values()))
 
     print("BFCL weighted aggregate + expanded decontam probes (rigor #3):")
-    from src.eval_bfcl import weighted_accuracy, BFCL_WEIGHTS
+    from autoscientist_toolcaller.eval_bfcl import weighted_accuracy, BFCL_WEIGHTS
     ok &= check("BFCL weights sum to 1.0", abs(sum(BFCL_WEIGHTS.values()) - 1.0) < 1e-9)
     _wa = weighted_accuracy({"simple": {"accuracy": 1.0}, "multi_turn": {"accuracy": 0.0}})
     ok &= check("weighted_accuracy renormalizes over present cats", abs(_wa - (0.15 / 0.45)) < 1e-9)
     ok &= check("weighted_accuracy None when no data", weighted_accuracy({"simple": {"accuracy": None}}) is None)
-    from src.decontaminate import DEFAULT_PROBES as _PROBES, decontaminate as _decon
+    from autoscientist_toolcaller.decontaminate import DEFAULT_PROBES as _PROBES, decontaminate as _decon
     ok &= check("decontam probe fixture expanded (>60)", len(_PROBES) > 60)
     _dk, _dd = _decon([{"query": _PROBES[7], "meta": {"source": "x"}}], _PROBES)  # verbatim probe as a train row
     ok &= check("verbatim probe dropped at DEFAULT thresholds", len(_dd) == 1 and len(_dk) == 0)

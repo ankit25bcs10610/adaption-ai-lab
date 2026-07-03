@@ -49,8 +49,8 @@ tables, and prints the **HEADLINE** (`+X pp ± CI, p<0.05, hallucination A%→B%
 
 ## 6. Publish the weights (I can run these for you)
 ```bash
-python -m src.release hf-model     --repo pandeyankit84/autoscientist-toolcaller --dir <weights>
-python -m src.release kaggle-model --slug pandeyankit99/autoscientist-toolcaller --dir <weights>
+python -m autoscientist_toolcaller.release hf-model     --repo pandeyankit84/autoscientist-toolcaller --dir <weights>
+python -m autoscientist_toolcaller.release kaggle-model --slug pandeyankit99/autoscientist-toolcaller --dir <weights>
 ```
 `release preflight` blocks publishing until the card has real numbers (no placeholders).
 

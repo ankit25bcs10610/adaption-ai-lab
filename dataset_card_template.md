@@ -22,7 +22,7 @@ feature is a ~28% slice of **hard negatives** — cases where the correct behavi
 
 ## Composition
 
-Each row is one example (canonical format in the repo's `src/format_utils.py`):
+Each row is one example (canonical format in the repo's `autoscientist_toolcaller/format_utils.py`):
 
 ```json
 {"tools": [ {"name","description","parameters"} ],
@@ -62,4 +62,4 @@ and *how* to call tools — including safe abstention.
 
 ## Reproduction
 
-Built with the pipeline in the accompanying repo: `python -m src.build_dataset --config config.yaml`.
+Built with the pipeline in the accompanying repo: `python -m autoscientist_toolcaller.build_dataset --config config.yaml`.

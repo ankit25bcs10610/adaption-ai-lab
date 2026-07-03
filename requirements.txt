@@ -12,7 +12,7 @@ numpy==1.26.4
 pyyaml==6.0.2
 tqdm==4.67.0
 kagglehub==0.3.4
-anthropic==0.84.0          # Claude LLM-as-judge for the quality filter (src/claude_judge.py)
-matplotlib==3.10.0         # Data-Viz track: chart rendering (src/viz)
+anthropic==0.84.0          # Claude LLM-as-judge for the quality filter (autoscientist_toolcaller/claude_judge.py)
+matplotlib==3.10.0         # Data-Viz track: chart rendering (autoscientist_toolcaller/viz)
 Pillow==11.3.0             # Data-Viz track: image encoding
 adaption==0.4.0            # Adaption SDK (from adaptionlabs.ai; pinned to the version used for the graded run)
