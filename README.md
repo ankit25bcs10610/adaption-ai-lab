@@ -214,6 +214,16 @@ The **only active** positives source is `Team-ACE/ToolACE` (Apache-2.0). `Salesf
 2. **Hindi/Devanagari + romanized slice** (`viz/indic_charts.py`) — the same ground-truth with localized labels and questions; numeric gold stays ASCII, categorical gold is the on-chart string. Paired `en`/`hi` twins share a `pair_id` for a clean matched-pair Δaccuracy — the HackIndia impact story.
 3. **Vega-Lite spec-reading** (`viz/vega_spec.py`) — a *text-only* modality where the "chart" is a Vega-Lite JSON spec and the model answers from `data.values`. No pixels, no VLM, same relaxed scorer — a second, cheaper axis of chart comprehension.
 
+<div align="center">
+
+| English | Hindi (Devanagari) |
+|:---:|:---:|
+| <img src="web/public/charts/en_1.png" alt="English chart-QA example" width="380"> | <img src="web/public/charts/hi_1.png" alt="Hindi/Devanagari chart-QA example" width="380"> |
+
+<sub>Paired <code>en</code>/<code>hi</code> twins — identical ground-truth, localized title/axes/question — for a clean matched-pair Δaccuracy.</sub>
+
+</div>
+
 ```bash
 python -m autoscientist_toolcaller.viz.build_dataset --out data/viz --n-synth 400 --n-indic 600 --n-vega 150
 python -m autoscientist_toolcaller.viz.gallery       --data-dir data/viz --n 18     # browsable HTML gallery
