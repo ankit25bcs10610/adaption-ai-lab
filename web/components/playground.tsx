@@ -104,6 +104,11 @@ export function Playground() {
               <Button onClick={run} className="mt-3 w-full">
                 <Play className="h-4 w-4" /> Run
               </Button>
+              {enabledTools.length === 0 && (
+                <p className="mt-2 text-center text-xs text-muted-foreground">
+                  No tools enabled — the model should <span className="text-run">refuse</span>. Run it and see.
+                </p>
+              )}
             </div>
 
             {/* Output */}
