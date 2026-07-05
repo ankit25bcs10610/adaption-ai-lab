@@ -3,6 +3,7 @@ import { Hero } from "@/components/hero";
 import { Marquee } from "@/components/marquee";
 import { Behaviors } from "@/components/behaviors";
 import { Playground } from "@/components/playground";
+import { AgentSection } from "@/components/agent-section";
 import { Pipeline } from "@/components/pipeline";
 import { Benchmarks } from "@/components/benchmarks";
 import { DataViz } from "@/components/dataviz";
@@ -26,6 +27,7 @@ export default function Page() {
       <Marquee />
       <Behaviors />
       <Playground />
+      <AgentSection />
       <Pipeline />
       <Benchmarks />
       <DataViz />
