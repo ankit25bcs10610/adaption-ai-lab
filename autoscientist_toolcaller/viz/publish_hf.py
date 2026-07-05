@@ -69,6 +69,16 @@ def main() -> None:
     ds.push_to_hub(args.repo, token=args.token, private=args.private)
     print(f"[hf] pushed -> https://huggingface.co/datasets/{args.repo}")
 
+    # Upload the dataset card as README.md so the repo doesn't render card-less (push_to_hub ships no card).
+    import os
+    card = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                        "VIZ_DATASET_CARD.md")
+    if os.path.exists(card):
+        from huggingface_hub import HfApi
+        HfApi(token=args.token).upload_file(path_or_fileobj=card, path_in_repo="README.md",
+                                            repo_id=args.repo, repo_type="dataset")
+        print("[hf] uploaded VIZ_DATASET_CARD.md as the dataset README")
+
 
 if __name__ == "__main__":
     main()

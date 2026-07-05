@@ -60,6 +60,10 @@ python3 -m autoscientist_toolcaller.fill_model_card --username pandeyankit84 --t
 # The card that actually ships with the weights is data/hf_model/README.md — keep it identical to the
 # freshly-filled MODEL_CARD.md so the published model card carries the real numbers (not a stale copy).
 cp MODEL_CARD.md data/hf_model/README.md
+# Stage the dataset card into the HF dataset publish dir so the dataset repo doesn't render card-less.
+mkdir -p data/hf_dataset && cp DATASET_CARD.md data/hf_dataset/README.md
+# Kaggle README (no HF YAML frontmatter — Kaggle uses dataset-metadata.json).
+mkdir -p data/kaggle_dataset && python3 -c "import re,sys; t=open('DATASET_CARD.md').read(); m=re.match(r'^---\n.*?\n---\n+',t,re.DOTALL); open('data/kaggle_dataset/README.md','w').write(t[m.end():] if m else t)"
 
 echo "==> [7/7] Reproducibility manifest + release preflight"
 python3 -m autoscientist_toolcaller.manifest --out-dir "$DATA" --config config.yaml --manifest "$RESULTS/manifest.json"

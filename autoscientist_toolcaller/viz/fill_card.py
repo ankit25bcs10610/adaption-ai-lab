@@ -81,11 +81,15 @@ def fill(template_text: str, base: Dict[str, Any], ft: Dict[str, Any],
         template_text,
         flags=re.DOTALL,
     )
-    # model-index value = fine-tuned overall relaxed accuracy (only fill if we actually have it, so an
-    # un-run card keeps __PENDING__ and stays preflight-blocked rather than shipping a fake 0.000).
+    # model-index: fill the value with the fine-tuned overall relaxed accuracy when we have it. When we
+    # DON'T (weights-pending), strip the whole model-index block rather than ship `value: __PENDING__`
+    # (which is invalid on HF and would fail the card lint) — mirroring the honest MODEL_CARD.md which
+    # omits model-index until real numbers exist. This makes fill_card idempotent/safe in either state.
     ov = _overall(ft)
     if ov is not None:
         text = text.replace("value: __PENDING__", f"value: {ov:.3f}")
+    else:
+        text = re.sub(r"\nmodel-index:\n(?: +.*\n)+", "\n", text, count=1)
     if username:
         text = text.replace("YOUR_USERNAME", username)
     return text

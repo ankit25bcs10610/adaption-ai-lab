@@ -22,18 +22,21 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="config.yaml")
     ap.add_argument("--out", default="results/baseline.json")
+    ap.add_argument("--model", default=None,
+                    help="override config.base_model (so scripts can pass $BASE_MODEL explicitly)")
     args = ap.parse_args()
     cfg = yaml.safe_load(open(args.config))
+    base_model = args.model or cfg["base_model"]
 
     test_path = os.path.join(cfg["paths"]["out_dir"], "test.jsonl")
     records = load_jsonl(test_path)
     gen = hf_generate_fn(
-        cfg["base_model"],
+        base_model,
         max_new_tokens=cfg["eval"]["max_new_tokens"],
         temperature=cfg["eval"]["temperature"],
     )
     metrics = evaluate(records, gen)
-    metrics["model"] = cfg["base_model"]
+    metrics["model"] = base_model
     metrics["role"] = "baseline"
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
