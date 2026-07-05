@@ -623,6 +623,20 @@ def main() -> int:
     ok &= check("over-refusal rate correct (1 of 2 gold-calls refused)", abs(_cal["over_refusal_rate"] - 0.5) < 1e-9)
     ok &= check("abstention recall correct (refused when should)", _cal["abstention_recall"] == 1.0)
 
+    print("LLM-judge synth loop (mockable, offline):")
+    from autoscientist_toolcaller.synth_llm import synthesize as _synth
+    def _is_crit(system):
+        return "critique" in system.lower() or "judge" in system.lower()
+    _valid_gen = '{"query":"What is the weather in Mumbai?","answer":{"type":"tool_call","calls":[{"name":"get_weather","arguments":{"city":"Mumbai"}}]}}'
+    _fake_ok = lambda s, u: ('{"ok": true, "reason": "hard+correct"}' if _is_crit(s) else _valid_gen)
+    _fake_badschema = lambda s, u: ('{"ok": true}' if _is_crit(s) else '{"query":"z","answer":{"type":"tool_call","calls":[{"name":"nonexistent_tool","arguments":{}}]}}')
+    _fake_critno = lambda s, u: ('{"ok": false, "reason": "too easy"}' if _is_crit(s) else _valid_gen)
+    _sv = _synth(1, [_W], complete_fn=_fake_ok, max_attempts=6)
+    ok &= check("synth: a valid critiqued+verified case survives", len(_sv) == 1 and _sv[0]["meta"]["source"] == "llm_synth")
+    ok &= check("synth: schema-invalid gold dropped by verify gate", _synth(1, [_W], complete_fn=_fake_badschema, max_attempts=6) == [])
+    ok &= check("synth: critique rejection drops the case", _synth(1, [_W], complete_fn=_fake_critno, max_attempts=6) == [])
+    ok &= check("synth: duplicate queries deduped", len(_synth(3, [_W], complete_fn=_fake_ok, max_attempts=20)) == 1)
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 

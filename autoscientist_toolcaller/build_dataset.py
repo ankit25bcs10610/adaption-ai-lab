@@ -537,6 +537,19 @@ def main() -> None:
             write_jsonl(os.path.join(out_dir, "agentic_trajectories.jsonl"),
                         _agentic.generate_trajectories(n_traj, seed=seed))
 
+    # Optional LLM-synthesized hard cases (Anthropic; opt-in, needs ANTHROPIC_API_KEY): generate ->
+    # LLM-critique -> schema-verify -> dedup. Each row still passes the same schema gate as every
+    # other slice, so a hallucinated gold is dropped, not shipped. Default offline build is unaffected.
+    synth_n = dcfg.get("llm_synth_examples", 0)
+    if synth_n and os.environ.get("ANTHROPIC_API_KEY"):
+        from . import synth_llm
+        syx = synth_llm.synthesize(synth_n, pool,
+                                   model=dcfg.get("quality_judge_model", "claude-opus-4-8"), seed=seed)
+        combined += syx
+        print(f"[build] llm_synth: +{len(syx)} (Anthropic-generated, critiqued, schema-verified)")
+    elif synth_n:
+        print("[build] llm_synth requested but ANTHROPIC_API_KEY not set — skipped")
+
     # 4b. Decontaminate against public BFCL/ToolACE-style probes (leakage guard for the hidden-set claim)
     contamination = None
     if cfg["dedup"].get("decontaminate"):

@@ -36,6 +36,7 @@ dataset:
   novel_tool_frac: 0.15        # hold out 15% of tool NAMES; examples using only them -> test_novel
   reasoning_traces: false      # prepend correct-by-construction <think> traces to train_pc (A/B arm;
                                # if ON, do NOT also enable the platform reasoning_traces recipe)
+  llm_synth_examples: 0        # opt-in: Anthropic generate→critique→schema-verify→dedup hard cases (needs ANTHROPIC_API_KEY)
   quality_keep_frac: 1.0       # keep top X of positives after quality filter (1.0 = filter off)
   quality_judge: heuristic     # heuristic (offline) | claude (Anthropic SDK LLM-as-judge)
   quality_judge_model: claude-opus-4-8  # used when quality_judge=claude (haiku for cheaper bulk scoring)
