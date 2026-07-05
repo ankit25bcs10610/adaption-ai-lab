@@ -15,14 +15,14 @@
 Most function-calling datasets contain only examples where a tool *should* be invoked, which trains models
 to call a tool even when none applies or when required arguments are missing — the dominant failure mode of
 real agents. We take the opposite view: the hardest and most valuable decision in tool use is **when *not* to
-call a tool**. We construct an original, **correct-by-construction** function-calling dataset (3,346 examples)
+call a tool**. We construct an original, **correct-by-construction** function-calling dataset (6,522 examples)
 in which ~40% of the data is *structured negative supervision* — refuse (no applicable tool), clarify
 (missing argument / ambiguous intent), over-refusal traps (hedged-but-satisfiable requests that must still
 call), and partial-parallel (two intents → two calls) — synthesized from real tool schemas so every gold
 label is verifiable. We add execution-verified multi-turn trajectories from deterministic tool environments,
 a schema-drift slice, and a five-language reliability slice. A two-pass adversarial audit of our own build
 pipeline caught the negative-supervision "moat" being silently discarded by deduplication (refuse examples
-8 → 284) and 36% → 0% schema-invalid gold calls, the latter now enforced by a build-time drop-guard. Graded
+8 → 531) and 36% → 0% schema-invalid gold calls, the latter now enforced by a build-time drop-guard. Graded
 on Adaption's Adaptive Data platform, dataset quality improved **+15.7% (grade C → B)**. We release the
 dataset, an execution-verified evaluation harness (BFCL-v4-weighted, calibration/abstention metrics,
 bootstrapped confidence intervals + McNemar significance), reproducibility manifests, and a live demo.
@@ -80,9 +80,9 @@ against BFCL/ToolACE-style probes protect the held-out claim. A final **drop-gua
 `tool_call` gold against its Draft-7 schema (`additionalProperties:false`), guaranteeing 0 invalid golds
 in the shipped artifacts (`stats.json:schema_invalid_dropped`).
 
-**Composition (published set: 3,346 examples).** 3,234 across train/val/test + 112 in a `test_novel`
-holdout using tool names never seen in training. Realized source shares: positives ≈ 51%, hard-negative
-≈ 20%, multi-turn ≈ 16%, schema-drift ≈ 9%; `no_tool` ≈ 8.8% of total.
+**Composition (published set: 6,522 examples, 7,315 unique tools).** 6,279 across train/val/test + 243 in
+a `test_novel` holdout using tool names never seen in training. Realized source shares: positives ≈ 50%,
+hard-negative ≈ 20%, multi-turn ≈ 15%, schema-drift ≈ 9%, multilingual ≈ 4%; `no_tool` ≈ 8.5% of total.
 
 ## 4. AutoScientist / Adaptive Data usage
 
@@ -110,8 +110,8 @@ harness is offline-testable (291 checks) so its correctness is verified independ
 
 Adaptive Data graded the audited dataset **7.0 → 8.1, +15.7%, grade C → B** on the fixed set (`c4923b7f`,
 1,000/2,440 rows under the free-tier cap); a completed 250-row reference run (`a99c0c96`) corroborates at
-**+10.0%, grade B**. The audit before/after (the whole thesis): `no_tool` 8 → 284, `miss_param` 1 → 32,
-`ambiguous` 0 → 55, schema-invalid gold calls 36% → 0%.
+**+10.0%, grade B**. The audit before/after (the whole thesis): `no_tool` 8 → 531, `miss_param` 1 → 63,
+`ambiguous` 0 → 142, schema-invalid gold calls 36% → 0%.
 
 ### 6.2 Held-out model improvement (pending the console run)
 
