@@ -59,6 +59,17 @@ def _structural_score(registry: ToolRegistry, parsed: Dict[str, Any] | None) -> 
     return -1.0
 
 
+def _critique(registry: ToolRegistry, parsed: Dict[str, Any] | None) -> str:
+    """A short corrective message fed back on a bad action (Reflexion-style self-correction)."""
+    if parsed is None:
+        return "Your last output was not valid JSON — reply with exactly one action object."
+    if parsed.get("action") == "call":
+        unknown = [c.get("name") for c in (parsed.get("calls") or []) if c.get("name") not in registry._fns]
+        if unknown:
+            return f"Tool(s) {unknown} are not available — use only the listed tools."
+    return "That action was not valid; try a different tool or arguments."
+
+
 def run_agent(
     goal: str,
     registry: ToolRegistry,
@@ -66,30 +77,38 @@ def run_agent(
     max_steps: int = 8,
     best_of_n: int = 1,
     verify_fn=None,
+    max_retries: int = 0,
 ) -> Dict[str, Any]:
     """Run the agent loop. Returns {status, steps, result, transcript, history}.
 
     status: 'done' (model called finish) · 'refuse'/'clarify' (model abstained) · 'max_steps' · 'parse_error'.
     best_of_n>1 draws K candidates per step and commits the best per `verify_fn` (default: structural).
+    max_retries>0 re-queries with a self-critique when the chosen action is invalid (bad parse / unknown tool).
     """
     history: List[Dict[str, str]] = []
     transcript: List[Dict[str, Any]] = []
     status, result = "max_steps", None
     verify = verify_fn or (lambda p: _structural_score(registry, p))
     for step in range(max_steps):
-        prompt = build_eval_prompt({"tools": registry.schemas, "query": goal, "history": history or None})
-        cands = [model_fn(prompt) for _ in range(max(1, best_of_n))]
-        plist = [parse_model_output(c) for c in cands]
-        best_i = max(range(len(cands)), key=lambda i: (verify(plist[i]), -i))
-        raw, parsed = cands[best_i], plist[best_i]
+        retries = 0
+        while True:
+            prompt = build_eval_prompt({"tools": registry.schemas, "query": goal, "history": history or None})
+            cands = [model_fn(prompt) for _ in range(max(1, best_of_n))]
+            plist = [parse_model_output(c) for c in cands]
+            best_i = max(range(len(cands)), key=lambda i: (verify(plist[i]), -i))
+            raw, parsed = cands[best_i], plist[best_i]
+            if verify(parsed) > 0 or retries >= max_retries:
+                break
+            history.append({"role": "tool", "content": f"(auto-critique) {_critique(registry, parsed)}"})
+            retries += 1
         if parsed is None:
             status = "parse_error"
-            transcript.append({"step": step, "action": None, "raw": raw})
+            transcript.append({"step": step, "action": None, "raw": raw, "retries": retries})
             break
         action = parsed.get("action")
         if action != "call":
             status = action if action in ("refuse", "clarify") else "parse_error"
-            transcript.append({"step": step, "action": action, "message": parsed.get("message")})
+            transcript.append({"step": step, "action": action, "message": parsed.get("message"), "retries": retries})
             break
         # execute each requested call and build one observation
         obs_parts, calls = [], parsed.get("calls") or []
@@ -102,7 +121,7 @@ def run_agent(
                 continue
             ok, res = registry.call(name, cargs)
             obs_parts.append(f"{name}: {'OK ' + str(res) if ok else 'ERROR ' + str(res)}")
-        transcript.append({"step": step, "action": "call", "calls": calls, "observation": "; ".join(obs_parts)})
+        transcript.append({"step": step, "action": "call", "calls": calls, "observation": "; ".join(obs_parts), "retries": retries})
         history.append({"role": "assistant", "content": raw})
         history.append({"role": "tool", "content": "; ".join(obs_parts)})
         if finished:

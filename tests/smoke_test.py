@@ -749,6 +749,26 @@ def main() -> int:
                   target_to_json_str({"type": "tool_call", "calls": [{"name": "finish", "arguments": {"answer": "ok"}}]})])
     ok &= check("run_agent best-of-N prefers a registered-tool action", run_agent("x", safe_tools_registry(), lambda p: next(_itbn), max_steps=3, best_of_n=2)["status"] == "done")
 
+    print("self-critique-and-retry:")
+    _it_retry = iter(['{"action":"call","calls":[{"name":"nope","arguments":{}}]}',
+                      target_to_json_str({"type": "tool_call", "calls": [{"name": "finish", "arguments": {"answer": "ok"}}]})])
+    _rr = run_agent("x", safe_tools_registry(), lambda p: next(_it_retry), max_steps=3, max_retries=1)
+    ok &= check("run_agent recovers via critique (unknown→retry→finish)", _rr["status"] == "done" and _rr["transcript"][0]["retries"] == 1)
+    _rn = run_agent("x", safe_tools_registry(),
+                    lambda p: '{"action":"call","calls":[{"name":"nope","arguments":{}}]}', max_steps=2, max_retries=2)
+    ok &= check("run_agent never infinite-loops when it never corrects", _rn["status"] in ("max_steps", "parse_error") and _rn["steps"] <= 2)
+    _clean3 = next(t for t in _trajs if t["kind"] == "clean")
+    def _garble_then_gold(traj):
+        seq = []
+        for s in traj["steps"]:
+            seq.append("not json at all")                     # attempt 0: unparseable → triggers retry
+            seq.append(target_to_json_str(s["answer"]))       # retry: gold
+        return iter(seq)
+    _itg = _garble_then_gold(_clean3)
+    _rret = rollout(_clean3, lambda p: next(_itg), n_samples=1, max_retries=1)
+    ok &= check("rollout retry recovers each step → success", _rret["success"] and _rret["retries"] >= len(_clean3["steps"]))
+    ok &= check("rollout without retry fails on a broken model", not rollout(_clean3, lambda p: "not json", n_samples=1, max_retries=0)["success"])
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 

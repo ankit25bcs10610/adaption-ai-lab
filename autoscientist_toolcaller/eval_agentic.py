@@ -55,22 +55,32 @@ def _candidate_score(parsed: Dict[str, Any] | None, env, state: Dict[str, Any]) 
     return -1.0
 
 
-def rollout(traj: Dict[str, Any], generate_fn: Callable[[str], str], n_samples: int = 1) -> Dict[str, Any]:
+def rollout(traj: Dict[str, Any], generate_fn: Callable[[str], str],
+            n_samples: int = 1, max_retries: int = 0) -> Dict[str, Any]:
     """Free rollout: advance the env by the MODEL's own actions, observation-in-the-loop.
 
     With n_samples>1, each step draws K candidates and the ENVIRONMENT (a perfect verifier) picks the
-    best one to commit — verifier-guided, test-time-compute search (the offline stand-in for RLVR)."""
+    best one to commit — verifier-guided, test-time-compute search (the offline stand-in for RLVR).
+    With max_retries>0, a step whose best candidate is env-illegal gets a self-critique and is re-tried."""
     env = env_by_name(traj["env"])
     state = copy.deepcopy(traj["init_state"])
     hist: List[Dict[str, Any]] = []
     per_step: List[bool] = []
+    total_retries = 0
     for step in traj["steps"]:
-        ex = {"tools": traj["tools"], "query": traj["goal"], "history": hist or None}
-        prompt = build_eval_prompt(ex)
-        cands = [generate_fn(prompt) for _ in range(max(1, n_samples))]
-        parsed_list = [parse_model_output(c) for c in cands]
-        best_i = max(range(len(cands)), key=lambda i: (_candidate_score(parsed_list[i], env, state), -i))
-        out, parsed = cands[best_i], parsed_list[best_i]
+        retries = 0
+        while True:
+            ex = {"tools": traj["tools"], "query": traj["goal"], "history": hist or None}
+            prompt = build_eval_prompt(ex)
+            cands = [generate_fn(prompt) for _ in range(max(1, n_samples))]
+            parsed_list = [parse_model_output(c) for c in cands]
+            best_i = max(range(len(cands)), key=lambda i: (_candidate_score(parsed_list[i], env, state), -i))
+            out, parsed = cands[best_i], parsed_list[best_i]
+            if _candidate_score(parsed, env, state) > 0 or retries >= max_retries:
+                break
+            hist.append({"role": "tool", "content": "(auto-critique) that action isn't valid here — try a different tool or arguments."})
+            retries += 1
+        total_retries += retries
         per_step.append(_step_matches(parsed, step))
         if parsed and parsed.get("action") == "call" and parsed.get("calls"):
             state, ok, reason = env.apply(state, parsed["calls"][0])
@@ -85,12 +95,12 @@ def rollout(traj: Dict[str, Any], generate_fn: Callable[[str], str], n_samples: 
     reached = state == traj["final_state"]
     # RECOVERY success additionally requires the last (impossible) step was abstained, not called.
     success = reached and (traj.get("kind") != "recovery" or (bool(per_step) and per_step[-1]))
-    return {"success": bool(success), "per_step": per_step, "steps": len(traj["steps"])}
+    return {"success": bool(success), "per_step": per_step, "steps": len(traj["steps"]), "retries": total_retries}
 
 
 def evaluate_agentic(trajectories: List[Dict[str, Any]], generate_fn: Callable[[str], str],
-                     n_samples: int = 1) -> Dict[str, Any]:
-    results = [rollout(t, generate_fn, n_samples=n_samples) for t in trajectories]
+                     n_samples: int = 1, max_retries: int = 0) -> Dict[str, Any]:
+    results = [rollout(t, generate_fn, n_samples=n_samples, max_retries=max_retries) for t in trajectories]
     succ = [int(r["success"]) for r in results]
     step_bits = [int(b) for r in results for b in r["per_step"]]
     ci = bootstrap_ci(succ)
@@ -104,6 +114,7 @@ def evaluate_agentic(trajectories: List[Dict[str, Any]], generate_fn: Callable[[
         "success_lo": ci["lo"], "success_hi": ci["hi"],
         "per_step_accuracy": (sum(step_bits) / len(step_bits)) if step_bits else 0.0,
         "avg_steps": (sum(r["steps"] for r in results) / len(results)) if results else 0.0,
+        "avg_retries": (sum(r.get("retries", 0) for r in results) / len(results)) if results else 0.0,
         "by_env": {k: {"n": len(v), "success_rate": sum(v) / len(v)} for k, v in by_env.items()},
     }
 
