@@ -514,12 +514,20 @@ def main() -> None:
         print(f"[build] multilingual: +{len(mlx)} (en/hi/hi-rom)")
 
     # 4. Combine + dedup
-    combined = positives + hard + mt + sd + mlx
+    combined = positives + hard + mt + sd
     combined = dedup.dedup_all(
         combined,
         minhash_threshold=cfg["dedup"]["minhash_threshold"],
         semantic_threshold=cfg["dedup"]["semantic_threshold"],
     )
+
+    # Multilingual twins are appended AFTER dedup on purpose: an en/hi/hi-rom twin set shares the same
+    # underlying request, so lexical/semantic dedup would collapse the cross-language twins into one and
+    # destroy the matched-pair Δaccuracy(lang−en) signal (the whole point of the slice). They're
+    # correct-by-construction and internally unique; split() keeps each twin set together via meta.pair_id.
+    if mlx:
+        combined += mlx
+        print(f"[build] multilingual appended post-dedup: +{len(mlx)} (cross-language twins preserved)")
 
     # Agentic multi-step trajectories — appended AFTER dedup on purpose: every step of one trajectory
     # shares the goal query (only the per-step call differs), so the query-based dedup would wrongly

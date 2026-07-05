@@ -39,16 +39,17 @@ Each row is one example (canonical format in `autoscientist_toolcaller/format_ut
 ```
 
 Splits: `train` / `val` / `test`, plus `test_novel` (examples using tools **never seen in training** — a
-generalization test). **3,346 examples** in the published set (HF + Kaggle) — 3,234 across
-`train`/`val`/`test` + 112 in the `test_novel` holdout; platform-graded snapshots were smaller (see the
-lineage table in `docs/AUTOSCIENTIST_USAGE.md`). Every `tool_call` gold is schema-validated at build by a
+generalization test). **6,522 examples** in the published set (HF + Kaggle) — 6,279 across
+`train`/`val`/`test` + 243 in the `test_novel` holdout, spanning **7,315 unique tools** for broad
+generalization; platform-graded snapshots were smaller (see the lineage table in
+`docs/AUTOSCIENTIST_USAGE.md`). Every `tool_call` gold is schema-validated at build by a
 correct-by-construction drop-guard (**0 schema-invalid golds shipped**; see `stats.json:schema_invalid_dropped`).
 Per-source/kind counts and a `mix` block (intended-vs-realized shares + a `mix_ok` guard) are in `stats.json`.
 
 Slices (counts across all splits):
 - **positives** — real tool-call examples curated from ToolACE (schema-validated), plus a small slice
   of **execution-verified** examples from deterministic tool environments (`autoscientist_toolcaller/envs.py`).
-- **hard negatives** — `no_tool` → refuse (**284**, held at ~**8.8% of the total set**, the research
+- **hard negatives** — `no_tool` → refuse (**531**, held at ~**8.5% of the total set**, the research
   optimum); `missing_arg` / `ambiguous` → clarify; `over_refusal` → **must call** (hedged-but-satisfiable
   requests, the counterweight to refusal bias); `partial_parallel` → **two calls** (call completeness).
 - **multi-turn** — `miss_param`, `miss_func`, `long_context` (BFCL v3/v4 style), plus verified

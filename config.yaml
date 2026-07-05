@@ -13,26 +13,26 @@ dataset:
       enabled: false                                # gated on HF; skip unless you've accepted terms + HF_TOKEN
     toolace:
       repo: Team-ACE/ToolACE                        # Apache-2.0 (clean)
-      max_examples: 3000
+      max_examples: 7000                             # scaled up (11.3k available) for more positives + tool diversity
     toucan:
       repo: Agent-Ark/Toucan-1.5M                   # Apache-2.0 — largest permissive tool-agentic set
       config: SFT                                    # required config (SFT | Qwen3 | OSS | Kimi-K2)
       max_examples: 2000
       enabled: false                                # opt-in: STREAMS ~max_examples rows (flip on for scale)
-  target_positive: 3500        # curated positive (tool-should-be-called) examples
+  target_positive: 6000        # curated positive (tool-should-be-called) examples (scaled up; moat ratios below scale with it)
   # Research-backed mix: ~10% irrelevance is the swept optimum (more degrades positive calling).
   # Shares are SHARED-denominator (see build_dataset step 3): realized ≈ intended, so with
   # hard_negative_ratio 0.22 and no_tool kind-weight ~0.5, no_tool lands at ~11% of the TOTAL set.
   hard_negative_ratio: 0.22    # no_tool + missing_arg + ambiguous (refuse/clarify moat)
   multiturn_ratio: 0.20        # multi-turn is ~30% of BFCL v4 and where small fine-tunes beat GPT-4o
   schema_drift_ratio: 0.08     # distinctive originality slice: tool schemas that changed under the model
-  multilingual_examples: 150   # matched en/hi/hi-romanized tool-calling twins (Adaptive Data 242-lang lever)
-  env_examples: 300            # execution-verified examples from autoscientist_toolcaller.envs (correct-by-construction)
+  multilingual_examples: 500   # matched en/hi/hi-romanized tool-calling twins (Adaptive Data 242-lang lever) — scaled up for real multilingual presence
+  env_examples: 500            # execution-verified examples from autoscientist_toolcaller.envs (correct-by-construction)
   env_multicall_frac: 0.3      # of env_examples, fraction that are verified 2-3 call trajectories
-  env_dpo: 200                 # execution-labeled DPO pairs from autoscientist_toolcaller.envs merged into pref.jsonl
-  agentic_examples: 200        # agentic MULTI-STEP trajectory steps (observation-in-the-loop; correct-by-construction)
-  agentic_trajectories: 60     # full trajectory objects written for the agentic eval (trajectory-success + per-step)
-  agentic_dpo: 150             # execution-labeled trajectory-STEP preference pairs merged into pref.jsonl
+  env_dpo: 350                 # execution-labeled DPO pairs from autoscientist_toolcaller.envs merged into pref.jsonl
+  agentic_examples: 400        # agentic MULTI-STEP trajectory steps (observation-in-the-loop; correct-by-construction)
+  agentic_trajectories: 120    # full trajectory objects written for the agentic eval (trajectory-success + per-step)
+  agentic_dpo: 300             # execution-labeled trajectory-STEP preference pairs merged into pref.jsonl
   novel_tool_frac: 0.15        # hold out 15% of tool NAMES; examples using only them -> test_novel
   reasoning_traces: false      # prepend correct-by-construction <think> traces to train_pc (A/B arm;
                                # if ON, do NOT also enable the platform reasoning_traces recipe)
