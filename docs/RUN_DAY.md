@@ -9,6 +9,15 @@ already done, tested, and committed; this is the only remaining path. Detailed r
 1. **adaptionlabs.ai/app** → open dataset **`d92279d3`** (cleaned/diversified) → **AUTOSCIENTIST** tab → **Launch / Train**.
 2. Wait for **Job Completed**. Note the **held-out number** and the **weights** (HF id or a download).
 
+## 0b. Depth-of-AutoScientist evidence (criterion #4)  ·  *(you, console)*
+Run AutoScientist **2–3 times with different recipes** (e.g. `deduplication` on/off, `reasoning_traces`
+on/off, a `preference_pairs` objective) and note each run's held-out %. Tabulate them so a judge sees you
+drove the platform, not one click:
+```bash
+python -m autoscientist_toolcaller.recipe_ablation --out results/recipe_ablation.md   # fill from the run grades
+```
+The winning recipe's weights go forward to step 1.
+
 ## 1. Fill every real number  ·  *(one command)*
 ```bash
 MODEL=<hf-id-or-local-weights> [ADAPTER=<lora-path>] SEEDS="41 42 43" bash scripts/finalize.sh
@@ -37,6 +46,18 @@ Then re-push the filled `MODEL_CARD.md` to the HF model repo. *(I can run all of
 2. Join the HackIndia **WhatsApp** channel + **Discord** (`#autoscient-challenge`) — eligibility.
 3. Fill the Part 2 form from [`PART2_SUBMISSION.md`](PART2_SUBMISSION.md): dataset id, HF + Kaggle
    dataset URLs, **weights link**, **Training Model ID**, both post URLs, live site.
+
+## Data-Visualization entry (second category — same shape, chart-QA)
+Awards are per-category, so run the chart-QA track too:
+```bash
+python -m autoscientist_toolcaller.viz.build_dataset --out data/viz --n-synth 400 --n-indic 600 --n-vega 150
+python -m autoscientist_toolcaller.viz.train_adaption --data data/viz/train_tab.jsonl   # upload + grade on Adaptive Data
+# then on the console: AutoScientist-train the chart-QA set (base VLM Qwen3-VL-8B or gemma-3-4b, LoRA)
+python -m autoscientist_toolcaller.viz.baseline --model <vlm> --data data/viz/test.jsonl   # honest 'before'
+# eval the fine-tuned VLM with the hardened relaxed scorer (autoscientist_toolcaller.viz.eval_chart)
+```
+Publish weights to a new `pandeyankit84/autoscientist-chartqa` HF repo + a Kaggle model; fill the
+Entry-B fields in [`PART2_SUBMISSION.md`](PART2_SUBMISSION.md) and post its social variant.
 
 ## Housekeeping (do now, independent of run-day)
 - **Revoke** any credentials pasted in chat (GitHub PAT, HF, Adaption) — GitHub: <https://github.com/settings/tokens>.

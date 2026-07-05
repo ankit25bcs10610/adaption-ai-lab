@@ -94,6 +94,28 @@ Huge thanks to Adaption for AutoScientist and Adaptive Data.
 
 ---
 
+## Data-Visualization entry — post separately (second category)
+
+**X / Twitter**
+> Taught a small open VLM to **read charts — in English AND Hindi** 📊
+>
+> Built for the @adaption_ai AutoScientist Challenge: a **self-verifying** synthetic chart-QA dataset —
+> every answer computed from the underlying data, so labels are correct by construction — plus a
+> Devanagari/romanized slice with matched en/hi twins for a clean cross-language Δ.
+>
+> 🤗 https://huggingface.co/datasets/pandeyankit84/autoscientist-chartqa-dataset
+> 💻 https://github.com/ankit25bcs10610/adaption-ai-lab
+> #AutoScientist #HackIndia #AI
+
+**LinkedIn**
+> **Charts are images — so text-only models can't read them, and the gap is wide** (on CharXiv, GPT-4o
+> scores ~47% on chart reasoning vs ~80% human). For the Adaption AutoScientist Challenge I built a
+> data-centric chart-understanding dataset: a self-verifying synthetic generator (9 chart types, ground
+> truth computed from the data), a Hindi/Devanagari + romanized slice with matched en/hi twins, and a
+> text-only Vega-Lite spec-reading modality. Open on Hugging Face + Kaggle.
+> 🤗 https://huggingface.co/datasets/pandeyankit84/autoscientist-chartqa-dataset · 💻 https://github.com/ankit25bcs10610/adaption-ai-lab
+> #AutoScientist #HackIndia #OpenSource #AI #MachineLearning #DataVisualization
+
 ## Posting checklist
 - [x] Publish datasets to HF **and** Kaggle (both tracks) — done.
 - [x] Live site + demo deployed: https://autoscientist-toolcaller.vercel.app (+ HF Space).
