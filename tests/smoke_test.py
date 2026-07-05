@@ -591,6 +591,22 @@ def main() -> int:
         _blind = iter([target_to_json_str(s["answer"]) for s in _rec["steps"][:-1]] +
                       [target_to_json_str({"type": "tool_call", "calls": [_rec["steps"][0]["answer"]["calls"][0]]})])
         ok &= check("blindly calling the impossible step fails recovery", not rollout(_rec, lambda p: next(_blind))["success"])
+    # fault-kind trajectories (#4): transient tool error injected mid-trajectory; gold = retry same call
+    _flt = next((t for t in _trajs if t["kind"] == "fault"), None)
+    ok &= check("fault trajectories are generated", _flt is not None)
+    if _flt is not None:
+        _fi = next(i for i, s in enumerate(_flt["steps"]) if s.get("inject_fault"))
+        _fstep, _rstep = _flt["steps"][_fi], _flt["steps"][_fi + 1]
+        ok &= check("fault step is followed by a RETRY of the same gold call",
+                    _rstep["answer"] == _fstep["answer"] and _fstep["fault_obs"] in
+                    " ".join(t.get("content", "") for t in (_rstep["history"] or [])))
+        ok &= check("oracle rollout succeeds THROUGH the injected fault (retry works)",
+                    rollout(_flt, _oracle(_flt))["success"])
+        # a model that gives up after the fault (abstains instead of retrying) must FAIL the trajectory
+        _gold_until = [target_to_json_str(s["answer"]) for s in _flt["steps"][:_fi + 1]]
+        _giveup = iter(_gold_until + ['{"action":"refuse","message":"the tool errored, giving up"}'] * 8)
+        ok &= check("giving up after a transient fault fails the trajectory",
+                    not rollout(_flt, lambda p: next(_giveup))["success"])
     _m = evaluate_agentic([_clean], _oracle(_clean))
     ok &= check("evaluate_agentic: oracle success_rate == 1.0", _m["trajectory_success_rate"] == 1.0)
 
@@ -846,6 +862,49 @@ def main() -> int:
         _t = _dp.run(emit=lambda s: None, results_dir=_d)
     ok &= check("demo_platform replays the full loop with recorded grade",
                 all(k in _t for k in ("UPLOAD", "GRADE", "IMPROVE", "TRAIN", "15.7", "canned")))
+
+    # --- format-invariance + masked twins (BFCL-v4 format sensitivity / Hammer masking) -----------
+    from autoscientist_toolcaller.format_utils import render_tools_as, build_eval_prompt as _bep, DOC_FORMATS as _DF
+    _ft_tools = [{"name": "get_weather", "description": "Get current weather for a city",
+                  "parameters": {"type": "object", "properties": {"city": {"type": "string", "description": "city name"}},
+                                 "required": ["city"]}}]
+    _rends = {f: render_tools_as(_ft_tools, f) for f in _DF}
+    ok &= check("render_tools_as: 4 distinct non-empty renderings", len(set(_rends.values())) == 4 and all(_rends.values()))
+    ok &= check("python rendering is a signature", "def get_weather(city: str)" in _rends["python"])
+    ok &= check("xml rendering has tool + required param", '<tool name="get_weather">' in _rends["xml"] and 'required="true"' in _rends["xml"])
+    _ft_ex = {"tools": _ft_tools, "query": "weather in Pune?",
+              "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Pune"}}]}, "meta": {}}
+    _p_json = _bep(_ft_ex)
+    _p_xml = _bep({**_ft_ex, "meta": {"doc_format": "xml"}})
+    ok &= check("build_eval_prompt honors meta.doc_format", _p_json != _p_xml and "<tool name=" in _p_xml)
+    ok &= check("default doc_format is byte-identical to legacy", _p_json == _bep({**_ft_ex, "meta": {"doc_format": "json"}}))
+
+    from autoscientist_toolcaller import format_twins as _ftw
+    _srcs = [json.loads(json.dumps(_ft_ex)) for _ in range(3)]
+    _twins = _ftw.generate_format_twins(_srcs, 2, seed=7)
+    ok &= check("format twins: 2 per source, gold identical, non-json formats",
+                len(_twins) == 4 and all(t["answer"] == _ft_ex["answer"] for t in _twins)
+                and all(t["meta"]["doc_format"] != "json" for t in _twins))
+    ok &= check("format twins share pair_id with their (mutated) source",
+                all(any(t["meta"]["pair_id"] == s["meta"].get("pair_id") for s in _srcs) for t in _twins))
+    _msrc = [json.loads(json.dumps(_ft_ex))]
+    _mtw = _ftw.generate_masked_twins(_msrc, 1, seed=7)
+    ok &= check("masked twin: neutral names, gold renamed consistently + schema-valid",
+                len(_mtw) == 1 and _mtw[0]["tools"][0]["name"] == "func_0"
+                and _mtw[0]["answer"]["calls"][0]["name"] == "func_0"
+                and "arg_0" in _mtw[0]["answer"]["calls"][0]["arguments"]
+                and _va(_mtw[0]["answer"], _mtw[0]["tools"])[0]
+                and _mtw[0]["meta"]["pair_id"] == _msrc[0]["meta"]["pair_id"])
+    ok &= check("masked twin keeps the description (select-by-description)",
+                _mtw[0]["tools"][0]["description"] == "Get current weather for a city")
+
+    from autoscientist_toolcaller.eval_bfcl import evaluate_bfcl as _ebf
+    _fmt_recs = [_ft_ex, {**json.loads(json.dumps(_ft_ex)), "meta": {"doc_format": "xml"}}]
+    _fmt_m = _ebf(_fmt_recs, lambda p: target_to_json_str(_ft_ex["answer"]))
+    ok &= check("eval_bfcl reports by_format + zero format_delta for an invariant model",
+                set(_fmt_m["by_format"]) == {"json", "xml"} and _fmt_m["format_delta"] == 0.0)
+    _fmt_m2 = _ebf(_fmt_recs, lambda p: target_to_json_str(_ft_ex["answer"]) if "<tool name=" not in p else '{"action":"refuse","message":"?"}')
+    ok &= check("format_delta detects a format-brittle model", _fmt_m2["format_delta"] == 1.0)
 
     from autoscientist_toolcaller import results_table as _rtab
     ok &= check("results_table renders a __PENDING__ leaderboard with no eval JSONs",

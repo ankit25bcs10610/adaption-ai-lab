@@ -49,7 +49,7 @@ over-refusal traps (hedged-but-doable → still call), and partial-parallel (two
 correct-by-construction.
 
 3/ I ran a 2-pass adversarial audit on my own build pipeline. It caught the moat nearly shipping empty —
-refuse examples 8 → 531, and 36% → 0% schema-invalid gold calls. Wrote it all up in the repo.
+refuse examples 8 → 644, and 36% → 0% schema-invalid gold calls. Wrote it all up in the repo.
 
 4/ Adaptive Data (@adaption_ai) graded the dataset **7.0 → 8.1, +15.7%, C→B**. Everything's open —
 weights, dataset, eval harness, reproducibility manifest, and a second Data-Viz (Hindi chart-QA) track.
@@ -76,7 +76,7 @@ over-refusal, and complete every call — all synthesized correct-by-constructio
 A few things I'm proud of:
 • **Adaptive Data quality +15.7% (grade C → B)** — measured by Adaption's platform.
 • A **two-pass adversarial audit** of my own build pipeline that caught the moat nearly shipping empty
-  (refuse examples 8 → 531; 36% → 0% schema-invalid gold calls) — documented, with regression tests.
+  (refuse examples 8 → 644; 36% → 0% schema-invalid gold calls) — documented, with regression tests.
 • Execution-verified environments, a decontamination pass, and a full reproducibility manifest.
 • A second **Data-Visualization** track: a self-verifying chart-QA dataset with a Hindi/Devanagari slice.
 

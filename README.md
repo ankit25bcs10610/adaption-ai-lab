@@ -20,7 +20,7 @@
 
 ## Why this wins (60 seconds)
 
-**The moat is knowing when *not* to call a tool.** Most function-calling datasets only contain examples where a tool *should* fire; real agents fail by hallucinating a call when none applies or guessing a missing argument. This dataset trains the opposite reflex — **call / refuse / clarify** — and a two-pass adversarial audit found and fixed real poison bugs before release (the refuse/clarify moat was being generated and silently discarded by dedup: `no_tool` **8 → 531**, `miss_param` **1 → 63**, schema-invalid gold calls **36% → 0%**, now enforced by a build-time drop-guard). Adaptive Data then re-graded the fixed set **C → B (+15.7%)**.
+**The moat is knowing when *not* to call a tool.** Most function-calling datasets only contain examples where a tool *should* fire; real agents fail by hallucinating a call when none applies or guessing a missing argument. This dataset trains the opposite reflex — **call / refuse / clarify** — and a two-pass adversarial audit found and fixed real poison bugs before release (the refuse/clarify moat was being generated and silently discarded by dedup: `no_tool` **8 → 644**, `miss_param` **1 → 70**, schema-invalid gold calls **36% → 0%**, now enforced by a build-time drop-guard). Adaptive Data then re-graded the fixed set **C → B (+15.7%)**.
 
 Concretely, the behavior the dataset teaches (canonical `call` / `refuse` / `clarify`):
 
@@ -30,7 +30,7 @@ Concretely, the behavior the dataset teaches (canonical `call` / `refuse` / `cla
 | "Write me a poem about the monsoon." *(no applicable tool)* | ❌ hallucinates a call | ✅ **refuse** — "no available tool can do this" |
 | "Book me a flight to Goa." *(missing `origin`, `date`)* | ❌ guesses the missing args | ✅ **clarify** — asks for origin + date first |
 
-Everything is **measured vs. projected, kept separate** (the +15.7% is a real *dataset-quality* grade, not a model-accuracy claim), **open on HF + Kaggle**, **reproducible** (seeded + manifest), and **CI-verified** (296 offline checks + a release card lint). The one remaining step is the AutoScientist console training run, which turns the projected model numbers into measured ones.
+Everything is **measured vs. projected, kept separate** (the +15.7% is a real *dataset-quality* grade, not a model-accuracy claim), **open on HF + Kaggle**, **reproducible** (seeded + manifest), and **CI-verified** (311 offline checks + a release card lint). The one remaining step is the AutoScientist console training run, which turns the projected model numbers into measured ones.
 
 ---
 
@@ -43,7 +43,7 @@ The AutoScientist Challenge automates the model-training loop, so the competitiv
 | **Function-Calling** (`autoscientist_toolcaller/`) | All Other Domains | A tool-use model that **refuses and clarifies** instead of hallucinating a call | Hard negatives (no-tool / missing-arg / ambiguous) + multi-turn + schema-drift + a 5-language reliability slice |
 | **Data Visualization** (`autoscientist_toolcaller/viz/`) | Data Visualization | A chart-reader that competes where text-only entrants can't — **and speaks Hindi** | Self-verifying synthetic chart generator + Devanagari/romanized slice + a text-only Vega-Lite spec-reading modality |
 
-Everything is **offline-testable**: the heavy ML stack (`torch`, `transformers`, `datasets`, the Adaption SDK) is lazily imported, so the correctness-critical logic runs on a handful of light deps (`numpy`, `jsonschema`, `pyyaml`, …) with **no LLM/VLM weights and no API keys**. `python -m tests.smoke_test` and `python -m tests.viz.test_viz` pass **296 checks** — and now run on every push via [CI](https://github.com/ankit25bcs10610/adaption-ai-lab/actions/workflows/tests.yml).
+Everything is **offline-testable**: the heavy ML stack (`torch`, `transformers`, `datasets`, the Adaption SDK) is lazily imported, so the correctness-critical logic runs on a handful of light deps (`numpy`, `jsonschema`, `pyyaml`, …) with **no LLM/VLM weights and no API keys**. `python -m tests.smoke_test` and `python -m tests.viz.test_viz` pass **311 checks** — and now run on every push via [CI](https://github.com/ankit25bcs10610/adaption-ai-lab/actions/workflows/tests.yml).
 
 ---
 
@@ -74,9 +74,9 @@ The build pipeline was adversarially audited, then re-graded on the platform:
 |---|---|---|
 | Adaptive Data grade — fixed set (`c4923b7f`, partial run¹) | C (7.0) | **B (8.1)** · **+15.7%** |
 | Adaptive Data grade — earlier 250-row set (`a99c0c96`, completed) | B− (8.0) | B (8.8) · +10.0% |
-| Refuse cases (`no_tool`) | 8 | **531** |
-| Clarify cases (`miss_param`) | 1 | **63** |
-| Disambiguate cases | 0 | **142** |
+| Refuse cases (`no_tool`) | 8 | **644** |
+| Clarify cases (`miss_param`) | 1 | **70** |
+| Disambiguate cases | 0 | **167** |
 | Schema-invalid gold calls | 36% | **0%** |
 
 > ¹ The **+15.7%** grade was returned on **1,000 of the 2,440** fixed-set rows — the free-tier processing cap — so it's a strong signal, not yet a completed full-set grade (that finishes with the console run). The **completed** 250-row run (+10%, grade B) corroborates the audit-driven gain.
@@ -146,7 +146,7 @@ The audit-count rows are the whole thesis: the "refuse / clarify / disambiguate"
 ├── web/                       # Next.js 14 + react-three-fiber landing page (in-browser tool-call playground)
 ├── site/                      # Zero-build single-file landing page (Three.js)
 ├── app/                       # Gradio demo (function-calling)
-├── tests/                     # Offline suites — tests/smoke_test.py (239) · tests/viz/test_viz.py (57)
+├── tests/                     # Offline suites — tests/smoke_test.py (254) · tests/viz/test_viz.py (57)
 ├── docs/                      # WINNING · DATA_QUALITY_AUDIT · AUTOSCIENTIST_USAGE · DATASHEET · CONSOLE_STEPS …
 ├── scripts/                   # run_all.sh (full pipeline) · finalize.sh (one-command run-day)
 └── requirements.txt · config.yaml
@@ -164,7 +164,7 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt        # full, pinned pipeline (canonical install)
 
 # Offline test suites — no downloads, no API keys
-python -m tests.smoke_test        # function-calling   → ALL PASS (239)
+python -m tests.smoke_test        # function-calling   → ALL PASS (254)
 python -m tests.viz.test_viz      # data-visualization → ALL PASS (57)
 ```
 
@@ -224,7 +224,7 @@ python -m autoscientist_toolcaller.fill_model_card  --username <you>       # aut
 - **Preference depth** (`build_preference.py`) — DPO pairs across four axes: refuse/clarify-vs-hallucination, **over-refusal** (call vs refuse), **partial-parallel** (both calls vs one), and execution-labeled **agentic-step** pairs.
 - **Optional LLM synthesis** (`synth_llm.py`) — generate → LLM-critique → schema-verify → dedup, opt-in and gated on a key (mockable, so it unit-tests offline). **Curriculum** difficulty scoring + optional `<think>` reasoning traces round out the pipeline.
 
-**Data-quality audit — two adversarial passes.** Because the dataset *is* the product, the build was audited before release. Pass 1 caught the refuse/clarify moat being generated and then silently discarded by dedup (`no_tool` **8 → 531**, `miss_param` **1 → 63**, `ambiguous` **0 → 142**), plus a slice-mixing undershoot and a DPO poison-pair risk. Pass 2 caught a schema-drift poison bug (**36% of `rename` gold calls were schema-invalid → 0%**), added over-refusal-trap and partial-parallel slices, execution-verified multi-call trajectories, a leakage **decontamination** pass, and a blocking release preflight. `stats.json` carries `mix` (intended-vs-realized shares + `mix_ok`) and `contamination` blocks. Full write-up: [`docs/DATA_QUALITY_AUDIT.md`](docs/DATA_QUALITY_AUDIT.md).
+**Data-quality audit — two adversarial passes.** Because the dataset *is* the product, the build was audited before release. Pass 1 caught the refuse/clarify moat being generated and then silently discarded by dedup (`no_tool` **8 → 644**, `miss_param` **1 → 70**, `ambiguous` **0 → 142**), plus a slice-mixing undershoot and a DPO poison-pair risk. Pass 2 caught a schema-drift poison bug (**36% of `rename` gold calls were schema-invalid → 0%**), added over-refusal-trap and partial-parallel slices, execution-verified multi-call trajectories, a leakage **decontamination** pass, and a blocking release preflight. `stats.json` carries `mix` (intended-vs-realized shares + `mix_ok`) and `contamination` blocks. Full write-up: [`docs/DATA_QUALITY_AUDIT.md`](docs/DATA_QUALITY_AUDIT.md).
 
 The **only active** positives source is `Team-ACE/ToolACE` (Apache-2.0). `Salesforce/xlam-function-calling-60k` (CC-BY-4.0) and `Agent-Ark/Toucan-1.5M` (Apache-2.0) are supported but **disabled by default** (opt-in, gated) — so the shipped dataset is clean Apache-2.0. Base model: `Qwen/Qwen2.5-Coder-3B-Instruct`. Full strategy: [`docs/WINNING.md`](docs/WINNING.md).
 
@@ -279,7 +279,7 @@ The site keeps **measured** numbers (the +15.7% grade, the audit) strictly separ
 Both suites are fully offline (no model downloads, no API keys) and exercise the correctness-critical logic — scorers, ground-truth generation, determinism, and every edge case surfaced by adversarial review.
 
 ```bash
-python -m tests.smoke_test      # 239 checks — function-calling
+python -m tests.smoke_test      # 254 checks — function-calling
 python -m tests.viz.test_viz    #  57 checks — data-visualization (scorer edge cases + synth GT + split integrity)
 ```
 

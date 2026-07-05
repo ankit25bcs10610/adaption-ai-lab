@@ -39,7 +39,7 @@ Each row is one example (canonical format in `autoscientist_toolcaller/format_ut
 ```
 
 Splits: `train` / `val` / `test`, plus `test_novel` (examples using tools **never seen in training** — a
-generalization test). **6,522 examples** in the published set (HF + Kaggle) — 6,279 across
+generalization test). **7,566 examples** in the published set (HF + Kaggle) — 7,323 across
 `train`/`val`/`test` + 243 in the `test_novel` holdout, spanning **7,315 unique tools** for broad
 generalization; platform-graded snapshots were smaller (see the lineage table in
 `docs/AUTOSCIENTIST_USAGE.md`). Every `tool_call` gold is schema-validated at build by a
@@ -49,13 +49,22 @@ Per-source/kind counts and a `mix` block (intended-vs-realized shares + a `mix_o
 Slices (counts across all splits):
 - **positives** — real tool-call examples curated from ToolACE (schema-validated), plus a small slice
   of **execution-verified** examples from deterministic tool environments (`autoscientist_toolcaller/envs.py`).
-- **hard negatives** — `no_tool` → refuse (**531**, held at ~**8.5% of the total set**, the research
+- **hard negatives** — `no_tool` → refuse (**644**, held at ~**8.8% of the total set**, the research
   optimum); `missing_arg` / `ambiguous` → clarify; `over_refusal` → **must call** (hedged-but-satisfiable
   requests, the counterweight to refusal bias); `partial_parallel` → **two calls** (call completeness).
 - **multi-turn** — `miss_param`, `miss_func`, `long_context` (BFCL v3/v4 style), plus verified
   **multi-call** env trajectories (2–3 order-independent calls).
 - **schema-drift** — a tool's schema changed under the model: `add_required` / `retype_enum` (→ clarify)
   and `rename` (→ remap to the new field). Every drift gold is validated against its drifted schema.
+- **format-invariance twins** — the same example with its tool docs re-rendered as Python signatures /
+  XML / a compact list (`meta.doc_format`), gold identical — targets BFCL-v4's *format sensitivity*
+  (tool-tuned models notoriously overfit one documentation format). Twins share a `pair_id` with their
+  source, so a twin can never land in a different split than its source.
+- **masked twins** — Hammer-style function masking: neutral `func_i`/`arg_j` names with descriptions
+  kept and the gold call renamed consistently (re-validated) — kills naming-convention shortcuts.
+- **fault-recovery trajectories** — agentic rollouts where a scripted transient tool error (503 / 429 /
+  timeout / malformed payload) interrupts a step and the gold continuation is to **retry the same call**
+  (failure realism; the env state provably doesn't advance on the fault).
 
 Exact per-kind counts and realized-vs-intended shares are in `stats.json` (`mix` block). A companion
 **preference set** (`pref.jsonl`) includes execution-labeled DPO pairs (chosen = verified call,

@@ -84,8 +84,13 @@ def rollout(traj: Dict[str, Any], generate_fn: Callable[[str], str],
         total_retries += retries
         per_step.append(_step_matches(parsed, step))
         if parsed and parsed.get("action") == "call" and parsed.get("calls"):
-            state, ok, reason = env.apply(state, parsed["calls"][0])
-            obs = _obs(env, state, ok, reason)
+            if step.get("inject_fault"):
+                # Scripted transient tool fault (fault-kind trajectories): the call does NOT take effect
+                # and the model sees the fault observation — the gold continuation is to retry the call.
+                obs = step["fault_obs"]
+            else:
+                state, ok, reason = env.apply(state, parsed["calls"][0])
+                obs = _obs(env, state, ok, reason)
         elif parsed and parsed.get("action") in ("refuse", "clarify"):
             obs = "OK — noted; awaiting your input."
         else:

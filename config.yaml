@@ -27,6 +27,8 @@ dataset:
   multiturn_ratio: 0.20        # multi-turn is ~30% of BFCL v4 and where small fine-tunes beat GPT-4o
   schema_drift_ratio: 0.08     # distinctive originality slice: tool schemas that changed under the model
   multilingual_examples: 500   # matched en/hi/hi-romanized tool-calling twins (Adaptive Data 242-lang lever) — scaled up for real multilingual presence
+  format_twin_sources: 400     # BFCL-v4 format-sensitivity: sources re-rendered as python/xml/compact tool docs (2 twins each; gold identical)
+  masked_twin_examples: 300    # Hammer-style function masking: func_i/arg_j neutral names, select-by-description (anti-shortcut)
   env_examples: 500            # execution-verified examples from autoscientist_toolcaller.envs (correct-by-construction)
   env_multicall_frac: 0.3      # of env_examples, fraction that are verified 2-3 call trajectories
   env_dpo: 350                 # execution-labeled DPO pairs from autoscientist_toolcaller.envs merged into pref.jsonl

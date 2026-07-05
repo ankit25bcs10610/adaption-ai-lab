@@ -49,8 +49,94 @@ def render_tools(tools: List[Dict[str, Any]]) -> str:
     return json.dumps(tools, indent=2, sort_keys=True, ensure_ascii=False)
 
 
-def build_system_prompt(tools: List[Dict[str, Any]]) -> str:
-    return SYSTEM_TEMPLATE.format(tools_json=render_tools(tools))
+# ---------------------------------------------------------------------------------------------
+# Format-invariance renderings (BFCL-v4 "format sensitivity"): the SAME tools documented as JSON
+# Schemas, Python signatures, XML, or a compact one-liner. Tool-specialized fine-tunes notoriously
+# overfit ONE documentation format (Gorilla BFCL v4 blog) — training on matched format twins with
+# identical gold teaches the model that the CONTRACT, not the rendering, is what matters.
+# ---------------------------------------------------------------------------------------------
+_PY_TYPES = {"string": "str", "integer": "int", "number": "float", "boolean": "bool",
+             "array": "list", "object": "dict"}
+
+DOC_FORMATS = ("json", "python", "xml", "compact")
+
+
+def _type_str(spec: Dict[str, Any]) -> str:
+    """Normalize a JSON-Schema `type` to a single string. Real-world schemas (e.g. ToolACE) sometimes
+    use the list form (["string","null"]); take the first non-null entry."""
+    t = (spec or {}).get("type", "string")
+    if isinstance(t, list):
+        t = next((x for x in t if x and x != "null"), "string")
+    return t if isinstance(t, str) else "string"
+
+
+def _render_tools_python(tools: List[Dict[str, Any]]) -> str:
+    out = []
+    for t in tools:
+        params = (t.get("parameters") or {})
+        props, req = params.get("properties") or {}, set(params.get("required") or [])
+        args = []
+        for name in props:  # schema dict order — deterministic for a given tool spec
+            py = _PY_TYPES.get(_type_str(props[name]), "str")
+            args.append(f"{name}: {py}" if name in req else f"{name}: {py} = None")
+        doc_lines = [t.get("description", "")]
+        for name in props:
+            d = (props[name] or {}).get("description", "")
+            doc_lines.append(f":param {name}: {d}" + (" (required)" if name in req else ""))
+        body = "\n    ".join(doc_lines)
+        out.append(f"def {t.get('name','tool')}({', '.join(args)}):\n    \"\"\"{body}\"\"\"")
+    return "\n\n".join(out)
+
+
+def _render_tools_xml(tools: List[Dict[str, Any]]) -> str:
+    def esc(s: Any) -> str:
+        return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    out = ["<tools>"]
+    for t in tools:
+        params = (t.get("parameters") or {})
+        props, req = params.get("properties") or {}, set(params.get("required") or [])
+        out.append(f'  <tool name="{esc(t.get("name",""))}">')
+        out.append(f"    <description>{esc(t.get('description',''))}</description>")
+        for name, spec in props.items():
+            spec = spec or {}
+            out.append(f'    <param name="{esc(name)}" type="{esc(_type_str(spec))}" '
+                       f'required="{"true" if name in req else "false"}">{esc(spec.get("description",""))}</param>')
+        out.append("  </tool>")
+    out.append("</tools>")
+    return "\n".join(out)
+
+
+def _render_tools_compact(tools: List[Dict[str, Any]]) -> str:
+    out = []
+    for t in tools:
+        params = (t.get("parameters") or {})
+        props, req = params.get("properties") or {}, set(params.get("required") or [])
+        sig = ", ".join(f"{n}{'*' if n in req else ''}:{_type_str(props[n])}" for n in props)
+        out.append(f"- {t.get('name','tool')}({sig}) — {t.get('description','')}")
+    return "\n".join(out)
+
+
+def render_tools_as(tools: List[Dict[str, Any]], doc_format: str = "json") -> str:
+    """Render the tool list in one of DOC_FORMATS. 'json' is byte-identical to render_tools()."""
+    if doc_format == "python":
+        return _render_tools_python(tools)
+    if doc_format == "xml":
+        return _render_tools_xml(tools)
+    if doc_format == "compact":
+        return _render_tools_compact(tools)
+    return render_tools(tools)
+
+
+def build_system_prompt(tools: List[Dict[str, Any]], doc_format: str = "json") -> str:
+    """System prompt; non-json doc_format swaps only the tool documentation (the contract text and the
+    required OUTPUT envelope stay identical — output format is fixed by design, input rendering varies)."""
+    text = SYSTEM_TEMPLATE.format(tools_json=render_tools_as(tools, doc_format))
+    if doc_format != "json":
+        label = {"python": "Python function signatures", "xml": "XML tool descriptors",
+                 "compact": "a compact signature list"}.get(doc_format, doc_format)
+        text = text.replace("a list of available tools as JSON Schemas",
+                            f"a list of available tools documented as {label}")
+    return text
 
 
 # Candidate strings tried (in order, for determinism) against a param's regex `pattern`.
@@ -151,9 +237,11 @@ def build_eval_prompt(example: Dict[str, Any]) -> str:
     """Single source of truth for the inference prompt (single- AND multi-turn).
 
     Used by every eval path so base and fine-tuned models see byte-identical prompts, and so multi-turn
-    history is rendered consistently. Training (to_prompt_completion) mirrors this.
+    history is rendered consistently. Training (to_prompt_completion) mirrors this. Format-twin examples
+    carry meta.doc_format ∈ DOC_FORMATS; the default 'json' path is byte-identical to before.
     """
-    system = build_system_prompt(example["tools"])
+    fmt = (example.get("meta") or {}).get("doc_format") or "json"
+    system = build_system_prompt(example["tools"], doc_format=fmt)
     hist = render_history(example.get("history"))
     if hist:
         return f"{system}\n\nConversation so far:\n{hist}\n\nUser request:\n{example['query']}"
@@ -169,7 +257,8 @@ def to_prompt_completion(example: Dict[str, Any], tokenizer=None) -> Dict[str, s
     role-tagged string, which Adaption's preprocessing can also consume. Multi-turn examples carry a
     `history` list of {role, content} turns that precede the final user query.
     """
-    system = build_system_prompt(example["tools"])
+    fmt = (example.get("meta") or {}).get("doc_format") or "json"
+    system = build_system_prompt(example["tools"], doc_format=fmt)
     user = example["query"]
     history = example.get("history") or []
     completion = target_to_json_str(example["answer"])
