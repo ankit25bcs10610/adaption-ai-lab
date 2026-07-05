@@ -16,9 +16,9 @@ was almost entirely absent from the shipped data:
 
 | Slice (the moat)                     | Intended | **Before** | **After** |
 |--------------------------------------|:--------:|:----------:|:---------:|
-| `no_tool` (refuse — no tool applies) | ~10% of total | **8 rows** | **239 rows** |
-| `miss_param` (clarify — arg missing across turns) | material | **1 row** | **36 rows** |
-| `ambiguous` (clarify — which tool?)  | material | **0 rows** | **133 rows** |
+| `no_tool` (refuse — no tool applies) | ~10% of total | **8 rows** | **284 rows** |
+| `miss_param` (clarify — arg missing across turns) | material | **1 row** | **32 rows** |
+| `ambiguous` (clarify — which tool?)  | material | **0 rows** | **55 rows** |
 
 Eight training rows cannot teach abstention. The claim and the data had diverged.
 

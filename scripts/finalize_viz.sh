@@ -32,11 +32,17 @@ python3 -m autoscientist_toolcaller.viz.fill_card --username pandeyankit84 \
   --adaption "$RESULTS/viz_adaption_run.json" \
   --template autoscientist_toolcaller/viz/model_card_template.md --out VIZ_MODEL_CARD.md
 
-echo "==> [4/4] Viz reproducibility manifest"
+echo "==> [4/4] Viz reproducibility manifest + stage cards into publish dirs"
 python3 -m autoscientist_toolcaller.manifest --viz --out-dir "$VIZ" --config config.yaml --manifest "$RESULTS/viz_manifest.json"
+# Stage the viz dataset card so neither the HF nor Kaggle viz dataset ships card-less.
+cp VIZ_DATASET_CARD.md "$VIZ/README.md"
+mkdir -p data/kaggle_viz && python3 -c "import re; t=open('VIZ_DATASET_CARD.md').read(); m=re.match(r'^---\n.*?\n---\n+',t,re.DOTALL); open('data/kaggle_viz/README.md','w').write(t[m.end():] if m else t)"
+# If a weights dir is given, ship the (now-filled) viz model card as its README so `release hf-model`'s
+# preflight gate sees it (weights-pending state keeps an honest, model-index-omitted card).
+if [ -n "${WEIGHTS:-}" ]; then cp VIZ_MODEL_CARD.md "$WEIGHTS/README.md"; echo "staged VIZ_MODEL_CARD.md -> $WEIGHTS/README.md"; fi
 
 echo ""
-echo "Filled: VIZ_MODEL_CARD.md · $RESULTS/viz_baseline.json · $RESULTS/viz_eval.json · $RESULTS/viz_manifest.json"
+echo "Filled: VIZ_MODEL_CARD.md · $VIZ/README.md · $RESULTS/viz_baseline.json · $RESULTS/viz_eval.json · $RESULTS/viz_manifest.json"
 echo "Publish the chart-QA weights next (gates on the now-filled card):"
 echo "  python -m autoscientist_toolcaller.release hf-model     --repo pandeyankit84/autoscientist-chartqa --dir <weights>"
 echo "  python -m autoscientist_toolcaller.release kaggle-model --slug pandeyankit99/autoscientist-chartqa --dir <weights>"

@@ -817,6 +817,16 @@ def main() -> int:
                        {}, "pandeyankit84")
     ok &= check("viz fill_card fills all __PENDING__ + username", _filled.count("__PENDING__") == 0 and "YOUR_USERNAME" not in _filled)
     ok &= check("viz fill_card sets the model-index value", "value: 0.700" in _filled)
+    # pending-state fill must OMIT the model-index (no invalid `value: __PENDING__`) and stay lint-clean
+    _pending = _fc.fill(open("autoscientist_toolcaller/viz/model_card_template.md").read(), {}, {}, {}, "pandeyankit84")
+    ok &= check("viz fill_card omits model-index when pending (lint-safe)",
+                "model-index:" not in _pending and "__PENDING__" not in _pending and "YOUR_USERNAME" not in _pending)
+
+    from autoscientist_toolcaller import demo_platform as _dp
+    with _tf.TemporaryDirectory() as _d:  # empty results dir -> canned path
+        _t = _dp.run(emit=lambda s: None, results_dir=_d)
+    ok &= check("demo_platform replays the full loop with recorded grade",
+                all(k in _t for k in ("UPLOAD", "GRADE", "IMPROVE", "TRAIN", "15.7", "canned")))
 
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1

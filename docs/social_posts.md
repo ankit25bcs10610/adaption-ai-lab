@@ -34,7 +34,7 @@ form. A social post is a required submission item. Everything below is ready to 
 > 🤗 https://huggingface.co/pandeyankit84/autoscientist-toolcaller
 > 💻 https://github.com/ankit25bcs10610/adaption-ai-lab
 >
-> #AutoScientist #HackIndia #AI
+> #AutoScientist #AI
 
 ---
 
@@ -49,7 +49,7 @@ over-refusal traps (hedged-but-doable → still call), and partial-parallel (two
 correct-by-construction.
 
 3/ I ran a 2-pass adversarial audit on my own build pipeline. It caught the moat nearly shipping empty —
-refuse examples 8 → 239, and 36% → 0% schema-invalid gold calls. Wrote it all up in the repo.
+refuse examples 8 → 284, and 36% → 0% schema-invalid gold calls. Wrote it all up in the repo.
 
 4/ Adaptive Data (@adaption_ai) graded the dataset **7.0 → 8.1, +15.7%, C→B**. Everything's open —
 weights, dataset, eval harness, reproducibility manifest, and a second Data-Viz (Hindi chart-QA) track.
@@ -58,16 +58,15 @@ weights, dataset, eval harness, reproducibility manifest, and a second Data-Viz 
 🤗 https://huggingface.co/pandeyankit84/autoscientist-toolcaller
 📊 https://www.kaggle.com/datasets/pandeyankit99/autoscientist-toolcaller-dataset
 💻 https://github.com/ankit25bcs10610/adaption-ai-lab
-#AutoScientist #HackIndia
-
+#AutoScientist
 ---
 
 ## LinkedIn (professional)
 
 **Teaching an AI model when *not* to call a tool.**
 
-I built an open-source, data-centric function-calling model for the Adaption AutoScientist Challenge
-(with HackIndia). Most tool-use datasets only teach a model to call tools — but real agents break on the
+I built an open-source, data-centric function-calling model for the Adaption AutoScientist Challenge.
+Most tool-use datasets only teach a model to call tools — but real agents break on the
 opposite decision: inventing a tool call when none applies, or guessing a missing argument. That gap is
 the whole edge.
 
@@ -77,7 +76,7 @@ over-refusal, and complete every call — all synthesized correct-by-constructio
 A few things I'm proud of:
 • **Adaptive Data quality +15.7% (grade C → B)** — measured by Adaption's platform.
 • A **two-pass adversarial audit** of my own build pipeline that caught the moat nearly shipping empty
-  (refuse examples 8 → 239; 36% → 0% schema-invalid gold calls) — documented, with regression tests.
+  (refuse examples 8 → 284; 36% → 0% schema-invalid gold calls) — documented, with regression tests.
 • Execution-verified environments, a decontamination pass, and a full reproducibility manifest.
 • A second **Data-Visualization** track: a self-verifying chart-QA dataset with a Hindi/Devanagari slice.
 
@@ -90,8 +89,8 @@ Everything is open — weights, both datasets, the eval harness, and a live demo
 🔗 Live site: https://autoscientist-toolcaller.vercel.app
 ▶️ In-browser demo: https://huggingface.co/spaces/pandeyankit84/autoscientist-toolcaller-demo
 
-Huge thanks to Adaption for AutoScientist and Adaptive Data.
-#AutoScientist #HackIndia #OpenSource #AI #MachineLearning #LLM #Agents
+Huge thanks to **@adaption_ai / Adaption Labs** for AutoScientist and Adaptive Data. *(Tag both @adaption_ai and Adaption Labs when you post.)*
+#AutoScientist #OpenSource #AI #MachineLearning #LLM #Agents
 
 ---
 
@@ -106,7 +105,7 @@ Huge thanks to Adaption for AutoScientist and Adaptive Data.
 >
 > 🤗 https://huggingface.co/datasets/pandeyankit84/autoscientist-chartqa-dataset
 > 💻 https://github.com/ankit25bcs10610/adaption-ai-lab
-> #AutoScientist #HackIndia #AI
+> #AutoScientist #AI
 
 **LinkedIn**
 > **Charts are images — so text-only models can't read them, and the gap is wide** (on CharXiv, GPT-4o
@@ -115,7 +114,7 @@ Huge thanks to Adaption for AutoScientist and Adaptive Data.
 > truth computed from the data), a Hindi/Devanagari + romanized slice with matched en/hi twins, and a
 > text-only Vega-Lite spec-reading modality. Open on Hugging Face + Kaggle.
 > 🤗 https://huggingface.co/datasets/pandeyankit84/autoscientist-chartqa-dataset · 💻 https://github.com/ankit25bcs10610/adaption-ai-lab
-> #AutoScientist #HackIndia #OpenSource #AI #MachineLearning #DataVisualization
+> #AutoScientist #OpenSource #AI #MachineLearning #DataVisualization
 
 ## Posting checklist
 - [x] Publish datasets to HF **and** Kaggle (both tracks) — done.
