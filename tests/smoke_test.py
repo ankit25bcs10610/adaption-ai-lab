@@ -694,6 +694,24 @@ def main() -> int:
     _cfgd = _yaml.safe_load(open("config.yaml"))
     ok &= check("config.yaml has a dpo section", isinstance(_cfgd.get("dpo"), dict) and _cfgd["dpo"]["beta"] == 0.1)
 
+    print("real agent tools (sandboxed filesystem):")
+    from autoscientist_toolcaller.agent_tools import sandbox_fs_registry
+    import tempfile as _tf3, os as _os3
+    _sbx = _tf3.mkdtemp()
+    open(_os3.path.join(_sbx, "notes.txt"), "w", encoding="utf-8").write("hello agent world")
+    _fsreg = sandbox_fs_registry(_sbx, allow_write=True)
+    ok &= check("sandbox rejects path traversal", not _fsreg.call("read_file", {"path": "../../etc/hosts"})[0])
+    _okr, _res = _fsreg.call("read_file", {"path": "notes.txt"})
+    ok &= check("sandbox read_file returns content", _okr and "hello agent world" in _res)
+    _rfs = run_agent("read notes.txt", _fsreg, _seq(
+        {"type": "tool_call", "calls": [{"name": "read_file", "arguments": {"path": "notes.txt"}}]},
+        {"type": "tool_call", "calls": [{"name": "finish", "arguments": {"answer": "done"}}]}), max_steps=4)
+    ok &= check("agent reads a real file via the sandbox tool", "hello agent world" in _rfs["transcript"][0]["observation"])
+    _okw, _ = _fsreg.call("write_file", {"path": "out.txt", "content": "written by agent"})
+    _okr2, _res2 = _fsreg.call("read_file", {"path": "out.txt"})
+    ok &= check("sandbox write+read round-trip", _okw and _okr2 and _res2 == "written by agent")
+    ok &= check("sandbox list_dir sees files", "notes.txt" in _fsreg.call("list_dir", {})[1])
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 

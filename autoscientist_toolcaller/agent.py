@@ -173,9 +173,18 @@ def main() -> None:
     ap.add_argument("--backend", choices=["anthropic", "hf"], default="anthropic")
     ap.add_argument("--model", default="claude-opus-4-8")
     ap.add_argument("--max-steps", type=int, default=8)
+    ap.add_argument("--sandbox", default=None, help="dir to expose read/write file tools (sandboxed)")
+    ap.add_argument("--http", action="store_true", help="also expose a read-only http_get tool")
     args = ap.parse_args()
     model_fn = anthropic_model_fn(args.model) if args.backend == "anthropic" else hf_model_fn(args.model)
-    result = run_agent(args.goal, safe_tools_registry(), model_fn, max_steps=args.max_steps)
+    if args.sandbox:
+        from .agent_tools import register_http, sandbox_fs_registry
+        registry = sandbox_fs_registry(args.sandbox, allow_write=True)
+        if args.http:
+            register_http(registry)
+    else:
+        registry = safe_tools_registry()
+    result = run_agent(args.goal, registry, model_fn, max_steps=args.max_steps)
     print(json.dumps({k: v for k, v in result.items() if k != "history"}, indent=2, ensure_ascii=False))
 
 
