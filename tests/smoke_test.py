@@ -683,6 +683,17 @@ def main() -> int:
     ok &= check("model card includes agentic + Δ + over-refusal rows",
                 "Agentic trajectory success" in _blk and "Δacc(hi−en)" in _blk and "Over-refusal rate" in _blk)
 
+    print("DPO training config (config-driven, CLI-overridable):")
+    from autoscientist_toolcaller.train_dpo import _dpo_params
+    import types as _types
+    _dp = _dpo_params({"beta": 0.2, "lora_r": 8}, _types.SimpleNamespace(beta=None, lr=None, epochs=None))
+    ok &= check("dpo params: config value used, defaults filled", _dp["beta"] == 0.2 and _dp["lora_r"] == 8 and _dp["lora_alpha"] == 32 and _dp["learning_rate"] == 5e-6)
+    _dp2 = _dpo_params({"beta": 0.2}, _types.SimpleNamespace(beta=0.05, lr=None, epochs=3.0))
+    ok &= check("dpo params: CLI overrides config", _dp2["beta"] == 0.05 and _dp2["epochs"] == 3.0)
+    import yaml as _yaml
+    _cfgd = _yaml.safe_load(open("config.yaml"))
+    ok &= check("config.yaml has a dpo section", isinstance(_cfgd.get("dpo"), dict) and _cfgd["dpo"]["beta"] == 0.1)
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 

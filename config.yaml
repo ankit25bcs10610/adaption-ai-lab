@@ -75,6 +75,16 @@ dedup:
   decontam_cos_threshold: 0.92    # semantic cosine vs a probe -> contaminated
   # decontam_probes: path/to/probes.jsonl  # optional; defaults to the built-in fixture
 
+dpo:                           # optional local DPO pass over the SFT checkpoint (TRL; needs a GPU)
+  beta: 0.1                     # DPO temperature / KL strength (lower = trust the reference model less)
+  learning_rate: 5.0e-6
+  epochs: 1.0
+  per_device_batch_size: 2
+  grad_accum: 8                 # effective batch = per_device_batch_size * grad_accum
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+
 adaption:
   column_mapping:
     prompt: prompt
