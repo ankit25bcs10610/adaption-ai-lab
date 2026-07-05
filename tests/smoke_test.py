@@ -535,6 +535,52 @@ def main() -> int:
     ok &= check("by_difficulty bands cover all records", sum(v["n"] for v in _md["by_difficulty"].values()) == 2)
     ok &= check("by_difficulty accuracies valid", all(0.0 <= v["accuracy"] <= 1.0 for v in _md["by_difficulty"].values()))
 
+    print("agentic trajectories (multi-step, observation-in-the-loop):")
+    from autoscientist_toolcaller import agentic as _ag
+    from autoscientist_toolcaller.agentic import env_by_name as _env_by_name
+    _trajs = _ag.generate_trajectories(30, seed=7)
+    ok &= check("agentic trajectories generated", len(_trajs) > 0)
+    ok &= check("trajectories have >=2 steps", all(len(t["steps"]) >= 2 for t in _trajs))
+    # every gold CALL step is execution-valid on its pre_state (correct by construction)
+    _valid = True
+    for t in _trajs:
+        env = _env_by_name(t["env"])
+        for s in t["steps"]:
+            if s["gold_action"] == "call":
+                _, _ok, _ = env.apply(s["pre_state"], s["answer"]["calls"][0])
+                _valid &= _ok
+    ok &= check("every gold call step is execution-verified", _valid)
+    ok &= check("recovery trajectories end in clarify", all(
+        t["steps"][-1]["gold_action"] == "clarify" for t in _trajs if t["kind"] == "recovery") or
+        not any(t["kind"] == "recovery" for t in _trajs))
+    ok &= check("agentic determinism", [ (x["goal"], len(x["steps"])) for x in _ag.generate_trajectories(30, seed=7)] ==
+                [ (x["goal"], len(x["steps"])) for x in _trajs])
+    _ex = _ag.to_examples(_trajs[0])
+    ok &= check("to_examples: source=agentic + pair_id + history", all(
+        e["meta"]["source"] == "agentic" and e["meta"].get("pair_id") and
+        (e.get("history") is None or isinstance(e["history"], list)) for e in _ex))
+
+    print("agentic eval (rollout success + per-step):")
+    from autoscientist_toolcaller.eval_agentic import evaluate_agentic, rollout
+    _clean = next(t for t in _trajs if t["kind"] == "clean")
+    def _oracle(traj):
+        _it = iter([target_to_json_str(s["answer"]) for s in traj["steps"]])
+        return lambda p: next(_it)
+    _r = rollout(_clean, _oracle(_clean))
+    ok &= check("oracle rollout succeeds on clean trajectory", _r["success"] and all(_r["per_step"]))
+    _rr = rollout(_clean, lambda p: '{"action":"refuse","message":"no"}')
+    ok &= check("always-refuse fails the trajectory", not _rr["success"])
+    _rec = next((t for t in _trajs if t["kind"] == "recovery"), None)
+    if _rec is not None:
+        ok &= check("oracle rollout succeeds on recovery (abstains on impossible step)",
+                    rollout(_rec, _oracle(_rec))["success"])
+        # a model that blindly CALLS on the impossible final step must FAIL the recovery trajectory
+        _blind = iter([target_to_json_str(s["answer"]) for s in _rec["steps"][:-1]] +
+                      [target_to_json_str({"type": "tool_call", "calls": [_rec["steps"][0]["answer"]["calls"][0]]})])
+        ok &= check("blindly calling the impossible step fails recovery", not rollout(_rec, lambda p: next(_blind))["success"])
+    _m = evaluate_agentic([_clean], _oracle(_clean))
+    ok &= check("evaluate_agentic: oracle success_rate == 1.0", _m["trajectory_success_rate"] == 1.0)
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 

@@ -38,6 +38,11 @@ echo "==> [2b/7] Multilingual matched-pair Δaccuracy(lang−en) — the HackInd
 python3 -m autoscientist_toolcaller.eval_multilingual --model "$MODEL" $ADAPTER_ARG --data "$DATA/test.jsonl" \
   --out "$RESULTS/eval_multilingual.json" | tee "$RESULTS/multilingual.txt" || true
 
+echo "==> [2c/7] Agentic trajectory eval (multi-step success + per-step) — if built"
+[ -f "$DATA/agentic_trajectories.jsonl" ] && python3 -m autoscientist_toolcaller.eval_agentic \
+  --model "$MODEL" $ADAPTER_ARG --data "$DATA/agentic_trajectories.jsonl" \
+  --out "$RESULTS/eval_agentic.json" | tee "$RESULTS/agentic.txt" || true
+
 echo "==> [3/7] Novel-tools holdout (generalization)"
 [ -f "$DATA/test_novel.jsonl" ] && python3 -m autoscientist_toolcaller.eval_harness --model "$MODEL" $ADAPTER_ARG --data "$DATA/test_novel.jsonl" --out "$RESULTS/eval_novel.json" || true
 

@@ -521,6 +521,22 @@ def main() -> None:
         semantic_threshold=cfg["dedup"]["semantic_threshold"],
     )
 
+    # Agentic multi-step trajectories — appended AFTER dedup on purpose: every step of one trajectory
+    # shares the goal query (only the per-step call differs), so the query-based dedup would wrongly
+    # collapse them into one. They're correct-by-construction + internally unique, and split() keeps
+    # each trajectory in a single split via meta.pair_id. Full trajectory objects go to a side file for
+    # the agentic eval (eval_agentic).
+    agentic_n = dcfg.get("agentic_examples", 0)
+    if agentic_n:
+        from . import agentic as _agentic
+        agx = _agentic.generate(agentic_n, seed=seed)
+        combined += agx
+        print(f"[build] agentic trajectories: +{len(agx)} steps")
+        n_traj = dcfg.get("agentic_trajectories", 0)
+        if n_traj:
+            write_jsonl(os.path.join(out_dir, "agentic_trajectories.jsonl"),
+                        _agentic.generate_trajectories(n_traj, seed=seed))
+
     # 4b. Decontaminate against public BFCL/ToolACE-style probes (leakage guard for the hidden-set claim)
     contamination = None
     if cfg["dedup"].get("decontaminate"):
