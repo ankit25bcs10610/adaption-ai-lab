@@ -567,6 +567,16 @@ def main() -> None:
                          "cos_threshold": cfg["dedup"].get("decontam_cos_threshold", 0.92)}
         print(f"[build] decontamination: dropped {len(dropped)} of {n_before} vs {len(probes)} probes")
 
+    # 4c. Correct-by-construction invariant: NEVER ship a schema-invalid tool_call gold. Every slice
+    # already aims for valid calls, but a generator edge case (e.g. a `type: object` or pattern-
+    # constrained param) can slip one through; this global gate guarantees the "0% schema-invalid"
+    # claim in DATASET_CARD/DATA_QUALITY_AUDIT holds for the SHIPPED artifacts, not just per-slice.
+    n_pre_valid = len(combined)
+    combined = [ex for ex in combined if validate_answer(ex["answer"], ex["tools"])[0]]
+    n_schema_dropped = n_pre_valid - len(combined)
+    if n_schema_dropped:
+        print(f"[build] schema-invalid gold drop-guard: removed {n_schema_dropped} of {n_pre_valid}")
+
     # 5. Split, then kill cross-split leakage from train
     parts = split(combined, dcfg["splits"], seed)
     if cfg["dedup"]["check_cross_split"]:
@@ -623,6 +633,7 @@ def main() -> None:
     }
     from . import curriculum as _curriculum
     stats = {"total": total_rows, "novel_test": len(novel_test), "mix": mix,
+             "schema_invalid_dropped": n_schema_dropped,  # correct-by-construction gate (should be 0)
              "difficulty": _curriculum.histogram(all_rows)}  # criterion-4: difficulty distribution
     if contamination is not None:
         stats["contamination"] = contamination

@@ -22,13 +22,13 @@ model-index:
       - task: {type: image-text-to-text, name: Chart Question Answering}
         dataset: {name: autoscientist-chartqa-test, type: YOUR_USERNAME/autoscientist-chartqa-dataset}
         metrics:
-          - {type: accuracy, name: relaxed_accuracy, value: 0.000}   # fill from results/viz_eval.json
+          - {type: accuracy, name: relaxed_accuracy, value: __PENDING__}   # filled by viz.fill_card from results/viz_eval.json
 ---
 
 # autoscientist-chartqa
 
 A chart-understanding vision-language model fine-tuned with **Adaption AutoScientist** for the Data
-Visualization category. Base: `Qwen/Qwen3-VL-8B-Instruct` (or `google/gemma-3-4b-it`).
+Visualization category. Base: `Qwen/Qwen3-VL-8B-Instruct` (or `google/gemma-3-4b-it`), LoRA.
 
 ## What's different
 
@@ -40,17 +40,18 @@ counts above a threshold, and identifies trends — in English and Hindi.
 ## Results (base vs. fine-tuned)
 
 ChartQA-style relaxed accuracy (±5% numeric tolerance), identical greedy decoding. Reproduce with
-`python -m autoscientist_toolcaller.viz.baseline`. Fill from `results/viz_baseline.json` / `results/viz_eval.json`.
+`python -m autoscientist_toolcaller.viz.baseline` (base and fine-tuned). Auto-filled by
+`python -m autoscientist_toolcaller.viz.fill_card` from `results/viz_baseline.json` / `results/viz_eval.json`.
 
+<!--VIZ_METRICS_START-->
 | Metric | Base | Fine-tuned |
 |---|---|---|
-| Relaxed accuracy (overall) | 0.000 | 0.000 |
-| — reasoning split | 0.000 | 0.000 |
-| — descriptive split | 0.000 | 0.000 |
-| — English (en) | 0.000 | 0.000 |
-| — Hindi (hi) | 0.000 | 0.000 |
-| Matched-pair Δ (hi − en) ↑ | — | 0.000 |
-| Novel chart-type holdout | 0.000 | 0.000 |
+| Relaxed accuracy (overall) | __PENDING__ | __PENDING__ |
+| — English (en) | __PENDING__ | __PENDING__ |
+| — Hindi (hi) | __PENDING__ | __PENDING__ |
+| Matched-pair Δ (hi − en) | — | __PENDING__ |
+| Novel chart-type holdout | __PENDING__ | __PENDING__ |
+<!--VIZ_METRICS_END-->
 
 AutoScientist `evaluation_summary` (from `results/viz_adaption_run.json`): grade_before / grade_after /
 improvement_percent.
@@ -74,5 +75,5 @@ Answer is the value/category/yes-no/trend only.
 ## Links
 
 - Dataset: https://huggingface.co/datasets/YOUR_USERNAME/autoscientist-chartqa-dataset
-- Kaggle: https://www.kaggle.com/models/YOUR_USERNAME/autoscientist-chartqa
-- Demo: https://huggingface.co/spaces/YOUR_USERNAME/autoscientist-chartqa-demo
+- Kaggle: https://www.kaggle.com/datasets/pandeyankit99/autoscientist-chartqa-dataset
+- Code: https://github.com/ankit25bcs10610/adaption-ai-lab

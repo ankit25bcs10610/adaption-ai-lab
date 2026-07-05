@@ -20,6 +20,9 @@ from typing import Any, Dict, List, Optional
 
 _ARTIFACTS = ["train.jsonl", "val.jsonl", "test.jsonl", "test_novel.jsonl", "pref.jsonl",
               "train_pc.jsonl", "stats.json"]
+# Data-Visualization (chart-QA) track artifacts — same provenance guarantee for the second release.
+_VIZ_ARTIFACTS = ["train.jsonl", "val.jsonl", "test.jsonl", "test_novel.jsonl",
+                  "train_chat.jsonl", "train_tab.jsonl", "stats.json"]
 _LIBS = ["datasets", "huggingface_hub", "adaption", "numpy", "datasketch", "model2vec"]
 
 
@@ -54,9 +57,10 @@ def _lib_versions() -> Dict[str, str]:
 
 
 def generate(out_dir: str = "data/out", config_path: str = "config.yaml",
-             seed: Optional[int] = None) -> Dict[str, Any]:
+             seed: Optional[int] = None, artifacts: Optional[List[str]] = None) -> Dict[str, Any]:
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    artifacts = {name: _sha256_file(os.path.join(out_dir, name)) for name in _ARTIFACTS}
+    names = artifacts if artifacts is not None else _ARTIFACTS
+    artifacts = {name: _sha256_file(os.path.join(out_dir, name)) for name in names}
     cfg_hash = _sha256_file(config_path)
     if seed is None and os.path.exists(config_path):
         try:
@@ -90,8 +94,9 @@ def verify(out_dir: str = "data/out", manifest_path: str = "results/manifest.jso
 
 
 def write(out_dir: str = "data/out", config_path: str = "config.yaml",
-          manifest_path: str = "results/manifest.json") -> Dict[str, Any]:
-    m = generate(out_dir, config_path)
+          manifest_path: str = "results/manifest.json",
+          artifacts: Optional[List[str]] = None) -> Dict[str, Any]:
+    m = generate(out_dir, config_path, artifacts=artifacts)
     os.makedirs(os.path.dirname(manifest_path) or ".", exist_ok=True)
     json.dump(m, open(manifest_path, "w"), indent=2)
     return m
@@ -102,8 +107,11 @@ def main() -> None:
     ap.add_argument("--out-dir", default="data/out")
     ap.add_argument("--config", default="config.yaml")
     ap.add_argument("--manifest", default="results/manifest.json")
+    ap.add_argument("--viz", action="store_true",
+                    help="use the Data-Visualization artifact set (train_chat/train_tab, no pref/train_pc)")
     ap.add_argument("--verify", action="store_true", help="verify on-disk artifacts against the manifest")
     args = ap.parse_args()
+    artifacts = _VIZ_ARTIFACTS if args.viz else None
     if args.verify:
         problems = verify(args.out_dir, args.manifest)
         if problems:
@@ -111,7 +119,7 @@ def main() -> None:
             raise SystemExit(1)
         print("[manifest] OK — on-disk artifacts match the manifest.")
         return
-    m = write(args.out_dir, args.config, args.manifest)
+    m = write(args.out_dir, args.config, args.manifest, artifacts=artifacts)
     print(f"[manifest] wrote {args.manifest} "
           f"({len(m['artifacts_sha256'])} artifacts, commit {str(m['git_commit'])[:8]}, seed {m['seed']})")
 

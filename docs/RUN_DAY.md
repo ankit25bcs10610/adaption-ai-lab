@@ -42,8 +42,8 @@ Then re-push the filled `MODEL_CARD.md` to the HF model repo. *(I can run all of
   *(I can do all of this once you give me the numbers.)*
 
 ## 4. Post + submit  ·  *(you)*
-1. Post the X + LinkedIn drafts ([`social_posts.md`](social_posts.md)); tag **@adaption_ai** / Adaption.
-2. Join the HackIndia **WhatsApp** channel + **Discord** (`#autoscient-challenge`) — eligibility.
+1. Post the X + LinkedIn drafts ([`social_posts.md`](social_posts.md)); tag **@adaption_ai** and **adaption-labs** (a required submission item).
+2. *(Optional)* join the Adaption **Discord** for office hours — not an eligibility gate for the AutoScientist Challenge.
 3. Fill the Part 2 form from [`PART2_SUBMISSION.md`](PART2_SUBMISSION.md): dataset id, HF + Kaggle
    dataset URLs, **weights link**, **Training Model ID**, both post URLs, live site.
 
@@ -56,8 +56,10 @@ python -m autoscientist_toolcaller.viz.train_adaption --data data/viz/train_tab.
 python -m autoscientist_toolcaller.viz.baseline --model <vlm> --data data/viz/test.jsonl   # honest 'before'
 # eval the fine-tuned VLM with the hardened relaxed scorer (autoscientist_toolcaller.viz.eval_chart)
 ```
-Publish weights to a new `pandeyankit84/autoscientist-chartqa` HF repo + a Kaggle model; fill the
-Entry-B fields in [`PART2_SUBMISSION.md`](PART2_SUBMISSION.md) and post its social variant.
+Publish weights to a new `pandeyankit84/autoscientist-chartqa` HF repo + a Kaggle model; use
+[`VIZ_MODEL_CARD.md`](../VIZ_MODEL_CARD.md) as the model-repo card (fill its `__PENDING__` cells with the
+run's relaxed-accuracy) and [`VIZ_DATASET_CARD.md`](../VIZ_DATASET_CARD.md) as the dataset card. Then fill
+the Entry-B fields in [`PART2_SUBMISSION.md`](PART2_SUBMISSION.md) and post its social variant.
 
 ## Housekeeping (do now, independent of run-day)
 - **Revoke** any credentials pasted in chat (GitHub PAT, HF, Adaption) — GitHub: <https://github.com/settings/tokens>.

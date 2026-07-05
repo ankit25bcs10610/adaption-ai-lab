@@ -1,7 +1,8 @@
 # Social posts — AutoScientist Challenge (ready to post)
 
-Post from your own accounts, tag **@adaption_ai** on X and **Adaption** (Adaption Labs) on LinkedIn,
-then paste both post URLs into the submission form. Everything below is ready to copy-paste.
+Post from your own accounts, tagging **@adaption_ai and adaption-labs** on **both** X and LinkedIn (the
+official challenge page requires tagging both handles), then paste both post URLs into the submission
+form. A social post is a required submission item. Everything below is ready to copy-paste.
 
 > **One thing to fill on run-day:** after the AutoScientist console run gives you the held-out number,
 > prepend this line to the X post and add the bullet to LinkedIn (honest model-accuracy claim):
@@ -121,5 +122,5 @@ Huge thanks to Adaption for AutoScientist and Adaptive Data.
 - [x] Live site + demo deployed: https://autoscientist-toolcaller.vercel.app (+ HF Space).
 - [ ] Add model **weights** to the HF model repo after the AutoScientist console run.
 - [ ] Fill the **held-out accuracy** line (base __% → fine-tuned __%) once the console run returns it.
-- [ ] Post on X (tag @adaption_ai) and LinkedIn (tag Adaption); attach a chart/demo screenshot.
+- [ ] Post on X and LinkedIn (tag **@adaption_ai and adaption-labs** on both); attach a chart/demo screenshot.
 - [ ] Paste both post URLs into the submission form.

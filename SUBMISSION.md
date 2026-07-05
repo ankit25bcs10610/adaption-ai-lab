@@ -30,14 +30,19 @@ criterion to its status and the exact artifact, so nothing is missed at submissi
 | 7 | Post on LinkedIn + X, tag @adaption_ai | ⚠️ **you post** | ready-to-paste drafts in `docs/social_posts.md`; **live demo already deployed** (bonus): https://huggingface.co/spaces/pandeyankit84/autoscientist-toolcaller-demo |
 | 8 | Submit (Part 2 form) | ⚠️ **you submit** | after steps 4–7; form opens before July 6 |
 
-Plus (HackIndia track, necessary): **join the WhatsApp channel** and the **Discord** (`#autoscient-challenge`).
+*(The AutoScientist Challenge requires no WhatsApp/Discord join — Discord is optional/community. HackIndia's
+"Adaptive Data Track", deadline ~June 15, is a separate, earlier event.)*
 
 ---
 
 ## Judging criteria → where we're strong
 
-1. **Measurable improvement over baseline (held-out)** — ⏳ **pending the AutoScientist training run** (that produces the official per-category held-out model number). Note: the **+15.7% (C→B)** figure is Adaptive Data's **dataset-quality grade** (counts under criterion 2), *not* a model accuracy — we do not claim the eligibility gate on it.
-2. **Dataset quality & originality** — the strongest axis: refuse/clarify/over-refusal/partial-parallel moat, execution-verified env data, schema-drift slice, decontamination, a documented **two-pass data-quality audit** (`docs/DATA_QUALITY_AUDIT.md`) that found + fixed real defects (no_tool 8→239; 36%→0% invalid golds).
+*Official judging = a measurable held-out % improvement over a baseline per category (the hard gate) + bonus
+points for releasing a demo. The numbered list below is our own quality framework mapping (not the verbatim
+official rubric).*
+
+1. **Measurable improvement over baseline (held-out)** — ⏳ **pending the AutoScientist training run** (that produces the official per-category held-out model number). Note: the **+15.7% (C→B)** figure is Adaptive Data's **dataset-quality grade**, *not* a model accuracy — we do not claim the eligibility gate on it.
+2. **Dataset quality & originality** — the strongest axis: refuse/clarify/over-refusal/partial-parallel moat, execution-verified env data, schema-drift slice, decontamination, a documented **two-pass data-quality audit** (`docs/DATA_QUALITY_AUDIT.md`) that found + fixed real defects (no_tool 8→284; 36%→0% invalid golds, now enforced by a build-time drop-guard).
 3. **Real-world impact** — reliable tool-calling (safe abstention) is a core agent-safety problem; the viz track adds Hindi/Devanagari chart-QA.
 4. **Depth of AutoScientist usage** — Adaptive Data recipes (dedup + reasoning traces) + brand-controls blueprint; enhanced dataset consumed; reproducible one-command pipeline.
 5. **Open-release quality** — model + dataset cards, README, audit, reproducibility **manifest** (SHA-256 + seeds + versions), blocking release **preflight**, GGUF export, and a live demo site.
@@ -51,7 +56,7 @@ Plus (HackIndia track, necessary): **join the WhatsApp channel** and the **Disco
 | ~~HF write token~~ | ✅ done | dataset + model card **published to HF** |
 | ~~Kaggle API creds~~ | ✅ done | dataset **published to Kaggle** (public) |
 | **AutoScientist console run** for weights + official held-out number | **you** (web console) | Steps 4–5 and the weights half of Step 6 (add weights to the HF model repo) |
-| LinkedIn/X posts, WhatsApp + Discord join | **you** | Step 7 + HackIndia eligibility |
+| LinkedIn/X posts (tag @adaption_ai + adaption-labs) | **you** | Step 7 — a required submission item |
 | **Rotate** the pasted credentials (HF write, Adaption key) | **you** | security — they were shared in chat |
 
 Everything else — dataset, audit, cards, eval harness, reproducibility, and the live demo — is built and

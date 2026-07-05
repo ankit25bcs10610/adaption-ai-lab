@@ -6,9 +6,11 @@ This repo now holds **two** data-centric submissions:
 2. **Data Visualization** (multimodal chart understanding) — `autoscientist_toolcaller/viz/`, the recommended stronger,
    less-crowded, visually-native category. See `autoscientist_toolcaller/viz/README.md`. It adds two originality levers most
    competitors lack: a **self-verifying synthetic chart generator** (answers correct by construction) and
-   a **Hindi/Devanagari + romanized chart-QA slice** that unlocks the $2k HackIndia track (matched-pair
-   en/hi Δaccuracy). Eval is a hardened ChartQA relaxed-accuracy harness; the win story is closing the
-   wide CharXiv gap (GPT-4o ~47% reasoning vs ~80% human).
+   a **Hindi/Devanagari + romanized chart-QA slice** (matched-pair en/hi Δaccuracy) — a strong
+   multilingual originality lever. *(Note: the separate HackIndia "Adaptive Data Track" was an earlier
+   event, deadline ~June 15; the live target here is the AutoScientist Challenge, July 6–Aug 3.)* Eval is a
+   hardened ChartQA relaxed-accuracy harness; the win story is closing the wide CharXiv gap (GPT-4o ~47%
+   reasoning vs ~80% human).
 
 Below is the strategy distilled from current (2026) research on what actually wins function-calling
 benchmarks, and exactly how the function-calling repo implements each lever.

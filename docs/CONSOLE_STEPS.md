@@ -56,6 +56,7 @@ python -m autoscientist_toolcaller.release kaggle-model --slug pandeyankit99/aut
 
 ## 7. Finish the submission
 - Paste the HEADLINE line as the first line of the LinkedIn/X posts (`docs/social_posts.md`).
-- Join the **WhatsApp channel** (necessary), pick **All Other Domains**, submit the Part-2 form.
+- Post on LinkedIn + X (tag **@adaption_ai** and **adaption-labs**), pick **All Other Domains**, submit
+  the Part-2 form. *(No WhatsApp/Discord join is required for the AutoScientist Challenge.)*
 
 **Send me the weights (or the HF repo id) and I'll run steps 5–6 for you.**

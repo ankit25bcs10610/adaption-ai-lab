@@ -53,12 +53,42 @@ def build_system_prompt(tools: List[Dict[str, Any]]) -> str:
     return SYSTEM_TEMPLATE.format(tools_json=render_tools(tools))
 
 
-def sample_value(spec: Dict[str, Any], rng) -> Any:
+# Candidate strings tried (in order, for determinism) against a param's regex `pattern`.
+_PATTERN_SAMPLES = [
+    "2026-02-01", "2026-02-01 10:30:00", "02/01/2026", "app-abc123",
+    "Passw0rd!", "acme-corp", "report.pdf", "user@example.com",
+    "+919999999999", "ABC123", "abc123", "Mumbai", "en",
+]
+
+
+def _value_matching_pattern(pattern: str, rng) -> str:
+    """Best-effort schema-VALID string for a regex `pattern`.
+
+    The build-time drop-guard (build_dataset) catches anything that still fails, so this only needs to
+    cover the common cases (dates, ids, composite password rules) rather than invert an arbitrary regex.
+    """
+    import re
+    try:
+        rx = re.compile(pattern)
+    except re.error:
+        return "abc123"
+    for cand in _PATTERN_SAMPLES:
+        if rx.search(cand):
+            return cand
+    for cand in ("Aa1@aaaa", "Aa1!aaaa", "A1b2C3d4$"):  # composite password-style fallbacks
+        if rx.search(cand):
+            return cand
+    return "abc123"
+
+
+def sample_value(spec: Dict[str, Any], rng, _depth: int = 0) -> Any:
     """Synthesize a schema-VALID value for a parameter spec (enum-first, then type-aware).
 
     Centralized so every synthetic generator produces type/enum-correct arguments. Using a hardcoded
-    string for an integer- or enum-typed field silently ships schema-invalid gold calls, which trains
-    the model to emit invalid calls — see autoscientist_toolcaller/schema_drift.py (make_rename) for the bug this prevents.
+    string for an integer-, object-, or pattern-constrained field silently ships schema-invalid gold
+    calls, which trains the model to emit invalid calls — see autoscientist_toolcaller/schema_drift.py
+    (make_rename) for the bug this prevents. `type: object` and `pattern`/`format` strings are handled
+    so nested and constrained params validate against Draft-7 with additionalProperties:false.
     """
     if "enum" in spec and spec["enum"]:
         return rng.choice(spec["enum"])
@@ -69,6 +99,23 @@ def sample_value(spec: Dict[str, Any], rng) -> Any:
         return rng.choice([True, False])
     if t == "array":
         return []
+    if t == "object":
+        # Build a well-formed nested object: sample every DEFINED property (all are allowed under
+        # additionalProperties:false, and sampling all guarantees every `required` sub-field is present).
+        props = spec.get("properties") or {}
+        if not props or _depth >= 4:
+            return {}
+        return {k: sample_value(sub, rng, _depth + 1) for k, sub in props.items()}
+    # string
+    if spec.get("pattern"):
+        return _value_matching_pattern(spec["pattern"], rng)
+    fmt = spec.get("format")
+    if fmt == "date":
+        return "2026-02-01"
+    if fmt in ("date-time", "datetime"):
+        return "2026-02-01 10:30:00"
+    if fmt == "email":
+        return "user@example.com"
     return rng.choice(["Mumbai", "2026-02-01", "report.pdf", "acme-corp", "en"])
 
 

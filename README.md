@@ -20,7 +20,7 @@
 
 ## Why this wins (60 seconds)
 
-**The moat is knowing when *not* to call a tool.** Most function-calling datasets only contain examples where a tool *should* fire; real agents fail by hallucinating a call when none applies or guessing a missing argument. This dataset trains the opposite reflex — **call / refuse / clarify** — and a two-pass adversarial audit found and fixed real poison bugs before release (the refuse/clarify moat was being generated and silently discarded by dedup: `no_tool` **8 → 239**, `miss_param` **1 → 36**, schema-invalid gold calls **36% → 0%**). Adaptive Data then re-graded the fixed set **C → B (+15.7%)**.
+**The moat is knowing when *not* to call a tool.** Most function-calling datasets only contain examples where a tool *should* fire; real agents fail by hallucinating a call when none applies or guessing a missing argument. This dataset trains the opposite reflex — **call / refuse / clarify** — and a two-pass adversarial audit found and fixed real poison bugs before release (the refuse/clarify moat was being generated and silently discarded by dedup: `no_tool` **8 → 284**, `miss_param` **1 → 32**, schema-invalid gold calls **36% → 0%**, now enforced by a build-time drop-guard). Adaptive Data then re-graded the fixed set **C → B (+15.7%)**.
 
 Concretely, the behavior the dataset teaches (canonical `call` / `refuse` / `clarify`):
 
@@ -30,7 +30,7 @@ Concretely, the behavior the dataset teaches (canonical `call` / `refuse` / `cla
 | "Write me a poem about the monsoon." *(no applicable tool)* | ❌ hallucinates a call | ✅ **refuse** — "no available tool can do this" |
 | "Book me a flight to Goa." *(missing `origin`, `date`)* | ❌ guesses the missing args | ✅ **clarify** — asks for origin + date first |
 
-Everything is **measured vs. projected, kept separate** (the +15.7% is a real *dataset-quality* grade, not a model-accuracy claim), **open on HF + Kaggle**, **reproducible** (seeded + manifest), and **CI-verified** (276 offline checks). The one remaining step is the AutoScientist console training run, which turns the projected model numbers into measured ones.
+Everything is **measured vs. projected, kept separate** (the +15.7% is a real *dataset-quality* grade, not a model-accuracy claim), **open on HF + Kaggle**, **reproducible** (seeded + manifest), and **CI-verified** (287 offline checks + a release card lint). The one remaining step is the AutoScientist console training run, which turns the projected model numbers into measured ones.
 
 ---
 
@@ -43,7 +43,7 @@ The AutoScientist Challenge automates the model-training loop, so the competitiv
 | **Function-Calling** (`autoscientist_toolcaller/`) | All Other Domains | A tool-use model that **refuses and clarifies** instead of hallucinating a call | Hard negatives (no-tool / missing-arg / ambiguous) + multi-turn + schema-drift + a 5-language reliability slice |
 | **Data Visualization** (`autoscientist_toolcaller/viz/`) | Data Visualization | A chart-reader that competes where text-only entrants can't — **and speaks Hindi** | Self-verifying synthetic chart generator + Devanagari/romanized slice + a text-only Vega-Lite spec-reading modality |
 
-Everything is **offline-testable**: the heavy ML stack (`torch`, `transformers`, `datasets`, the Adaption SDK) is lazily imported, so the correctness-critical logic runs on a handful of light deps (`numpy`, `jsonschema`, `pyyaml`, …) with **no LLM/VLM weights and no API keys**. `python -m tests.smoke_test` and `python -m tests.viz.test_viz` pass **276 checks** — and now run on every push via [CI](https://github.com/ankit25bcs10610/adaption-ai-lab/actions/workflows/tests.yml).
+Everything is **offline-testable**: the heavy ML stack (`torch`, `transformers`, `datasets`, the Adaption SDK) is lazily imported, so the correctness-critical logic runs on a handful of light deps (`numpy`, `jsonschema`, `pyyaml`, …) with **no LLM/VLM weights and no API keys**. `python -m tests.smoke_test` and `python -m tests.viz.test_viz` pass **287 checks** — and now run on every push via [CI](https://github.com/ankit25bcs10610/adaption-ai-lab/actions/workflows/tests.yml).
 
 ---
 
@@ -128,7 +128,7 @@ The audit-count rows are the whole thesis: the "refuse / clarify / disambiguate"
 ├── web/                       # Next.js 14 + react-three-fiber landing page (in-browser tool-call playground)
 ├── site/                      # Zero-build single-file landing page (Three.js)
 ├── app/                       # Gradio demo (function-calling)
-├── tests/                     # Offline suites — tests/smoke_test.py (219) · tests/viz/test_viz.py (57)
+├── tests/                     # Offline suites — tests/smoke_test.py (230) · tests/viz/test_viz.py (57)
 ├── docs/                      # WINNING · DATA_QUALITY_AUDIT · AUTOSCIENTIST_USAGE · DATASHEET · CONSOLE_STEPS …
 ├── scripts/                   # run_all.sh (full pipeline) · finalize.sh (one-command run-day)
 └── requirements.txt · config.yaml
@@ -146,7 +146,7 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt        # full, pinned pipeline (canonical install)
 
 # Offline test suites — no downloads, no API keys
-python -m tests.smoke_test        # function-calling   → ALL PASS (219)
+python -m tests.smoke_test        # function-calling   → ALL PASS (230)
 python -m tests.viz.test_viz      # data-visualization → ALL PASS (57)
 ```
 
@@ -217,7 +217,7 @@ The **only active** positives source is `Team-ACE/ToolACE` (Apache-2.0). `Salesf
 **Thesis.** A chart is an image, so text-only entrants can't compete — and the gap is wide and measurable (on CharXiv, GPT-4o scores ~47% on reasoning questions vs ~80% human). Three levers most competitors lack:
 
 1. **Self-verifying synthetic charts** (`viz/synth_charts.py`) — matplotlib renders 9 chart types and the QA ground-truth is *computed from the underlying data*, with on-chart value labels produced by the **same formatter** as the gold answer. A perfectly-reading model is never graded wrong. Hardened against ~30 adversarial edge cases (integer-quantum ties, unique-extremum guards, Pearson-r scatter, series-named questions on multi-series charts), including compound multi-hop QA (`compare_then_compute`).
-2. **Hindi/Devanagari + romanized slice** (`viz/indic_charts.py`) — the same ground-truth with localized labels and questions; numeric gold stays ASCII, categorical gold is the on-chart string. Paired `en`/`hi` twins share a `pair_id` for a clean matched-pair Δaccuracy — the HackIndia impact story.
+2. **Hindi/Devanagari + romanized slice** (`viz/indic_charts.py`) — the same ground-truth with localized labels and questions; numeric gold stays ASCII, categorical gold is the on-chart string. Paired `en`/`hi` twins share a `pair_id` for a clean matched-pair Δaccuracy — the multilingual impact story.
 3. **Vega-Lite spec-reading** (`viz/vega_spec.py`) — a *text-only* modality where the "chart" is a Vega-Lite JSON spec and the model answers from `data.values`. No pixels, no VLM, same relaxed scorer — a second, cheaper axis of chart comprehension.
 
 <div align="center">
@@ -261,7 +261,7 @@ The site keeps **measured** numbers (the +15.7% grade, the audit) strictly separ
 Both suites are fully offline (no model downloads, no API keys) and exercise the correctness-critical logic — scorers, ground-truth generation, determinism, and every edge case surfaced by adversarial review.
 
 ```bash
-python -m tests.smoke_test      # 219 checks — function-calling
+python -m tests.smoke_test      # 230 checks — function-calling
 python -m tests.viz.test_viz    #  57 checks — data-visualization (scorer edge cases + synth GT + split integrity)
 ```
 
@@ -280,7 +280,12 @@ Every module is `py_compile`-clean. The data-viz scorer and synthetic generator 
 
 ## How this maps to the judging criteria
 
-| Criterion | Where it's addressed |
+> The official challenge ([adaptionlabs.ai/blog/autoscientist-challenge](https://adaptionlabs.ai/blog/autoscientist-challenge))
+> judges on **one hard gate — a measurable % improvement over a baseline on Adaption's held-out in-house
+> test set for the category — plus bonus points for releasing a demo.** The table below is *our* quality
+> framework showing how the build stacks up on each dimension a judge is likely to weigh.
+
+| Dimension | Where it's addressed |
 |---|---|
 | **Measurable improvement over baseline** | `baseline.py` / `viz/baseline.py` + `eval_bfcl.py` / `eval_chart.py` — identical decoding, bootstrapped std error, base-vs-fine-tuned tables, gap decomposition |
 | **Dataset quality & originality** | Hard-negative + multi-turn + schema-drift generators; 5-language reliability slice; self-verifying synthetic charts + Vega spec-reading; dedup + decontamination + LLM-as-judge |
@@ -305,6 +310,6 @@ Submission status and remaining checklist: [`SUBMISSION.md`](SUBMISSION.md) · p
 
 ## License & acknowledgements
 
-Code and generated datasets are released under **Apache-2.0**. The active data source is ToolACE (Apache-2.0); the optional, disabled-by-default sources retain their upstream license (xLAM CC-BY-4.0; Toucan / ReachQA Apache-2.0 / MIT), with attribution preserved in the dataset cards when enabled. Built for the Adaption AutoScientist Challenge × HackIndia.
+Code and generated datasets are released under **Apache-2.0**. The active data source is ToolACE (Apache-2.0); the optional, disabled-by-default sources retain their upstream license (xLAM CC-BY-4.0; Toucan / ReachQA Apache-2.0 / MIT), with attribution preserved in the dataset cards when enabled. Built for the **Adaption AutoScientist Challenge**.
 
 <div align="center"><sub>🤖 Engineered with <a href="https://claude.com/claude-code">Claude Code</a></sub></div>
