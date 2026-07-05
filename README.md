@@ -103,12 +103,15 @@ The audit-count rows are the whole thesis: the "refuse / clarify / disambiguate"
 │   ├── multiturn.py             BFCL miss_param / miss_func / long_context
 │   ├── schema_drift.py          tools whose schema changed under the model
 │   ├── multilingual.py          matched-twin reliability slice — en / hi / hi-rom / es / fr
+│   ├── envs.py · agentic.py      execution-verified envs  ·  multi-STEP observation-in-the-loop trajectories
+│   ├── synth_llm.py             LLM generate → critique → schema-verify → dedup (opt-in, mockable)
 │   ├── curriculum.py            per-example difficulty scoring + curriculum ordering
 │   ├── reasoning.py             optional <think> traces distilled from gold (gated off by default)
 │   ├── dedup.py · decontaminate.py    MinHash + semantic near-dup  ·  cross-split & BFCL leakage removal
 │   ├── quality_filter.py · claude_judge.py    heuristic scorer  ·  LLM-as-judge (Anthropic SDK)
-│   ├── build_preference.py      DPO pairs (chosen = refuse/clarify, rejected = hallucinated call)
-│   ├── eval_bfcl.py · eval_harness.py · eval_decompose.py    BFCL-aligned scoring + gap decomposition
+│   ├── build_preference.py      DPO pairs — refuse/clarify, over-refusal, partial-parallel, agentic-step
+│   ├── eval_bfcl.py · eval_harness.py · eval_decompose.py    BFCL scoring (+agentic cat, calibration) + decomposition
+│   ├── eval_agentic.py · eval_multilingual.py    trajectory-success/per-step  ·  matched-pair Δaccuracy
 │   ├── eval_stats.py · robustness_table.py · reliability_probe.py    bootstrapped CIs, robustness, over-refusal probe
 │   ├── recipe_ablation.py       recipe grid → grade-per-config table (depth of AutoScientist usage)
 │   ├── train_adaption.py        Adaption AutoScientist SDK run  ·  baseline.py  honest before-number
@@ -196,9 +199,10 @@ python -m autoscientist_toolcaller.fill_model_card  --username <you>       # aut
 **What makes the data original**
 
 - **Hard negatives** (`hard_negatives.py`) — no-tool, missing-arg, and ambiguous cases the model must *not* answer with a call. This is the moat.
-- **Multilingual reliability** (`multilingual.py`) — matched twins across **English, Hindi, romanized Hindi, Spanish, and French**, correct by construction, so you can measure whether "should I refuse?" survives a language switch.
-- **Curriculum** (`curriculum.py`) — every example is scored for difficulty and can be emitted in easy→hard order.
-- **Optional reasoning traces** (`reasoning.py`) — short `<think>` rationales distilled from the gold decision, gated **off** by default so they never contaminate the strict-format baseline.
+- **Agentic trajectories** (`agentic.py`) — stateful **multi-step** rollouts where each gold action follows the previous tool **observation**, incl. a recovery step where the requested action is impossible in the reached state → gold is to *clarify*, not blindly call. Correct by construction from the `envs.py` oracle; scored by `eval_agentic.py` (**trajectory-success + per-step accuracy**).
+- **Multilingual reliability** (`multilingual.py`) — matched twins across **English, Hindi, romanized Hindi, Spanish, and French**, correct by construction, so you can measure whether "should I refuse?" survives a language switch (`eval_multilingual.py` reports the matched-pair Δaccuracy).
+- **Preference depth** (`build_preference.py`) — DPO pairs across four axes: refuse/clarify-vs-hallucination, **over-refusal** (call vs refuse), **partial-parallel** (both calls vs one), and execution-labeled **agentic-step** pairs.
+- **Optional LLM synthesis** (`synth_llm.py`) — generate → LLM-critique → schema-verify → dedup, opt-in and gated on a key (mockable, so it unit-tests offline). **Curriculum** difficulty scoring + optional `<think>` reasoning traces round out the pipeline.
 
 **Data-quality audit — two adversarial passes.** Because the dataset *is* the product, the build was audited before release. Pass 1 caught the refuse/clarify moat being generated and then silently discarded by dedup (`no_tool` **8 → 239**, `miss_param` **1 → 36**, `ambiguous` **0 → 133**), plus a slice-mixing undershoot and a DPO poison-pair risk. Pass 2 caught a schema-drift poison bug (**36% of `rename` gold calls were schema-invalid → 0%**), added over-refusal-trap and partial-parallel slices, execution-verified multi-call trajectories, a leakage **decontamination** pass, and a blocking release preflight. `stats.json` carries `mix` (intended-vs-realized shares + `mix_ok`) and `contamination` blocks. Full write-up: [`docs/DATA_QUALITY_AUDIT.md`](docs/DATA_QUALITY_AUDIT.md).
 
