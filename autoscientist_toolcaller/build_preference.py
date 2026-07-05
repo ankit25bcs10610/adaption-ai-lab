@@ -80,14 +80,41 @@ def _corrupt_positive(example: Dict[str, Any], rng: random.Random) -> Optional[D
         modes.append("swap_tool")
     if present_required:
         modes.append("drop_required")
+    if len(calls) >= 2:
+        modes.append("drop_call")  # parallel completeness: emit one fewer call than required
     if not modes:
         return None
     mode = rng.choice(modes)
-    if mode == "swap_tool":
+    if mode == "drop_call":
+        calls.pop(rng.randrange(len(calls)))
+    elif mode == "swap_tool":
         c["name"] = rng.choice(others)["name"]
     else:  # drop_required -> the call is now missing a required arg (schema-invalid)
         del c["arguments"][rng.choice(present_required)]
     return {"action": "call", "calls": calls}
+
+
+def _axis_pairs(example: Dict[str, Any], rng: random.Random) -> List[Dict[str, str]]:
+    """Extra preference pairs that target specific moat axes, guaranteed (not left to rejection
+    sampling): over-refusal (chosen=call vs rejected=refuse) and partial-parallel (both calls vs one)."""
+    ans = example["answer"]
+    if ans["type"] != "tool_call":
+        return []
+    meta = example.get("meta", {}) or {}
+    hk = meta.get("hn_kind")
+    chosen = target_to_json_str(ans)
+    out: List[Dict[str, str]] = []
+    if hk == "over_refusal":
+        rej = {"action": "refuse", "message": "I don't think any available tool can do that."}
+        if _confirmed_wrong(example, rej):
+            out.append({"prompt": _prompt(example), "chosen": chosen, "rejected": _canon(rej)})
+    if hk == "partial_parallel" and len(ans.get("calls") or []) >= 2:
+        calls = copy.deepcopy(ans["calls"])
+        calls.pop(rng.randrange(len(calls)))
+        rej = {"action": "call", "calls": calls}
+        if _confirmed_wrong(example, rej):
+            out.append({"prompt": _prompt(example), "chosen": chosen, "rejected": _canon(rej)})
+    return out
 
 
 def _canon(obj: Any) -> str:
@@ -102,10 +129,16 @@ def _confirmed_wrong(example: Dict[str, Any], rejected_obj: Dict[str, Any]) -> b
     ans = example["answer"]
     if ans["type"] in ("refuse", "clarify"):
         return rejected_obj.get("action") == "call" and bool(rejected_obj.get("calls"))
+    # gold is a tool_call:
+    if rejected_obj.get("action") in ("refuse", "clarify"):
+        return True  # abstaining when a call is required is wrong (the over-refusal negative)
     gold_calls = ans.get("calls") or []
+    rej_calls = rejected_obj.get("calls") or []
     if _canon(rejected_obj) == _canon({"action": "call", "calls": gold_calls}):
         return False  # identical to gold -> poison
-    rc = (rejected_obj.get("calls") or [{}])[0]
+    if len(rej_calls) != len(gold_calls):
+        return True  # wrong number of calls (dropped/added a call — the partial-parallel negative)
+    rc = (rej_calls or [{}])[0]
     gc = (gold_calls or [{}])[0]
     if rc.get("name") != gc.get("name"):
         return True  # different tool
@@ -167,6 +200,7 @@ def build_pairs(examples: List[Dict[str, Any]], seed: int = 42) -> List[Dict[str
                 "rejected": json.dumps(rejected_obj, sort_keys=True, ensure_ascii=False),
             }
         )
+        pairs += _axis_pairs(ex, rng)  # extra over-refusal / partial-parallel contrasts
     if skipped:
         print(f"[pref] skipped {skipped} examples (no confirmed-wrong negative — poison guard)")
     return pairs
@@ -201,13 +235,28 @@ def main() -> None:
         pairs += env_pairs
         n_env = len(env_pairs)
 
+    # Merge agentic trajectory-STEP DPO pairs (chosen = gold step, rejected = checker-proven-wrong
+    # next call on that step's state) — the same execution-labeled quality as env_dpo, but multi-step.
+    n_ag = 0
+    ag_dpo_n = cfg["dataset"].get("agentic_dpo", 0)
+    if ag_dpo_n:
+        ag_path = os.path.join(out_dir, "agentic_dpo.jsonl")
+        if not os.path.exists(ag_path):
+            from .agentic import generate_dpo as _ag_dpo
+            with open(ag_path, "w", encoding="utf-8") as f:
+                for d in _ag_dpo(ag_dpo_n, seed=cfg["seed"]):
+                    f.write(json.dumps(d, ensure_ascii=False) + "\n")
+        ag_pairs = [json.loads(l) for l in open(ag_path, encoding="utf-8") if l.strip()]
+        pairs += ag_pairs
+        n_ag = len(ag_pairs)
+
     out = os.path.join(out_dir, "pref.jsonl")
     with open(out, "w", encoding="utf-8") as f:
         for p in pairs:
             f.write(json.dumps(p, ensure_ascii=False) + "\n")
     n_hn = sum(1 for e in examples if e["answer"]["type"] in ("refuse", "clarify"))
     print(f"[pref] wrote {len(pairs)} pairs -> {out} "
-          f"({n_sft} SFT-derived incl. {n_hn} hard-neg, {n_env} execution-labeled env)")
+          f"({n_sft} SFT-derived incl. {n_hn} hard-neg, {n_env} execution-labeled env, {n_ag} agentic-step)")
 
 
 if __name__ == "__main__":

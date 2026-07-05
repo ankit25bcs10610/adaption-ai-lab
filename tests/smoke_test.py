@@ -581,6 +581,33 @@ def main() -> int:
     _m = evaluate_agentic([_clean], _oracle(_clean))
     ok &= check("evaluate_agentic: oracle success_rate == 1.0", _m["trajectory_success_rate"] == 1.0)
 
+    print("scaled DPO axes (over-refusal / partial-parallel / agentic-step):")
+    from autoscientist_toolcaller.build_preference import _axis_pairs, _confirmed_wrong
+    import random as _rp2
+    _rngp = _rp2.Random(0)
+    _orx = {"tools": [_W], "query": "you could maybe check the weather in Mumbai",
+            "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Mumbai"}}]},
+            "meta": {"hn_kind": "over_refusal"}}
+    _ap = _axis_pairs(_orx, _rngp)
+    ok &= check("over-refusal axis pair: chosen=call, rejected=refuse", len(_ap) == 1 and
+                json.loads(_ap[0]["chosen"])["action"] == "call" and json.loads(_ap[0]["rejected"])["action"] == "refuse")
+    _pp2 = {"tools": [_W, _S], "query": "weather in Mumbai and price of AAPL",
+            "answer": {"type": "tool_call", "calls": [
+                {"name": "get_weather", "arguments": {"city": "Mumbai"}},
+                {"name": "get_stock", "arguments": {"ticker": "AAPL"}}]},
+            "meta": {"hn_kind": "partial_parallel"}}
+    _pap = _axis_pairs(_pp2, _rngp)
+    ok &= check("partial-parallel axis pair: rejected drops a call", len(_pap) == 1 and
+                len(json.loads(_pap[0]["rejected"])["calls"]) == 1)
+    ok &= check("poison guard: refuse rejected for a positive is confirmed-wrong",
+                _confirmed_wrong(_orx, {"action": "refuse", "message": "x"}))
+    ok &= check("poison guard: wrong call-count is confirmed-wrong",
+                _confirmed_wrong(_pp2, {"action": "call", "calls": [_pp2["answer"]["calls"][0]]}))
+    ok &= check("poison guard: gold-identical is NOT wrong",
+                not _confirmed_wrong(_pp2, {"action": "call", "calls": _pp2["answer"]["calls"]}))
+    _agd = _ag.generate_dpo(10, seed=1)
+    ok &= check("agentic-step DPO pairs built (chosen != rejected)", len(_agd) > 0 and all(d["chosen"] != d["rejected"] for d in _agd))
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 
