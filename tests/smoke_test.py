@@ -828,6 +828,13 @@ def main() -> int:
     ok &= check("demo_platform replays the full loop with recorded grade",
                 all(k in _t for k in ("UPLOAD", "GRADE", "IMPROVE", "TRAIN", "15.7", "canned")))
 
+    from autoscientist_toolcaller import results_table as _rtab
+    ok &= check("results_table renders a __PENDING__ leaderboard with no eval JSONs",
+                _rtab.render({}, {}, "", {}, {}, {}).count("__PENDING__") >= 10)
+    _rt_filled = _rtab.render({"overall_accuracy": 0.6, "hallucination_rate": 0.2},
+                              {"overall_accuracy": 0.83, "hallucination_rate": 0.05}, "hd", {}, {}, {})
+    ok &= check("results_table computes the Δ column", "+0.230" in _rt_filled and "-0.150" in _rt_filled)
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 
