@@ -516,7 +516,7 @@ def main() -> int:
     from autoscientist_toolcaller.eval_bfcl import weighted_accuracy, BFCL_WEIGHTS
     ok &= check("BFCL weights sum to 1.0", abs(sum(BFCL_WEIGHTS.values()) - 1.0) < 1e-9)
     _wa = weighted_accuracy({"simple": {"accuracy": 1.0}, "multi_turn": {"accuracy": 0.0}})
-    ok &= check("weighted_accuracy renormalizes over present cats", abs(_wa - (0.15 / 0.45)) < 1e-9)
+    ok &= check("weighted_accuracy renormalizes over present cats", abs(_wa - (0.12 / 0.32)) < 1e-9)
     ok &= check("weighted_accuracy None when no data", weighted_accuracy({"simple": {"accuracy": None}}) is None)
     from autoscientist_toolcaller.decontaminate import DEFAULT_PROBES as _PROBES, decontaminate as _decon
     ok &= check("decontam probe fixture expanded (>60)", len(_PROBES) > 60)
@@ -607,6 +607,21 @@ def main() -> int:
                 not _confirmed_wrong(_pp2, {"action": "call", "calls": _pp2["answer"]["calls"]}))
     _agd = _ag.generate_dpo(10, seed=1)
     ok &= check("agentic-step DPO pairs built (chosen != rejected)", len(_agd) > 0 and all(d["chosen"] != d["rejected"] for d in _agd))
+
+    print("BFCL agentic category + calibration/abstention metrics:")
+    ok &= check("categorize -> 'agentic' for agentic-meta example", categorize(
+        {"tools": [_W], "history": [{"role": "user", "content": "x"}],
+         "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "X"}}]},
+         "meta": {"source": "agentic"}}) == "agentic")
+    _recs_cal = [
+        {"tools": [_W], "query": "weather in Mumbai", "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Mumbai"}}]}, "meta": {}},
+        {"tools": [_W], "query": "could you maybe get the weather in Delhi", "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Delhi"}}]}, "meta": {}},
+        {"tools": [_W], "query": "write a poem about rain", "answer": {"type": "refuse", "content": "no tool"}, "meta": {}},
+    ]
+    _cal = evaluate(_recs_cal, lambda p: target_to_json_str(_recs_cal[0]["answer"]) if "Mumbai" in p else '{"action":"refuse","message":"x"}')["calibration"]
+    ok &= check("confusion matrix cells sum to N", sum(sum(row.values()) for row in _cal["confusion"].values()) == 3)
+    ok &= check("over-refusal rate correct (1 of 2 gold-calls refused)", abs(_cal["over_refusal_rate"] - 0.5) < 1e-9)
+    ok &= check("abstention recall correct (refused when should)", _cal["abstention_recall"] == 1.0)
 
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1

@@ -37,6 +37,9 @@ _NUM_RE = re.compile(r"^-?\d+(\.\d+)?$")
 # Categorization
 # --------------------------------------------------------------------------------------
 def categorize(example: Dict[str, Any]) -> str:
+    # agentic multi-step trajectory steps (observation-in-the-loop) — the BFCL-v4 agentic frontier
+    if (example.get("meta") or {}).get("source") == "agentic":
+        return "agentic"
     # multi-turn (BFCL v3/v4's highest-weight AST bucket) takes precedence
     if example.get("history"):
         return "multi_turn"
@@ -174,8 +177,8 @@ def judge_bfcl(example: Dict[str, Any], output_text: str, lenient: bool = True) 
 # a documented, CONFIGURABLE proxy — the real leaderboard weights differ — reported as a weighted proxy
 # alongside the flat micro-average so the aggregate isn't just an artifact of our own test-set category mix.
 BFCL_WEIGHTS: Dict[str, float] = {
-    "simple": 0.15, "multiple": 0.15, "parallel": 0.15,
-    "multi_turn": 0.30, "irrelevance": 0.15, "clarify": 0.10,
+    "simple": 0.12, "multiple": 0.12, "parallel": 0.14,
+    "multi_turn": 0.20, "irrelevance": 0.12, "clarify": 0.10, "agentic": 0.20,
 }
 
 
@@ -197,7 +200,7 @@ def evaluate_bfcl(
 ) -> Dict[str, Any]:
     from .eval_harness import _bootstrap_se
 
-    cats = ["simple", "multiple", "parallel", "multi_turn", "irrelevance", "clarify"]
+    cats = ["simple", "multiple", "parallel", "multi_turn", "irrelevance", "clarify", "agentic"]
     buckets: Dict[str, List[Dict[str, Any]]] = {c: [] for c in cats}
     all_bits: List[int] = []
     hard_halluc = 0

@@ -47,10 +47,12 @@ def judge(example: Dict[str, Any], output_text: str) -> Dict[str, Any]:
         "parsed_ok": parsed is not None,
         "correct": False,
         "hallucinated_call": False,
+        "pred_action": None,
     }
     if parsed is None:
         return result
     action = parsed.get("action")
+    result["pred_action"] = action if action in ("call", "refuse", "clarify") else None
 
     if gold_type == "tool_call":
         if action != "call":
@@ -167,6 +169,26 @@ def evaluate(
             by_diff[b] = {"n": len(sub), "accuracy": sum(sub) / len(sub), "stderr": _bootstrap_se(sub)}
     if by_diff:
         metrics["by_difficulty"] = by_diff
+
+    # Calibration: confusion matrix (gold action × predicted action) + abstention rates. Does the model
+    # abstain when it should (refuse/clarify) WITHOUT over-refusing on satisfiable requests?
+    acts = ("call", "refuse", "clarify")
+    confusion = {g: {p: 0 for p in (*acts, "none")} for g in acts}
+    for v in verdicts:
+        g = "call" if v["gold_type"] == "tool_call" else v["gold_type"]
+        p = v.get("pred_action") or "none"
+        confusion[g][p] += 1
+    n_call = sum(confusion["call"].values())
+    over_refused = confusion["call"]["refuse"] + confusion["call"]["clarify"]
+    pred_abstain = sum(confusion[g][p] for g in acts for p in ("refuse", "clarify"))
+    should_abstain = sum(sum(confusion[g].values()) for g in ("refuse", "clarify"))
+    hit_abstain = sum(confusion[g][p] for g in ("refuse", "clarify") for p in ("refuse", "clarify"))
+    metrics["calibration"] = {
+        "confusion": confusion,
+        "over_refusal_rate": (over_refused / n_call) if n_call else 0.0,
+        "abstention_precision": (hit_abstain / pred_abstain) if pred_abstain else 0.0,
+        "abstention_recall": (hit_abstain / should_abstain) if should_abstain else 0.0,
+    }
 
     if return_records:
         return {"metrics": metrics, "records": details}
