@@ -732,6 +732,23 @@ def main() -> int:
     ok &= check("tool-selection: full-context accuracy 1.0 (oracle, gold present)", _mts["accuracy_full_context"] == 1.0)
     ok &= check("tool-selection: recall in [0,1]", 0.0 <= _mts["recall_at_k"] <= 1.0)
 
+    print("env-verified best-of-N reranking:")
+    _clean2 = next(t for t in _trajs if t["kind"] == "clean")
+    def _bad_then_gold(traj, n):
+        seq = []
+        for s in traj["steps"]:
+            seq.append('{"action":"refuse","message":"unsure"}')       # sample 0: abstain (score 1)
+            if n > 1:
+                seq.append(target_to_json_str(s["answer"]))            # sample 1: gold call (score 3)
+        return iter(seq)
+    _it2 = _bad_then_gold(_clean2, 2)
+    ok &= check("best-of-N (env-verified) picks the good sample → success", rollout(_clean2, lambda p: next(_it2), n_samples=2)["success"])
+    _it1 = _bad_then_gold(_clean2, 1)
+    ok &= check("best-of-1 with an abstaining model fails (shows the lift)", not rollout(_clean2, lambda p: next(_it1), n_samples=1)["success"])
+    _itbn = iter(['{"action":"call","calls":[{"name":"nope","arguments":{}}]}',
+                  target_to_json_str({"type": "tool_call", "calls": [{"name": "finish", "arguments": {"answer": "ok"}}]})])
+    ok &= check("run_agent best-of-N prefers a registered-tool action", run_agent("x", safe_tools_registry(), lambda p: next(_itbn), max_steps=3, best_of_n=2)["status"] == "done")
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 

@@ -43,23 +43,45 @@ class ToolRegistry:
             return False, f"{type(e).__name__}: {e}"
 
 
+def _structural_score(registry: ToolRegistry, parsed: Dict[str, Any] | None) -> float:
+    """Cheap, side-effect-free verifier for best-of-N when no env oracle is available: prefer a
+    well-formed call to REGISTERED tools > a valid abstention > an unknown-tool call > unparseable."""
+    if parsed is None:
+        return -1.0
+    action = parsed.get("action")
+    if action in ("refuse", "clarify"):
+        return 1.0
+    if action == "call":
+        calls = parsed.get("calls") or []
+        if not calls:
+            return -1.0
+        return 2.0 if all(c.get("name") in registry._fns for c in calls) else 0.0
+    return -1.0
+
+
 def run_agent(
     goal: str,
     registry: ToolRegistry,
     model_fn: ModelFn,
     max_steps: int = 8,
+    best_of_n: int = 1,
+    verify_fn=None,
 ) -> Dict[str, Any]:
     """Run the agent loop. Returns {status, steps, result, transcript, history}.
 
     status: 'done' (model called finish) · 'refuse'/'clarify' (model abstained) · 'max_steps' · 'parse_error'.
+    best_of_n>1 draws K candidates per step and commits the best per `verify_fn` (default: structural).
     """
     history: List[Dict[str, str]] = []
     transcript: List[Dict[str, Any]] = []
     status, result = "max_steps", None
+    verify = verify_fn or (lambda p: _structural_score(registry, p))
     for step in range(max_steps):
         prompt = build_eval_prompt({"tools": registry.schemas, "query": goal, "history": history or None})
-        raw = model_fn(prompt)
-        parsed = parse_model_output(raw)
+        cands = [model_fn(prompt) for _ in range(max(1, best_of_n))]
+        plist = [parse_model_output(c) for c in cands]
+        best_i = max(range(len(cands)), key=lambda i: (verify(plist[i]), -i))
+        raw, parsed = cands[best_i], plist[best_i]
         if parsed is None:
             status = "parse_error"
             transcript.append({"step": step, "action": None, "raw": raw})

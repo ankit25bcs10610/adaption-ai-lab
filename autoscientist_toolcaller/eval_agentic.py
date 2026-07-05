@@ -40,16 +40,37 @@ def _step_matches(parsed: Dict[str, Any] | None, step: Dict[str, Any]) -> bool:
     return action == gold
 
 
-def rollout(traj: Dict[str, Any], generate_fn: Callable[[str], str]) -> Dict[str, Any]:
-    """Free rollout: advance the env by the MODEL's own actions, observation-in-the-loop."""
+def _candidate_score(parsed: Dict[str, Any] | None, env, state: Dict[str, Any]) -> float:
+    """Env-as-verifier reward for one candidate action (no commit — env.apply copies state)."""
+    if parsed is None:
+        return -1.0
+    action = parsed.get("action")
+    if action in ("refuse", "clarify"):
+        return 1.0  # a valid abstention (correct on recovery steps)
+    if action == "call" and parsed.get("calls"):
+        new, ok, _ = env.apply(state, parsed["calls"][0])
+        if not ok:
+            return 0.0  # illegal on this state
+        return 3.0 if new != state else 2.0  # advances the world > legal no-op
+    return -1.0
+
+
+def rollout(traj: Dict[str, Any], generate_fn: Callable[[str], str], n_samples: int = 1) -> Dict[str, Any]:
+    """Free rollout: advance the env by the MODEL's own actions, observation-in-the-loop.
+
+    With n_samples>1, each step draws K candidates and the ENVIRONMENT (a perfect verifier) picks the
+    best one to commit — verifier-guided, test-time-compute search (the offline stand-in for RLVR)."""
     env = env_by_name(traj["env"])
     state = copy.deepcopy(traj["init_state"])
     hist: List[Dict[str, Any]] = []
     per_step: List[bool] = []
     for step in traj["steps"]:
         ex = {"tools": traj["tools"], "query": traj["goal"], "history": hist or None}
-        out = generate_fn(build_eval_prompt(ex))
-        parsed = parse_model_output(out)
+        prompt = build_eval_prompt(ex)
+        cands = [generate_fn(prompt) for _ in range(max(1, n_samples))]
+        parsed_list = [parse_model_output(c) for c in cands]
+        best_i = max(range(len(cands)), key=lambda i: (_candidate_score(parsed_list[i], env, state), -i))
+        out, parsed = cands[best_i], parsed_list[best_i]
         per_step.append(_step_matches(parsed, step))
         if parsed and parsed.get("action") == "call" and parsed.get("calls"):
             state, ok, reason = env.apply(state, parsed["calls"][0])
@@ -67,8 +88,9 @@ def rollout(traj: Dict[str, Any], generate_fn: Callable[[str], str]) -> Dict[str
     return {"success": bool(success), "per_step": per_step, "steps": len(traj["steps"])}
 
 
-def evaluate_agentic(trajectories: List[Dict[str, Any]], generate_fn: Callable[[str], str]) -> Dict[str, Any]:
-    results = [rollout(t, generate_fn) for t in trajectories]
+def evaluate_agentic(trajectories: List[Dict[str, Any]], generate_fn: Callable[[str], str],
+                     n_samples: int = 1) -> Dict[str, Any]:
+    results = [rollout(t, generate_fn, n_samples=n_samples) for t in trajectories]
     succ = [int(r["success"]) for r in results]
     step_bits = [int(b) for r in results for b in r["per_step"]]
     ci = bootstrap_ci(succ)
@@ -77,6 +99,7 @@ def evaluate_agentic(trajectories: List[Dict[str, Any]], generate_fn: Callable[[
         by_env.setdefault(t["env"], []).append(int(r["success"]))
     return {
         "n": len(trajectories),
+        "n_samples": n_samples,
         "trajectory_success_rate": (sum(succ) / len(succ)) if succ else 0.0,
         "success_lo": ci["lo"], "success_hi": ci["hi"],
         "per_step_accuracy": (sum(step_bits) / len(step_bits)) if step_bits else 0.0,
