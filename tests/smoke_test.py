@@ -769,6 +769,55 @@ def main() -> int:
     ok &= check("rollout retry recovers each step → success", _rret["success"] and _rret["retries"] >= len(_clean3["steps"]))
     ok &= check("rollout without retry fails on a broken model", not rollout(_clean3, lambda p: "not json", n_samples=1, max_retries=0)["success"])
 
+    # --- regressions for the 2026-07 problem-statement audit fixes ---------------------------------
+    import random as _random, tempfile as _tf, os as _os, re as _re
+    from autoscientist_toolcaller.format_utils import sample_value as _sv
+    from autoscientist_toolcaller.schema_validator import validate_answer as _va
+    _rng = _random.Random(0)
+    _obj_spec = {"type": "object", "properties": {"a": {"type": "string"}, "b": {"type": "integer"}}, "required": ["a", "b"]}
+    _ov = _sv(_obj_spec, _rng)
+    ok &= check("sample_value builds a valid object for type:object",
+                isinstance(_ov, dict) and {"a", "b"}.issubset(_ov) and isinstance(_ov["b"], int))
+    _pat = r"^\d{4}-\d{2}-\d{2}$"
+    ok &= check("sample_value respects a string pattern", bool(_re.match(_pat, _sv({"type": "string", "pattern": _pat}, _rng))))
+    _tool = {"name": "t", "parameters": {"type": "object", "properties": {"cfg": _obj_spec}, "required": ["cfg"]}}
+    ok &= check("drop-guard basis: scalar-for-object gold is schema-INVALID",
+                not _va({"type": "tool_call", "calls": [{"name": "t", "arguments": {"cfg": "oops"}}]}, [_tool])[0])
+    ok &= check("drop-guard basis: sampled-object gold is schema-VALID",
+                _va({"type": "tool_call", "calls": [{"name": "t", "arguments": {"cfg": _sv(_obj_spec, _rng)}}]}, [_tool])[0])
+
+    from autoscientist_toolcaller import manifest as _mani
+    with _tf.TemporaryDirectory() as _d:
+        _o = _os.path.join(_d, "o"); _os.makedirs(_o)
+        for _f in ("train.jsonl", "val.jsonl", "test.jsonl", "stats.json"):
+            open(_os.path.join(_o, _f), "w").write('{"x":1}\n')
+        _mp = _os.path.join(_d, "m.json")
+        _mani.write(out_dir=_o, config_path="config.yaml", manifest_path=_mp,
+                    artifacts=["train.jsonl", "val.jsonl", "test.jsonl", "stats.json"])
+        ok &= check("manifest verify passes right after write", _mani.verify(_o, _mp) == [])
+        open(_os.path.join(_o, "train.jsonl"), "w").write('{"x":2}\n')
+        ok &= check("manifest verify DETECTS drift after a file changes",
+                    any("train.jsonl" in p for p in _mani.verify(_o, _mp)))
+
+    from autoscientist_toolcaller import release as _rel
+    with _tf.TemporaryDirectory() as _d:
+        open(_os.path.join(_d, "clean.md"), "w").write("all good, no markers")
+        open(_os.path.join(_d, "pend.md"), "w").write("val: __PENDING__")
+        ok &= check("lint_cards passes a clean card", _rel.lint_cards([_os.path.join(_d, "clean.md")]) == [])
+        ok &= check("lint_cards blocks a __PENDING__ card", bool(_rel.lint_cards([_os.path.join(_d, "pend.md")])))
+        _pd = _os.path.join(_d, "pub"); _os.makedirs(_pd)
+        open(_os.path.join(_pd, "README.md"), "w").write("YOUR_USERNAME")
+        ok &= check("preflight gates a placeholder card shipping in publish_dir",
+                    any("YOUR_USERNAME" in p for p in _rel.preflight(out_dir=_d, publish_dir=_pd, check_manifest=False)))
+
+    from autoscientist_toolcaller.viz import fill_card as _fc
+    _filled = _fc.fill(open("autoscientist_toolcaller/viz/model_card_template.md").read(),
+                       {"relaxed_accuracy": 0.5, "by_lang": {"en": {"accuracy": 0.5}, "hi": {"accuracy": 0.4}}, "by_split": {"test_novel": {"accuracy": 0.4}}},
+                       {"relaxed_accuracy": 0.7, "by_lang": {"en": {"accuracy": 0.75}, "hi": {"accuracy": 0.66}}, "by_split": {"test_novel": {"accuracy": 0.6}}},
+                       {}, "pandeyankit84")
+    ok &= check("viz fill_card fills all __PENDING__ + username", _filled.count("__PENDING__") == 0 and "YOUR_USERNAME" not in _filled)
+    ok &= check("viz fill_card sets the model-index value", "value: 0.700" in _filled)
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 

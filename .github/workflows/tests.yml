@@ -26,8 +26,14 @@ jobs:
           grep -viE '^(torch|transformers|datasets|accelerate|adaption)([=<>~! ]|$)' requirements.txt > ci-requirements.txt
           pip install -r ci-requirements.txt
 
-      - name: Function-calling suite (219 checks)
+      - name: Function-calling suite
         run: python -m tests.smoke_test
 
-      - name: Data-visualization suite (57 checks)
+      - name: Data-visualization suite
         run: python -m tests.viz.test_viz
+
+      # data/ and results/ are gitignored, so CI can't verify a built-dataset manifest — but the CARDS
+      # are committed. Lint the release cards for stray placeholders (the FC cards must be fully clean;
+      # the viz MODEL card is expected to keep __PENDING__ until the VLM run, so it's not linted here).
+      - name: Release card lint (no unfilled placeholders in the ready cards)
+        run: python -m autoscientist_toolcaller.release lint-cards --cards MODEL_CARD.md DATASET_CARD.md VIZ_DATASET_CARD.md

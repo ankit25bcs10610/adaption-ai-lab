@@ -22,7 +22,8 @@ _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def preflight(out_dir: str = "data/out", card_paths=None, require_pref: bool = False,
-              check_manifest: bool = True, manifest_path: str = "results/manifest.json") -> list:
+              check_manifest: bool = True, manifest_path: str = "results/manifest.json",
+              publish_dir: str = None) -> list:
     """Return a list of BLOCKING release problems (empty list = safe to publish).
 
     Pure filesystem/string checks — never touches the network — so it can gate every upload and run in
@@ -43,6 +44,14 @@ def preflight(out_dir: str = "data/out", card_paths=None, require_pref: bool = F
     if card_paths is None:
         card_paths = [p for p in (os.path.join(_REPO_ROOT, "MODEL_CARD.md"),
                                   os.path.join(_REPO_ROOT, "DATASET_CARD.md")) if os.path.exists(p)]
+        # Also gate the card that actually SHIPS in the dir being published (e.g. data/hf_model/README.md,
+        # or a Data-Visualization weights dir carrying VIZ_MODEL_CARD.md as its README). This is stricter
+        # and more correct than globally listing the viz cards: it blocks a placeholder-bearing card for
+        # the exact release in flight (incl. chart-QA) without blocking a ready FC release while viz is pending.
+        if publish_dir:
+            shipped = os.path.join(publish_dir, "README.md")
+            if os.path.exists(shipped) and shipped not in card_paths:
+                card_paths.append(shipped)
     for cp in card_paths:
         try:
             text = cp if "\n" in cp else open(cp, encoding="utf-8").read()
@@ -64,14 +73,30 @@ def preflight(out_dir: str = "data/out", card_paths=None, require_pref: bool = F
     return problems
 
 
-def _enforce_preflight(out_dir: str = "data/out") -> None:
-    problems = preflight(out_dir)
+def lint_cards(card_paths: list) -> list:
+    """Placeholder-only lint of the given cards (no data/manifest checks) — CI-friendly since the cards
+    are committed but data/ and results/ are gitignored. Returns a list of problems (empty = clean)."""
+    problems = []
+    for cp in card_paths:
+        try:
+            text = open(cp, encoding="utf-8").read()
+        except OSError:
+            problems.append(f"card unreadable: {cp}")
+            continue
+        for marker in _PLACEHOLDERS:
+            if marker in text:
+                problems.append(f"placeholder '{marker}' in {cp}")
+    return problems
+
+
+def _enforce_preflight(out_dir: str = "data/out", publish_dir: str = None) -> None:
+    problems = preflight(out_dir, publish_dir=publish_dir)
     if problems:
         raise SystemExit("[release] PREFLIGHT FAILED — refusing to publish:\n  - " + "\n  - ".join(problems))
 
 
 def hf_upload(repo: str, path: str, repo_type: str) -> None:
-    _enforce_preflight()  # never publish a broken release
+    _enforce_preflight(publish_dir=path)  # never publish a broken release (+ gate the card shipping in `path`)
     from huggingface_hub import HfApi
 
     api = HfApi(token=os.environ.get("HF_TOKEN"))
@@ -83,7 +108,7 @@ def hf_upload(repo: str, path: str, repo_type: str) -> None:
 def kaggle_upload(
     slug: str, path: str, license_name: str, framework: str, variation: str = "default"
 ) -> None:
-    _enforce_preflight()  # never publish a broken release
+    _enforce_preflight(publish_dir=path)  # never publish a broken release (+ gate the card shipping in `path`)
     import kagglehub
 
     # kagglehub model handle grammar is <owner>/<model>/<framework>/<variation-slug>. The 4th part
@@ -104,7 +129,7 @@ def kaggle_dataset_upload(slug: str, path: str, license_name: str = "Apache 2.0"
 
     Handle grammar is <owner>/<dataset-slug>. kagglehub writes a dataset-metadata.json if absent.
     """
-    _enforce_preflight()
+    _enforce_preflight(publish_dir=path)
     import kagglehub
 
     kagglehub.dataset_upload(
@@ -140,14 +165,26 @@ def main() -> None:
 
     p4 = sub.add_parser("preflight", help="run release checks without uploading")
     p4.add_argument("--dir", default="data/out")
+    p4.add_argument("--cards", nargs="*", default=None,
+                    help="explicit card paths to gate (e.g. VIZ_MODEL_CARD.md VIZ_DATASET_CARD.md); "
+                         "defaults to the FC cards + any README.md shipping in --dir")
+
+    p5 = sub.add_parser("lint-cards", help="placeholder-only lint of committed cards (CI-safe, no data)")
+    p5.add_argument("--cards", nargs="+", required=True)
 
     args = ap.parse_args()
     if args.cmd == "preflight":
-        problems = preflight(args.dir)
+        problems = preflight(args.dir, card_paths=args.cards)
         if problems:
             print("[release] PREFLIGHT FAILED:\n  - " + "\n  - ".join(problems))
             raise SystemExit(1)
         print("[release] preflight OK — all artifacts present, LICENSE found, no placeholders.")
+    elif args.cmd == "lint-cards":
+        problems = lint_cards(args.cards)
+        if problems:
+            print("[release] CARD LINT FAILED:\n  - " + "\n  - ".join(problems))
+            raise SystemExit(1)
+        print(f"[release] card lint OK — no placeholders in {len(args.cards)} card(s).")
     elif args.cmd == "hf-dataset":
         hf_upload(args.repo, args.dir, "dataset")
     elif args.cmd == "hf-model":

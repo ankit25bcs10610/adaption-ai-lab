@@ -258,6 +258,19 @@ def main() -> None:
     print(f"[pref] wrote {len(pairs)} pairs -> {out} "
           f"({n_sft} SFT-derived incl. {n_hn} hard-neg, {n_env} execution-labeled env, {n_ag} agentic-step)")
 
+    # Refresh the reproducibility manifest so pref.jsonl's hash is current. build_dataset writes the
+    # manifest BEFORE pref.jsonl exists, so without this the manifest carries a stale pref hash and
+    # release preflight fails ("artifact changed"). Refreshing here keeps the pref build self-consistent
+    # (this was the exact drift that once blocked every upload).
+    try:
+        from . import manifest as _manifest
+        results_dir = cfg.get("paths", {}).get("results_dir", "results")
+        _manifest.write(out_dir=out_dir, config_path=args.config,
+                        manifest_path=os.path.join(results_dir, "manifest.json"))
+        print(f"[pref] refreshed {os.path.join(results_dir, 'manifest.json')} (pref.jsonl hash now current)")
+    except Exception as e:
+        print(f"[pref] manifest refresh skipped ({type(e).__name__}: {e})")
+
 
 if __name__ == "__main__":
     main()

@@ -57,6 +57,9 @@ python3 -m autoscientist_toolcaller.reliability_probe --model "$MODEL" $ADAPTER_
 echo "==> [6/7] HTML report + auto-filled model card (real numbers)"
 python3 -m autoscientist_toolcaller.eval_report --out "$RESULTS/report.html"
 python3 -m autoscientist_toolcaller.fill_model_card --username pandeyankit84 --template model_card_template.md --out MODEL_CARD.md
+# The card that actually ships with the weights is data/hf_model/README.md — keep it identical to the
+# freshly-filled MODEL_CARD.md so the published model card carries the real numbers (not a stale copy).
+cp MODEL_CARD.md data/hf_model/README.md
 
 echo "==> [7/7] Reproducibility manifest + release preflight"
 python3 -m autoscientist_toolcaller.manifest --out-dir "$DATA" --config config.yaml --manifest "$RESULTS/manifest.json"

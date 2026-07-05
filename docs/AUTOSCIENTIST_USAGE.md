@@ -31,8 +31,9 @@ client.datasets.run(
 
 ## 2. Measured result (real, held-out quality grade)
 
-**Dataset lineage — single source of truth.** The published open dataset (HF + Kaggle) is **3,174 rows**;
-the platform-graded runs below are earlier / curated **snapshots** of it, not separate datasets.
+**Dataset lineage — single source of truth.** The published open dataset (HF + Kaggle) is **3,346 rows**
+(3,234 `train`/`val`/`test` + 112 `test_novel`); the platform-graded runs below are earlier / curated
+**snapshots** of it, not separate datasets.
 
 | Run (dataset_id) | rows | status | score before → after | Δ | grade |
 |---|---|---|---|---|---|

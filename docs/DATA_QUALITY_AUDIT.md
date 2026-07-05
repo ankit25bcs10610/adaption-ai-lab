@@ -67,11 +67,15 @@ the Kaggle release handle mislabelled the model *variation* as a version.)
 
 After the fixes, on the same config and seed:
 
-- `no_tool` **8 → 239**, `miss_param` **1 → 36**, `ambiguous` **0 → 133**.
-- Realized source shares — positives **57.6%**, hard-negative **18.9%**, multi-turn **14.3%**,
-  schema-drift **9.1%** — now track the intended mix instead of collapsing toward positives.
-- `no_tool` sits at **8.1% of the total set**, inside the ~10% research optimum band; `mix_ok` passes.
-- Total examples: **3,174** (the published HF/Kaggle set) across `train / val / test` (+ a novel-tools holdout).
+- `no_tool` **8 → 284**, `miss_param` **1 → 32**, `ambiguous` **0 → 55** (current realized counts).
+- Realized source shares — positives (ToolACE) **50.6%**, hard-negative **19.7%**, multi-turn **15.8%**,
+  schema-drift **8.9%** — now track the intended mix instead of collapsing toward positives.
+- `no_tool` sits at **8.8% of the total set**, inside the ~10% research optimum band; `mix_ok` passes.
+- Total examples: **3,346** (the published HF/Kaggle set) — 3,234 across `train / val / test` + 112 in the
+  `test_novel` novel-tools holdout.
+- **0 schema-invalid `tool_call` golds shipped** — a build-time drop-guard validates every gold against
+  its tool's Draft-7 schema (`stats.json:schema_invalid_dropped`), so "correct by construction" is enforced,
+  not just asserted.
 
 Regression tests were added for each fix (`tests/smoke_test.py`: Hammer construction excludes the
 gold tool, the `<think>` firewall, the DPO poison guard), so the moat can't silently empty out again.
