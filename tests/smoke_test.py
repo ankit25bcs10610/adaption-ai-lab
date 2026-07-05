@@ -516,7 +516,9 @@ def main() -> int:
     from autoscientist_toolcaller.eval_bfcl import weighted_accuracy, BFCL_WEIGHTS
     ok &= check("BFCL weights sum to 1.0", abs(sum(BFCL_WEIGHTS.values()) - 1.0) < 1e-9)
     _wa = weighted_accuracy({"simple": {"accuracy": 1.0}, "multi_turn": {"accuracy": 0.0}})
-    ok &= check("weighted_accuracy renormalizes over present cats", abs(_wa - (0.12 / 0.32)) < 1e-9)
+    _exp = BFCL_WEIGHTS["simple"] / (BFCL_WEIGHTS["simple"] + BFCL_WEIGHTS["multi_turn"])  # v4-aligned weights
+    ok &= check("weighted_accuracy renormalizes over present cats", abs(_wa - _exp) < 1e-9)
+    ok &= check("v4 weights emphasize agentic+multi_turn (70%)", abs(BFCL_WEIGHTS["agentic"] + BFCL_WEIGHTS["multi_turn"] - 0.70) < 1e-9)
     ok &= check("weighted_accuracy None when no data", weighted_accuracy({"simple": {"accuracy": None}}) is None)
     from autoscientist_toolcaller.decontaminate import DEFAULT_PROBES as _PROBES, decontaminate as _decon
     ok &= check("decontam probe fixture expanded (>60)", len(_PROBES) > 60)
@@ -570,6 +572,17 @@ def main() -> int:
     ok &= check("oracle rollout succeeds on clean trajectory", _r["success"] and all(_r["per_step"]))
     _rr = rollout(_clean, lambda p: '{"action":"refuse","message":"no"}')
     ok &= check("always-refuse fails the trajectory", not _rr["success"])
+    # pass^k (#12): reliability under sampling. Needs a STATELESS oracle (re-derives the step from the
+    # prompt) since pass_hat_k re-runs the rollout n_trials times.
+    from autoscientist_toolcaller.eval_agentic import pass_hat_k
+    def _stateless_oracle(traj):
+        golds = [target_to_json_str(s["answer"]) for s in traj["steps"]]
+        return lambda p: golds[min(p.count("ASSISTANT:"), len(golds) - 1)]
+    ok &= check("pass^k = 1.0 when the model always solves it",
+                pass_hat_k(_clean, _stateless_oracle(_clean), k=3, n_trials=6) == 1.0)
+    ok &= check("pass^k = 0.0 when the model always fails",
+                pass_hat_k(_clean, lambda p: '{"action":"refuse","message":"no"}', k=3, n_trials=6) == 0.0)
+    ok &= check("pass^k None when n_trials < k", pass_hat_k(_clean, _stateless_oracle(_clean), k=5, n_trials=3) is None)
     _rec = next((t for t in _trajs if t["kind"] == "recovery"), None)
     if _rec is not None:
         ok &= check("oracle rollout succeeds on recovery (abstains on impossible step)",
@@ -722,6 +735,12 @@ def main() -> int:
              {"name": "play_music", "description": "Play a song", "parameters": {"type": "object", "properties": {"track": {"type": "string"}}, "required": ["track"]}}]
     _top = retrieve_tools(_pool, "what is the weather in Mumbai", 1)
     ok &= check("retriever ranks the weather tool #1", bool(_top) and _top[0]["name"] == "get_weather")
+    # hybrid dense arm: a semantically-related query with NO lexical overlap should still rank it #1
+    from autoscientist_toolcaller.tool_retrieval import ToolRetriever as _TR
+    _hr = _TR(_pool, use_dense=True)
+    if _hr._doc_emb is not None:  # dense embeddings available (model2vec)
+        ok &= check("hybrid retriever: semantic query (no lexical overlap) ranks weather #1",
+                    _hr.retrieve("forecast temperature today", 1)[0]["name"] == "get_weather")
     _rrec = [{"tools": [_W], "query": "weather in Mumbai", "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Mumbai"}}]}, "meta": {}}]
     _r1 = retrieval_recall(_rrec, _pool, k=1, m=3, seed=1)["recall_at_k"]
     _r5 = retrieval_recall(_rrec, _pool, k=5, m=3, seed=1)["recall_at_k"]

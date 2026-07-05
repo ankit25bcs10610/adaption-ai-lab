@@ -30,7 +30,7 @@ Concretely, the behavior the dataset teaches (canonical `call` / `refuse` / `cla
 | "Write me a poem about the monsoon." *(no applicable tool)* | ❌ hallucinates a call | ✅ **refuse** — "no available tool can do this" |
 | "Book me a flight to Goa." *(missing `origin`, `date`)* | ❌ guesses the missing args | ✅ **clarify** — asks for origin + date first |
 
-Everything is **measured vs. projected, kept separate** (the +15.7% is a real *dataset-quality* grade, not a model-accuracy claim), **open on HF + Kaggle**, **reproducible** (seeded + manifest), and **CI-verified** (291 offline checks + a release card lint). The one remaining step is the AutoScientist console training run, which turns the projected model numbers into measured ones.
+Everything is **measured vs. projected, kept separate** (the +15.7% is a real *dataset-quality* grade, not a model-accuracy claim), **open on HF + Kaggle**, **reproducible** (seeded + manifest), and **CI-verified** (296 offline checks + a release card lint). The one remaining step is the AutoScientist console training run, which turns the projected model numbers into measured ones.
 
 ---
 
@@ -43,7 +43,7 @@ The AutoScientist Challenge automates the model-training loop, so the competitiv
 | **Function-Calling** (`autoscientist_toolcaller/`) | All Other Domains | A tool-use model that **refuses and clarifies** instead of hallucinating a call | Hard negatives (no-tool / missing-arg / ambiguous) + multi-turn + schema-drift + a 5-language reliability slice |
 | **Data Visualization** (`autoscientist_toolcaller/viz/`) | Data Visualization | A chart-reader that competes where text-only entrants can't — **and speaks Hindi** | Self-verifying synthetic chart generator + Devanagari/romanized slice + a text-only Vega-Lite spec-reading modality |
 
-Everything is **offline-testable**: the heavy ML stack (`torch`, `transformers`, `datasets`, the Adaption SDK) is lazily imported, so the correctness-critical logic runs on a handful of light deps (`numpy`, `jsonschema`, `pyyaml`, …) with **no LLM/VLM weights and no API keys**. `python -m tests.smoke_test` and `python -m tests.viz.test_viz` pass **291 checks** — and now run on every push via [CI](https://github.com/ankit25bcs10610/adaption-ai-lab/actions/workflows/tests.yml).
+Everything is **offline-testable**: the heavy ML stack (`torch`, `transformers`, `datasets`, the Adaption SDK) is lazily imported, so the correctness-critical logic runs on a handful of light deps (`numpy`, `jsonschema`, `pyyaml`, …) with **no LLM/VLM weights and no API keys**. `python -m tests.smoke_test` and `python -m tests.viz.test_viz` pass **296 checks** — and now run on every push via [CI](https://github.com/ankit25bcs10610/adaption-ai-lab/actions/workflows/tests.yml).
 
 ---
 
@@ -146,7 +146,7 @@ The audit-count rows are the whole thesis: the "refuse / clarify / disambiguate"
 ├── web/                       # Next.js 14 + react-three-fiber landing page (in-browser tool-call playground)
 ├── site/                      # Zero-build single-file landing page (Three.js)
 ├── app/                       # Gradio demo (function-calling)
-├── tests/                     # Offline suites — tests/smoke_test.py (234) · tests/viz/test_viz.py (57)
+├── tests/                     # Offline suites — tests/smoke_test.py (239) · tests/viz/test_viz.py (57)
 ├── docs/                      # WINNING · DATA_QUALITY_AUDIT · AUTOSCIENTIST_USAGE · DATASHEET · CONSOLE_STEPS …
 ├── scripts/                   # run_all.sh (full pipeline) · finalize.sh (one-command run-day)
 └── requirements.txt · config.yaml
@@ -164,7 +164,7 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt        # full, pinned pipeline (canonical install)
 
 # Offline test suites — no downloads, no API keys
-python -m tests.smoke_test        # function-calling   → ALL PASS (234)
+python -m tests.smoke_test        # function-calling   → ALL PASS (239)
 python -m tests.viz.test_viz      # data-visualization → ALL PASS (57)
 ```
 
@@ -279,7 +279,7 @@ The site keeps **measured** numbers (the +15.7% grade, the audit) strictly separ
 Both suites are fully offline (no model downloads, no API keys) and exercise the correctness-critical logic — scorers, ground-truth generation, determinism, and every edge case surfaced by adversarial review.
 
 ```bash
-python -m tests.smoke_test      # 234 checks — function-calling
+python -m tests.smoke_test      # 239 checks — function-calling
 python -m tests.viz.test_viz    #  57 checks — data-visualization (scorer edge cases + synth GT + split integrity)
 ```
 
