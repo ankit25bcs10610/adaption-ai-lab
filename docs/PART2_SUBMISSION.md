@@ -32,7 +32,7 @@ with awards **per category**, so you have **two complete tracks → submit BOTH*
 
 ## Entry A — All Other Domains (function-calling)
 - **Which category:** `All Other Domains`
-- **Specify dataset ID:** `d92279d3-90c5-4da7-aef3-e506aa291cd6`
+- **Specify dataset ID:** `bea4a581-2ef4-44fa-b6ae-47ba5fcaf36f` (new 6,522-row set = the published HF/Kaggle dataset; grade finishing server-side. Fallback: `d92279d3-90c5-4da7-aef3-e506aa291cd6`)
   *(cleaned + diversified; use once it shows **Job Completed** — fallback `a99c0c96-…` is completed at +10%)*
 - **Final dataset (HF):** `https://huggingface.co/datasets/pandeyankit84/autoscientist-toolcaller-dataset`
 - **Kaggle:** `https://www.kaggle.com/datasets/pandeyankit99/autoscientist-toolcaller-dataset`

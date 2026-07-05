@@ -173,10 +173,22 @@ def judge_bfcl(example: Dict[str, Any], output_text: str, lenient: bool = True) 
     return res
 
 
-# Approximate BFCL-v4-style category emphasis (multi-turn + irrelevance carry the most weight). This is
-# a documented, CONFIGURABLE proxy — the real leaderboard weights differ — reported as a weighted proxy
-# alongside the flat micro-average so the aggregate isn't just an artifact of our own test-set category mix.
+# BFCL-v4 composition (Gorilla BFCL v4 blog: gorilla.cs.berkeley.edu/blogs/17_bfcl_v4_prompt_variation.html):
+#   Agentic 40% · Multi-Turn 30% · Live 10% · Non-Live 10% · Hallucination 10%.
+# We map our slices into that tree (equal-weight WITHIN a bucket) so the weighted aggregate matches the
+# benchmark that actually exists in 2026 (the previous weights were v3-shaped). `weighted_accuracy`
+# renormalizes over categories that have examples, so the **Live 10%** bucket (user-contributed / web-search
+# / memory — not covered offline) drops out and is reported as not-covered rather than silently mis-weighted.
 BFCL_WEIGHTS: Dict[str, float] = {
+    "agentic": 0.40,                                          # Agentic (40%)
+    "multi_turn": 0.30,                                       # Multi-Turn (30%)
+    "simple": 0.0333, "multiple": 0.0333, "parallel": 0.0334,  # Non-Live AST (10%)
+    "irrelevance": 0.05, "clarify": 0.05,                    # Hallucination / abstention (10%)
+    "live": 0.10,   # Live (user-contributed / web-search / memory) — NOT covered offline; since no example
+                    # ever carries category "live", weighted_accuracy renormalizes it away (reported not-covered).
+}
+# Pre-2026 v3 shape, kept for reference / A-B.
+BFCL_WEIGHTS_V3: Dict[str, float] = {
     "simple": 0.12, "multiple": 0.12, "parallel": 0.14,
     "multi_turn": 0.20, "irrelevance": 0.12, "clarify": 0.10, "agentic": 0.20,
 }

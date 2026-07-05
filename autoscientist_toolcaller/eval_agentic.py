@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+from math import comb
 from typing import Any, Callable, Dict, List
 
 from .agentic import _obs, env_by_name
@@ -96,6 +97,29 @@ def rollout(traj: Dict[str, Any], generate_fn: Callable[[str], str],
     # RECOVERY success additionally requires the last (impossible) step was abstained, not called.
     success = reached and (traj.get("kind") != "recovery" or (bool(per_step) and per_step[-1]))
     return {"success": bool(success), "per_step": per_step, "steps": len(traj["steps"]), "retries": total_retries}
+
+
+def pass_hat_k(traj: Dict[str, Any], generate_fn: Callable[[str], str],
+               k: int = 5, n_trials: int = None) -> float | None:
+    """Unbiased **pass^k** (tau-bench, arXiv:2406.12045): the probability the model succeeds on ALL k
+    i.i.d. attempts — a reliability/consistency metric a single greedy run hides. Run n_trials≥k
+    independent rollouts; with c successes of n the unbiased estimator is C(c,k)/C(n,k). Needs a
+    STOCHASTIC generate_fn (temperature>0); at temp 0 it collapses to 0/1. Returns None if n_trials<k."""
+    n = n_trials or max(k, 2 * k)
+    if n < k:
+        return None
+    c = sum(int(rollout(traj, generate_fn, n_samples=1)["success"]) for _ in range(n))
+    denom = comb(n, k)
+    return (comb(c, k) / denom) if denom else 0.0
+
+
+def evaluate_pass_hat_k(trajectories: List[Dict[str, Any]], generate_fn: Callable[[str], str],
+                        k: int = 5, n_trials: int = None) -> Dict[str, Any]:
+    """Fleet-level pass^k: mean over trajectories. Reported alongside single-run success so a judge sees
+    reliability under sampling, not just a lucky greedy pass."""
+    vals = [pass_hat_k(t, generate_fn, k=k, n_trials=n_trials) for t in trajectories]
+    vals = [v for v in vals if v is not None]
+    return {"k": k, "n": len(vals), "pass_hat_k": (sum(vals) / len(vals)) if vals else 0.0}
 
 
 def evaluate_agentic(trajectories: List[Dict[str, Any]], generate_fn: Callable[[str], str],
