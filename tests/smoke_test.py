@@ -637,6 +637,38 @@ def main() -> int:
     ok &= check("synth: critique rejection drops the case", _synth(1, [_W], complete_fn=_fake_critno, max_attempts=6) == [])
     ok &= check("synth: duplicate queries deduped", len(_synth(3, [_W], complete_fn=_fake_ok, max_attempts=20)) == 1)
 
+    print("agent runtime (goal -> call -> observe -> repeat):")
+    from autoscientist_toolcaller.agent import run_agent, safe_tools_registry, env_registry
+    from autoscientist_toolcaller.envs import CartEnv as _CartEnv
+
+    def _seq(*answers):
+        _it = iter([target_to_json_str(a) for a in answers])
+        return lambda p: next(_it)
+
+    _r1 = run_agent("compute 2+3", safe_tools_registry(), _seq(
+        {"type": "tool_call", "calls": [{"name": "add", "arguments": {"a": 2, "b": 3}}]},
+        {"type": "tool_call", "calls": [{"name": "finish", "arguments": {"answer": "5"}}]}), max_steps=5)
+    ok &= check("agent executes a real tool + finishes", _r1["status"] == "done" and _r1["result"] == "5"
+                and "OK 5" in _r1["transcript"][0]["observation"])
+    _r2 = run_agent("x", safe_tools_registry(), _seq(
+        {"type": "tool_call", "calls": [{"name": "nope", "arguments": {}}]},
+        {"type": "tool_call", "calls": [{"name": "finish", "arguments": {"answer": "x"}}]}), max_steps=5)
+    ok &= check("agent surfaces unknown-tool error as an observation", "unknown tool" in _r2["transcript"][0]["observation"])
+    _r3 = run_agent("impossible", safe_tools_registry(), lambda p: '{"action":"refuse","message":"no tool"}', max_steps=5)
+    ok &= check("agent stops on refuse (abstention is terminal)", _r3["status"] == "refuse")
+    _er = env_registry(_CartEnv())
+    _r4 = run_agent("manage cart", _er, _seq(
+        {"type": "tool_call", "calls": [{"name": "add_item", "arguments": {"item": "apples", "quantity": 3}}]},
+        {"type": "tool_call", "calls": [{"name": "remove_item", "arguments": {"item": "apples", "quantity": 10}}]},
+        {"type": "tool_call", "calls": [{"name": "finish", "arguments": {"answer": "done"}}]}), max_steps=6)
+    ok &= check("agent executes stateful env tools; over-remove errors, state intact",
+                _r4["status"] == "done" and "ERROR" in _r4["transcript"][1]["observation"]
+                and _er._state["s"]["items"].get("apples") == 3)
+    _r5 = run_agent("loop", safe_tools_registry(),
+                    lambda p: target_to_json_str({"type": "tool_call", "calls": [{"name": "add", "arguments": {"a": 1, "b": 1}}]}),
+                    max_steps=3)
+    ok &= check("agent respects the step budget", _r5["status"] == "max_steps" and _r5["steps"] == 3)
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 
