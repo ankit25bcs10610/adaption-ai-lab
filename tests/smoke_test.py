@@ -712,6 +712,26 @@ def main() -> int:
     ok &= check("sandbox write+read round-trip", _okw and _okr2 and _res2 == "written by agent")
     ok &= check("sandbox list_dir sees files", "notes.txt" in _fsreg.call("list_dir", {})[1])
 
+    print("tool retrieval + selection-under-N-tools eval:")
+    from autoscientist_toolcaller.tool_retrieval import retrieve_tools
+    from autoscientist_toolcaller.eval_tool_selection import pad_with_distractors, retrieval_recall, evaluate_tool_selection
+    import random as _rts
+    _pool = [_W, _S,
+             {"name": "send_email", "description": "Send an email to a recipient", "parameters": {"type": "object", "properties": {"to": {"type": "string"}}, "required": ["to"]}},
+             {"name": "set_timer", "description": "Set a countdown timer", "parameters": {"type": "object", "properties": {"seconds": {"type": "integer"}}, "required": ["seconds"]}},
+             {"name": "play_music", "description": "Play a song", "parameters": {"type": "object", "properties": {"track": {"type": "string"}}, "required": ["track"]}}]
+    _top = retrieve_tools(_pool, "what is the weather in Mumbai", 1)
+    ok &= check("retriever ranks the weather tool #1", bool(_top) and _top[0]["name"] == "get_weather")
+    _rrec = [{"tools": [_W], "query": "weather in Mumbai", "answer": {"type": "tool_call", "calls": [{"name": "get_weather", "arguments": {"city": "Mumbai"}}]}, "meta": {}}]
+    _r1 = retrieval_recall(_rrec, _pool, k=1, m=3, seed=1)["recall_at_k"]
+    _r5 = retrieval_recall(_rrec, _pool, k=5, m=3, seed=1)["recall_at_k"]
+    ok &= check("recall@k monotonic (k=5 >= k=1)", _r5 >= _r1)
+    _padded = pad_with_distractors(_rrec[0], _pool, 3, _rts.Random(0))
+    ok &= check("pad adds distractors + keeps gold tool", any(t["name"] == "get_weather" for t in _padded) and len(_padded) == 4)
+    _mts = evaluate_tool_selection(_rrec, lambda p: target_to_json_str(_rrec[0]["answer"]), _pool, k=5, m=3, seed=1)
+    ok &= check("tool-selection: full-context accuracy 1.0 (oracle, gold present)", _mts["accuracy_full_context"] == 1.0)
+    ok &= check("tool-selection: recall in [0,1]", 0.0 <= _mts["recall_at_k"] <= 1.0)
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 
