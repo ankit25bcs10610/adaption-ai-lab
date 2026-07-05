@@ -34,7 +34,7 @@ cp "$RESULTS/eval_$S1.json" "$RESULTS/eval.json"
 cp "$RESULTS/eval_bfcl_$S1.json" "$RESULTS/eval_bfcl.json" 2>/dev/null || true
 FT="$RESULTS/ft_$S1/predictions.jsonl"; BASEP="$RESULTS/base/predictions.jsonl"
 
-echo "==> [2b/7] Multilingual matched-pair Δaccuracy(lang−en) — the HackIndia robustness number"
+echo "==> [2b/7] Multilingual matched-pair Δaccuracy(lang−en) — the multilingual robustness number"
 python3 -m autoscientist_toolcaller.eval_multilingual --model "$MODEL" $ADAPTER_ARG --data "$DATA/test.jsonl" \
   --out "$RESULTS/eval_multilingual.json" | tee "$RESULTS/multilingual.txt" || true
 

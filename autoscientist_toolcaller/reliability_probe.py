@@ -202,7 +202,7 @@ def main() -> None:
     ap.add_argument("--adapter", default=None)
     ap.add_argument("--out", default="results/reliability_probe.md")
     ap.add_argument("--strict", action="store_true")
-    ap.add_argument("--self-check", action="store_true", help="run the oracle; must score 100%")
+    ap.add_argument("--self-check", action="store_true", help="run the oracle; it must fully pass (100 pct)")
     args = ap.parse_args()
 
     if args.self_check or not args.model:
