@@ -45,7 +45,8 @@ def _row(label: str, base: Dict[str, Any], ft: Dict[str, Any], key: str, se_key:
     return f"| {label} | {bcell} | {fcell} |"
 
 
-def build_metrics_block(base: Dict[str, Any], ft: Dict[str, Any], adaption: Dict[str, Any]) -> str:
+def build_metrics_block(base: Dict[str, Any], ft: Dict[str, Any], adaption: Dict[str, Any],
+                        agentic: Dict[str, Any] = None, multilingual: Dict[str, Any] = None) -> str:
     lines = [
         "| Metric | Base | Fine-tuned |",
         "|---|---|---|",
@@ -55,6 +56,16 @@ def build_metrics_block(base: Dict[str, Any], ft: Dict[str, Any], adaption: Dict
         _row("Clarify accuracy", base, ft, "clarify_accuracy"),
         _row("**Hallucination rate on hard negatives** ↓", base, ft, "hallucination_rate"),
     ]
+    # Advanced signals: calibration (over-refusal), agentic trajectory success, multilingual Δ.
+    bcal, fcal = (base.get("calibration") or {}), (ft.get("calibration") or {})
+    if isinstance(fcal.get("over_refusal_rate"), (int, float)):
+        lines.append(f"| Over-refusal rate ↓ | {_cell(bcal.get('over_refusal_rate'))} | {_cell(fcal.get('over_refusal_rate'))} |")
+    if agentic and agentic.get("n"):
+        lines.append(f"| Agentic trajectory success | — | {agentic['trajectory_success_rate']:.3f} |")
+        lines.append(f"| Agentic per-step accuracy | — | {agentic['per_step_accuracy']:.3f} |")
+    if multilingual and multilingual.get("matched_pair_delta_vs_en"):
+        for lang, d in sorted(multilingual["matched_pair_delta_vs_en"].items()):
+            lines.append(f"| Δacc({lang}−en) | — | {d['delta_vs_en']:+.3f} |")
     summ = adaption.get("evaluation_summary") if adaption else None
     if isinstance(summ, dict):
         ip = summ.get("improvement_percent")
@@ -69,6 +80,8 @@ def main() -> None:
     ap.add_argument("--baseline", default="results/baseline.json")
     ap.add_argument("--finetuned", default="results/eval.json")
     ap.add_argument("--adaption", default="results/adaption_run.json")
+    ap.add_argument("--agentic", default="results/eval_agentic.json")
+    ap.add_argument("--multilingual", default="results/eval_multilingual.json")
     ap.add_argument("--template", default="model_card_template.md")
     ap.add_argument("--out", default="MODEL_CARD.md")
     args = ap.parse_args()
@@ -79,7 +92,7 @@ def main() -> None:
 
     text = open(args.template, encoding="utf-8").read()
 
-    block = build_metrics_block(base, ft, adaption)
+    block = build_metrics_block(base, ft, adaption, _load(args.agentic), _load(args.multilingual))
     text = re.sub(
         r"<!--METRICS_START-->.*?<!--METRICS_END-->",
         f"<!--METRICS_START-->\n{block}\n<!--METRICS_END-->",

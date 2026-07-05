@@ -281,6 +281,54 @@ def render_radar(bfcl: Dict[str, Any], size: int = 300) -> str:
     )
 
 
+def render_agentic(ag: Dict[str, Any]) -> str:
+    """Agentic trajectory eval (results/eval_agentic.json): free-rollout success + per-step + by-env."""
+    if not ag or not ag.get("n"):
+        return ""
+    by = ag.get("by_env") or {}
+    rows = "".join(
+        f"<tr><td>{e}</td><td>{v['success_rate']*100:.1f}%</td><td>{v['n']}</td></tr>"
+        for e, v in sorted(by.items())
+    )
+    tbl = (f'<table><thead><tr><th>Env</th><th>Success</th><th>n</th></tr></thead>'
+           f'<tbody>{rows}</tbody></table>') if rows else ""
+    return ("<h2>Agentic trajectory eval</h2>"
+            '<p class="muted">Free rollout — the environment is advanced by the model&rsquo;s own actions '
+            "(observation-in-the-loop). Recovery trajectories must abstain on the impossible step.</p>"
+            f'<p><span class="badge">{ag["trajectory_success_rate"]*100:.1f}% trajectory success</span> '
+            f'· per-step {ag["per_step_accuracy"]*100:.1f}% · avg {ag.get("avg_steps",0):.1f} steps · n={ag["n"]}</p>'
+            + tbl)
+
+
+def render_calibration(ft: Dict[str, Any]) -> str:
+    """Abstention calibration (from the fine-tuned eval's calibration block)."""
+    cal = (ft or {}).get("calibration")
+    if not cal:
+        return ""
+    return ("<h2>Calibration &amp; abstention</h2>"
+            '<p class="muted">Does the model abstain when it should (refuse/clarify) WITHOUT over-refusing '
+            "satisfiable requests?</p>"
+            f'<p><span class="badge">over-refusal {cal["over_refusal_rate"]*100:.1f}%</span> '
+            f'· abstention precision {cal["abstention_precision"]*100:.1f}% '
+            f'· recall {cal["abstention_recall"]*100:.1f}%</p>')
+
+
+def render_multilingual(ml: Dict[str, Any]) -> str:
+    """Matched-pair Δaccuracy(lang−en) (results/eval_multilingual.json)."""
+    if not ml or not ml.get("languages"):
+        return ""
+    by, d = ml["by_lang"], ml.get("matched_pair_delta_vs_en", {})
+    rows = []
+    for lang in ml["languages"]:
+        acc = by[lang]["accuracy"]
+        acc_s = f"{acc*100:.1f}%" if isinstance(acc, (int, float)) else "n/a"
+        dv = "—" if lang == "en" else (f'{d[lang]["delta_vs_en"]*100:+.1f} pp' if lang in d else "n/a")
+        rows.append(f"<tr><td>{lang}</td><td>{acc_s}</td><td>{dv}</td></tr>")
+    return ("<h2>Multilingual robustness (matched-pair &Delta;)</h2>"
+            "<table><thead><tr><th>Lang</th><th>Accuracy</th><th>&Delta; vs en</th></tr></thead>"
+            f"<tbody>{''.join(rows)}</tbody></table>")
+
+
 def render_html(
     base: Dict[str, Any],
     ft: Dict[str, Any],
@@ -289,6 +337,8 @@ def render_html(
     stats: Optional[Dict[str, Any]] = None,
     decomp: Optional[Dict[str, Any]] = None,
     errors: Optional[List[Dict[str, Any]]] = None,
+    agentic: Optional[Dict[str, Any]] = None,
+    multilingual: Optional[Dict[str, Any]] = None,
 ) -> str:
     improvement = ""
     b, f = base.get("overall_accuracy"), ft.get("overall_accuracy")
@@ -303,8 +353,12 @@ def render_html(
 <h2>Base vs. fine-tuned</h2>
 <p class="muted">Identical greedy decoding for both. Lower is better for hallucination.</p>
 {render_metric_table(base, ft)}
+{('<p><span class="badge">BFCL-weighted ' + f"{bfcl['weighted_accuracy']*100:.1f}%" + '</span> (proxy, category-weighted)</p>') if isinstance((bfcl or {}).get('weighted_accuracy'), (int, float)) else ''}
 {render_category_bars(bfcl)}
 {render_radar(bfcl)}
+{render_agentic(agentic or {})}
+{render_calibration(ft)}
+{render_multilingual(multilingual or {})}
 {render_schema_drift(ft)}
 {render_confusion(preds)}
 {render_error_explorer(errors or [])}
@@ -321,13 +375,15 @@ def main() -> None:
     ap.add_argument("--stats", default="results/eval_stats.json")
     ap.add_argument("--decomp", default="results/eval_decompose.json")
     ap.add_argument("--errors", default="results/errors.jsonl")
+    ap.add_argument("--agentic", default="results/eval_agentic.json")
+    ap.add_argument("--multilingual", default="results/eval_multilingual.json")
     ap.add_argument("--out", default="results/report.html")
     args = ap.parse_args()
 
     html = render_html(
         _load(args.baseline), _load(args.finetuned), _load(args.bfcl),
         _load_jsonl(args.predictions), _load(args.stats), _load(args.decomp),
-        _load_jsonl(args.errors),
+        _load_jsonl(args.errors), _load(args.agentic), _load(args.multilingual),
     )
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     open(args.out, "w", encoding="utf-8").write(html)

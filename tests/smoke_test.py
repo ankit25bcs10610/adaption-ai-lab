@@ -669,6 +669,20 @@ def main() -> int:
                     max_steps=3)
     ok &= check("agent respects the step budget", _r5["status"] == "max_steps" and _r5["steps"] == 3)
 
+    print("report + model-card wiring (agentic / calibration / multilingual):")
+    from autoscientist_toolcaller.eval_report import render_agentic, render_calibration, render_multilingual
+    from autoscientist_toolcaller.fill_model_card import build_metrics_block
+    _agm = {"n": 5, "trajectory_success_rate": 0.8, "per_step_accuracy": 0.9, "avg_steps": 3.0, "by_env": {"cart": {"success_rate": 0.8, "n": 5}}}
+    ok &= check("report renders agentic block", "trajectory success" in render_agentic(_agm) and "cart" in render_agentic(_agm))
+    _ftc = {"calibration": {"over_refusal_rate": 0.1, "abstention_precision": 0.9, "abstention_recall": 0.8}}
+    ok &= check("report renders calibration block", "over-refusal" in render_calibration(_ftc))
+    _mlm = {"languages": ["en", "hi"], "by_lang": {"en": {"accuracy": 0.9}, "hi": {"accuracy": 0.8}},
+            "matched_pair_delta_vs_en": {"hi": {"delta_vs_en": -0.1}}}
+    ok &= check("report renders multilingual Δ block", "hi" in render_multilingual(_mlm) and "vs en" in render_multilingual(_mlm))
+    _blk = build_metrics_block({}, _ftc, {}, agentic=_agm, multilingual=_mlm)
+    ok &= check("model card includes agentic + Δ + over-refusal rows",
+                "Agentic trajectory success" in _blk and "Δacc(hi−en)" in _blk and "Over-refusal rate" in _blk)
+
     print("\nRESULT:", "ALL PASS ✅" if ok else "FAILURES ❌")
     return 0 if ok else 1
 
