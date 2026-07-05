@@ -12,7 +12,7 @@
 [![CI](https://github.com/ankit25bcs10610/adaption-ai-lab/actions/workflows/tests.yml/badge.svg)](https://github.com/ankit25bcs10610/adaption-ai-lab/actions/workflows/tests.yml)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](#license--acknowledgements)
 
-[**Live site**](https://autoscientist-toolcaller.vercel.app) · [In-browser demo](https://huggingface.co/spaces/pandeyankit84/autoscientist-toolcaller-demo) · [Datasets](#live-artifacts-published--open) · [Data-quality audit](docs/DATA_QUALITY_AUDIT.md) · [Submission status](SUBMISSION.md)
+[**Live site**](https://autoscientist-toolcaller.vercel.app) · [In-browser demo](https://huggingface.co/spaces/pandeyankit84/autoscientist-toolcaller-demo) · [Datasets](#live-artifacts-published--open) · [Paper](docs/paper.md) · [Data-quality audit](docs/DATA_QUALITY_AUDIT.md) · [Submission status](SUBMISSION.md)
 
 </div>
 
