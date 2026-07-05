@@ -15,8 +15,8 @@ Keep: **`d92279d3…`** (2,557 rows — the cleaned + diversified set) and `a99c
 "Data Uploading" or 0%, it's queue-blocked — cancelling the two above frees it.
 
 ## 2. Run the AutoScientist training loop (produces WEIGHTS + held-out number)
-1. Open `bea4a581-2ef4-44fa-b6ae-47ba5fcaf36f` (the new 6,522-row set that matches the published HF/Kaggle
-   dataset; its grade is finishing server-side) → the **AUTOSCIENTIST** column/tab → **Launch / Train**.
+1. Open `4e4178c7-adf1-4fdf-9c76-90ad29275047` (the FINAL 7,566-row set — exactly the published
+   HF/Kaggle dataset; already uploaded + cost-estimated ~87 min / 62 credits, run NOT yet launched) → the **AUTOSCIENTIST** column/tab → **Launch / Train**.
    *(fallback: the older `d92279d3` 2,557-row set.)*
 2. Objective: **instruction_dataset** (prompt → completion).
 3. Column mapping: `prompt` → prompt, `completion` → completion (already set for this dataset).

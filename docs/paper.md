@@ -15,14 +15,14 @@
 Most function-calling datasets contain only examples where a tool *should* be invoked, which trains models
 to call a tool even when none applies or when required arguments are missing — the dominant failure mode of
 real agents. We take the opposite view: the hardest and most valuable decision in tool use is **when *not* to
-call a tool**. We construct an original, **correct-by-construction** function-calling dataset (6,522 examples)
+call a tool**. We construct an original, **correct-by-construction** function-calling dataset (7,566 examples)
 in which ~40% of the data is *structured negative supervision* — refuse (no applicable tool), clarify
 (missing argument / ambiguous intent), over-refusal traps (hedged-but-satisfiable requests that must still
 call), and partial-parallel (two intents → two calls) — synthesized from real tool schemas so every gold
 label is verifiable. We add execution-verified multi-turn trajectories from deterministic tool environments,
 a schema-drift slice, and a five-language reliability slice. A two-pass adversarial audit of our own build
 pipeline caught the negative-supervision "moat" being silently discarded by deduplication (refuse examples
-8 → 531) and 36% → 0% schema-invalid gold calls, the latter now enforced by a build-time drop-guard. Graded
+8 → 644) and 36% → 0% schema-invalid gold calls, the latter now enforced by a build-time drop-guard. Graded
 on Adaption's Adaptive Data platform, dataset quality improved **+15.7% (grade C → B)**. We release the
 dataset, an execution-verified evaluation harness (BFCL-v4-weighted, calibration/abstention metrics,
 bootstrapped confidence intervals + McNemar significance), reproducibility manifests, and a live demo.
@@ -69,20 +69,28 @@ Each example is `{tools, query, [history], answer}` where `answer` is a single J
   state-diff checkers *run* each candidate call and verify the resulting state, yielding correct-by-
   construction multi-call trajectories and checker-proven-wrong preference pairs.
 - **Agentic trajectories** (`agentic.py`) — observation-in-the-loop multi-step rollouts with error-recovery
-  steps (impossible → clarify; already-satisfied → stop).
+  steps (impossible → clarify; already-satisfied → stop), plus **fault-injection** variants: a scripted
+  transient tool error (503 / 429 / timeout / malformed payload) whose gold continuation is to *retry the
+  same call* — failure realism per BFCL-v4's injected errors and PALADIN (arXiv:2509.25238).
 - **Schema-drift** (`schema_drift.py`) — tools whose schema changed under the model (param added /
   retyped / renamed), teaching schema-awareness.
 - **Multilingual** (`multilingual.py`) — matched English/Hindi/romanized twins sharing a `pair_id` for a
   clean cross-language Δ.
+- **Format-invariance twins** (`format_twins.py`) — the same example with tool docs re-rendered as Python
+  signatures / XML / a compact list, gold identical — targeting BFCL-v4's *format sensitivity* bucket,
+  where tool-specialized fine-tunes notoriously overfit one documentation format.
+- **Masked twins** (`format_twins.py`) — Hammer-style function masking (arXiv:2410.04587): neutral
+  `func_i`/`arg_j` names with descriptions kept and gold renamed consistently, killing naming-convention
+  shortcuts (select-by-description).
 
 **Hygiene.** MinHash + semantic deduplication, cross-split leakage removal, and a decontamination pass
 against BFCL/ToolACE-style probes protect the held-out claim. A final **drop-guard** validates every
 `tool_call` gold against its Draft-7 schema (`additionalProperties:false`), guaranteeing 0 invalid golds
 in the shipped artifacts (`stats.json:schema_invalid_dropped`).
 
-**Composition (published set: 6,522 examples, 7,315 unique tools).** 6,279 across train/val/test + 243 in
+**Composition (published set: 7,566 examples, 7,315 unique tools).** 7,323 across train/val/test + 243 in
 a `test_novel` holdout using tool names never seen in training. Realized source shares: positives ≈ 50%,
-hard-negative ≈ 20%, multi-turn ≈ 15%, schema-drift ≈ 9%, multilingual ≈ 4%; `no_tool` ≈ 8.5% of total.
+hard-negative ≈ 17%, multi-turn ≈ 13%, schema-drift ≈ 8%, multilingual ≈ 3%, format-twins ≈ 10%, masked-twins ≈ 4%; `no_tool` ≈ 8.8% of total.
 
 ## 4. AutoScientist / Adaptive Data usage
 
@@ -110,8 +118,8 @@ harness is offline-testable (291 checks) so its correctness is verified independ
 
 Adaptive Data graded the audited dataset **7.0 → 8.1, +15.7%, grade C → B** on the fixed set (`c4923b7f`,
 1,000/2,440 rows under the free-tier cap); a completed 250-row reference run (`a99c0c96`) corroborates at
-**+10.0%, grade B**. The audit before/after (the whole thesis): `no_tool` 8 → 531, `miss_param` 1 → 63,
-`ambiguous` 0 → 142, schema-invalid gold calls 36% → 0%.
+**+10.0%, grade B**. The audit before/after (the whole thesis): `no_tool` 8 → 644, `miss_param` 1 → 70,
+`ambiguous` 0 → 167, schema-invalid gold calls 36% → 0%.
 
 ### 6.2 Held-out model improvement (pending the console run)
 

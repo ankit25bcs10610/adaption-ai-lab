@@ -214,6 +214,7 @@ def evaluate_bfcl(
 
     cats = ["simple", "multiple", "parallel", "multi_turn", "irrelevance", "clarify", "agentic"]
     buckets: Dict[str, List[Dict[str, Any]]] = {c: [] for c in cats}
+    fmt_bits: Dict[str, List[int]] = {}
     all_bits: List[int] = []
     hard_halluc = 0
     hard_total = 0
@@ -223,6 +224,9 @@ def evaluate_bfcl(
         v = judge_bfcl(ex, generate_fn(prompt), lenient=lenient)
         buckets[v["category"]].append(v)
         all_bits.append(int(v["correct"]))
+        # format-sensitivity bucket (BFCL v4): same contract, different tool-doc rendering
+        fmt = (ex.get("meta") or {}).get("doc_format") or "json"
+        fmt_bits.setdefault(fmt, []).append(int(v["correct"]))
         if v["category"] in ("irrelevance", "clarify"):
             hard_total += 1
             hard_halluc += int(v["hallucinated_call"])
@@ -245,6 +249,14 @@ def evaluate_bfcl(
         "category_weights": BFCL_WEIGHTS,
         "hallucination_rate": (hard_halluc / hard_total) if hard_total else 0.0,
         "by_category": per_cat,
+        # BFCL-v4 format sensitivity: accuracy per tool-doc rendering + the spread (max−min). A LOW
+        # format_delta is the robustness claim — the model reads the contract, not the formatting.
+        "by_format": {f: {"n": len(b), "accuracy": (sum(b) / len(b)) if b else None}
+                      for f, b in sorted(fmt_bits.items())},
+        "format_delta": (
+            (lambda accs: (max(accs) - min(accs)) if len(accs) >= 2 else None)
+            ([sum(b) / len(b) for b in fmt_bits.values() if b])
+        ),
     }
 
 

@@ -6,8 +6,8 @@ already done, tested, and committed; this is the only remaining path. Detailed r
 [`PART2_SUBMISSION.md`](PART2_SUBMISSION.md) · [`social_posts.md`](social_posts.md).
 
 ## 0. Get the weights + held-out number  ·  *(you, web console — the one gate)*
-1. **adaptionlabs.ai/app** → open dataset **`bea4a581-2ef4-44fa-b6ae-47ba5fcaf36f`** (the new 6,522-row set,
-   matches the published HF/Kaggle dataset; grade finishing server-side) → **AUTOSCIENTIST** tab → **Launch / Train**. *(older `d92279d3` 2,557-row set is the fallback.)*
+1. **adaptionlabs.ai/app** → open dataset **`4e4178c7-adf1-4fdf-9c76-90ad29275047`** (the FINAL 7,566-row set —
+   exactly the published HF/Kaggle dataset, uploaded + cost-estimated, run not yet launched) → **AUTOSCIENTIST** tab → **Launch / Train**. *(older `d92279d3` 2,557-row set is the fallback.)*
 2. Wait for **Job Completed**. Note the **held-out number** and the **weights** (HF id or a download).
 
 ## 0b. Depth-of-AutoScientist evidence (criterion #4)  ·  *(you, console)*

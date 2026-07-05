@@ -17,7 +17,7 @@ import json
 import random
 from typing import Any, Dict, List, Optional
 
-from .envs import CalendarEnv, CartEnv, FRUITS, TITLES, _intent_text, _valid_next_call, _perturb
+from .envs import CalendarEnv, CartEnv, FRUITS, TITLES, TRANSIENT_FAULTS, _intent_text, _valid_next_call, _perturb
 from .format_utils import target_to_json_str
 
 _ENV_BY_NAME = {"cart": CartEnv, "calendar": CalendarEnv}
@@ -72,20 +72,37 @@ def build_trajectory(env, rng: random.Random, traj_id: str) -> Optional[Dict[str
     if len(plan) < 2:
         return None
 
-    recovery = rng.random() < 0.35
+    # Trajectory kind: clean (base) / recovery (impossible final step → clarify) / fault (a transient
+    # tool error is injected mid-trajectory and the gold is to RETRY the same call — failure realism per
+    # BFCL v4's injected errors / PALADIN / Failure-Makes-the-Agent-Stronger). Mutually exclusive.
+    roll = rng.random()
+    recovery = roll < 0.35
+    fault = (not recovery) and roll < 0.65
     intents = [_intent_text(env, c) for c in plan]
     bad_call = clarify_msg = None
     if recovery:
         bad_call, clarify_msg = _impossible_call(env, cur, rng)  # impossible in the FINAL reached state
         intents.append(_intent_text(env, bad_call))
     goal = " ".join(intents)
+    fault_at = rng.randrange(len(plan)) if fault else -1
+    fault_obs = rng.choice(TRANSIENT_FAULTS) if fault else None
 
     steps: List[Dict[str, Any]] = []
     state = env.blank()
     hist: List[Dict[str, Any]] = []
-    for c in plan:
+    for j, c in enumerate(plan):
         pre = copy.deepcopy(state)
         answer = {"type": "tool_call", "calls": [c]}
+        if j == fault_at:
+            # 1) the gold call whose observation will be the transient fault (state does NOT advance)
+            steps.append({
+                "history": copy.deepcopy(hist), "query": goal, "answer": answer,
+                "gold_action": "call", "pre_state": pre,
+                "inject_fault": True, "fault_obs": fault_obs,
+            })
+            hist.append({"role": "assistant", "content": target_to_json_str(answer)})
+            hist.append({"role": "tool", "content": fault_obs})
+            # 2) the RETRY step: same gold call, now with the fault in history (error → reflect → retry)
         steps.append({
             "history": copy.deepcopy(hist), "query": goal, "answer": answer,
             "gold_action": "call", "pre_state": pre,
@@ -109,7 +126,7 @@ def build_trajectory(env, rng: random.Random, traj_id: str) -> Optional[Dict[str
     return {
         "traj_id": traj_id, "env": env.name, "tools": env.tools(), "goal": goal,
         "init_state": env.blank(), "steps": steps, "final_state": final_state,
-        "kind": "recovery" if recovery else "clean",
+        "kind": "recovery" if recovery else ("fault" if fault else "clean"),
     }
 
 

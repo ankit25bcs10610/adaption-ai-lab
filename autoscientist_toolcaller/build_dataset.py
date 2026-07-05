@@ -363,7 +363,11 @@ def _split_group_key(ex: Dict[str, Any], i: int) -> str:
     meta = ex.get("meta", {}) or {}
     pid = meta.get("pair_id")
     if pid is not None:
-        return f"{meta.get('source', '')}:pair:{pid}"
+        # Key on pair_id ALONE (no source namespace): format/masked twins deliberately carry a different
+        # meta.source than their source example, and namespacing by source split those groups apart —
+        # letting a twin land in test while its source sat in train (verbatim-query leakage). Pair-id
+        # families are prefix-disjoint (multilingual: int, agentic: "traj_*", twins: "fmt-*"/"mask-*").
+        return f"pair:{pid}"
     return f"solo:{i}"
 
 
@@ -528,6 +532,22 @@ def main() -> None:
     if mlx:
         combined += mlx
         print(f"[build] multilingual appended post-dedup: +{len(mlx)} (cross-language twins preserved)")
+
+    # Format-invariance + masked twins (BFCL-v4 format sensitivity / Hammer function-masking) — same
+    # post-dedup rule (they share the source's query verbatim). Each twin shares meta.pair_id with its
+    # source (assigned in place), so split() can never leak a twin across the train/test boundary.
+    ft_n = dcfg.get("format_twin_sources", 0)
+    if ft_n:
+        from . import format_twins as _ftw
+        ftx = _ftw.generate_format_twins(combined, ft_n, seed=seed)
+        combined += ftx
+        print(f"[build] format twins appended post-dedup: +{len(ftx)} (python/xml/compact tool docs)")
+    mk_n = dcfg.get("masked_twin_examples", 0)
+    if mk_n:
+        from . import format_twins as _ftw
+        mkx = _ftw.generate_masked_twins(combined, mk_n, seed=seed)
+        combined += mkx
+        print(f"[build] masked twins appended post-dedup: +{len(mkx)} (func_i/arg_j neutral names)")
 
     # Agentic multi-step trajectories — appended AFTER dedup on purpose: every step of one trajectory
     # shares the goal query (only the per-step call differs), so the query-based dedup would wrongly

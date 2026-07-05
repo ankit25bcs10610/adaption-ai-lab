@@ -16,9 +16,9 @@ was almost entirely absent from the shipped data:
 
 | Slice (the moat)                     | Intended | **Before** | **After** |
 |--------------------------------------|:--------:|:----------:|:---------:|
-| `no_tool` (refuse — no tool applies) | ~10% of total | **8 rows** | **531 rows** |
-| `miss_param` (clarify — arg missing across turns) | material | **1 row** | **63 rows** |
-| `ambiguous` (clarify — which tool?)  | material | **0 rows** | **142 rows** |
+| `no_tool` (refuse — no tool applies) | ~10% of total | **8 rows** | **644 rows** |
+| `miss_param` (clarify — arg missing across turns) | material | **1 row** | **70 rows** |
+| `ambiguous` (clarify — which tool?)  | material | **0 rows** | **167 rows** |
 
 Eight training rows cannot teach abstention. The claim and the data had diverged.
 
@@ -67,11 +67,12 @@ the Kaggle release handle mislabelled the model *variation* as a version.)
 
 After the fixes, on the same config and seed:
 
-- `no_tool` **8 → 531**, `miss_param` **1 → 63**, `ambiguous` **0 → 142** (current realized counts).
-- Realized source shares — positives (ToolACE) **50.4%**, hard-negative **19.9%**, multi-turn **15.0%**,
-  schema-drift **8.8%**, multilingual **3.6%** — now track the intended mix instead of collapsing toward positives.
-- `no_tool` sits at **8.5% of the total set**, inside the ~10% research optimum band; `mix_ok` passes.
-- Total examples: **6,522** (the published HF/Kaggle set) — 6,279 across `train / val / test` + 243 in the
+- `no_tool` **8 → 644**, `miss_param` **1 → 70**, `ambiguous` **0 → 167** (current realized counts).
+- Realized source shares — positives (ToolACE) **43.2%**, hard-negative **17.1%**, multi-turn **12.9%**,
+  schema-drift **7.5%**, multilingual **3.2%**, format-twin **9.8%**, masked-twin **3.9%** — now track the
+  intended mix instead of collapsing toward positives.
+- `no_tool` sits at **8.8% of the total set**, inside the ~10% research optimum band; `mix_ok` passes.
+- Total examples: **7,566** (the published HF/Kaggle set) — 7,323 across `train / val / test` + 243 in the
   `test_novel` novel-tools holdout, spanning **7,315 unique tools**.
 - **0 schema-invalid `tool_call` golds shipped** — a build-time drop-guard validates every gold against
   its tool's Draft-7 schema (`stats.json:schema_invalid_dropped`), so "correct by construction" is enforced,

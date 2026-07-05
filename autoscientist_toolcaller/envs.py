@@ -26,6 +26,17 @@ FRUITS = ["apples", "bananas", "oranges", "grapes", "mangoes"]
 DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 TITLES = ["Standup", "Review", "1:1", "Planning", "Demo"]
 
+# Transient tool-layer faults for failure-realism trajectories (BFCL v4 injects exactly this class of
+# error into its agentic tracks; see also PALADIN arXiv:2509.25238, "Failure Makes the Agent Stronger"
+# arXiv:2509.18847). The correct behavior on a TRANSIENT fault is to RETRY the same call — not to
+# abandon the task, switch tools, or hallucinate success. The env state does not advance on a fault.
+TRANSIENT_FAULTS = [
+    "HTTP 503 Service Unavailable — the tool backend is temporarily down; a retry may succeed.",
+    "HTTP 429 Too Many Requests — rate limited; retry the same call after a moment.",
+    "ReadTimeout: the tool did not respond in time; the request may not have been processed.",
+    "ERROR: malformed JSON in the tool response — the payload could not be parsed; please retry.",
+]
+
 
 class CartEnv:
     name = "cart"
