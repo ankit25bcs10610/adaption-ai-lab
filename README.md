@@ -104,6 +104,7 @@ The audit-count rows are the whole thesis: the "refuse / clarify / disambiguate"
 │   ├── schema_drift.py          tools whose schema changed under the model
 │   ├── multilingual.py          matched-twin reliability slice — en / hi / hi-rom / es / fr
 │   ├── envs.py · agentic.py      execution-verified envs  ·  multi-STEP observation-in-the-loop trajectories
+│   ├── agent.py                 LIVE agent runtime — goal → call a real tool → observe → repeat (+ MCP hook)
 │   ├── synth_llm.py             LLM generate → critique → schema-verify → dedup (opt-in, mockable)
 │   ├── curriculum.py            per-example difficulty scoring + curriculum ordering
 │   ├── reasoning.py             optional <think> traces distilled from gold (gated off by default)
@@ -282,7 +283,7 @@ Every module is `py_compile`-clean. The data-viz scorer and synthetic generator 
 |---|---|
 | **Measurable improvement over baseline** | `baseline.py` / `viz/baseline.py` + `eval_bfcl.py` / `eval_chart.py` — identical decoding, bootstrapped std error, base-vs-fine-tuned tables, gap decomposition |
 | **Dataset quality & originality** | Hard-negative + multi-turn + schema-drift generators; 5-language reliability slice; self-verifying synthetic charts + Vega spec-reading; dedup + decontamination + LLM-as-judge |
-| **Real-world impact** | Agent tool-use reliability (knowing when *not* to call); multilingual (Hindi) chart understanding |
+| **Real-world impact** | Agent tool-use reliability (knowing when *not* to call), demonstrated by a **live agent runtime** (`agent.py`) that executes real tools with the call/refuse/clarify guardrails; multilingual (Hindi) chart understanding |
 | **Depth of AutoScientist usage** | `train_adaption.py` (SDK end-to-end with recipes, brand controls, `estimate=True`) + `recipe_ablation.py` grade-per-config grid + the measured C→B grade |
 | **Open-release quality** | Auto-filled model + dataset cards, pinned deps, seeds + manifest, HTML eval report, GGUF export, live demos on HF + Kaggle |
 
