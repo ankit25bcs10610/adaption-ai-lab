@@ -4,8 +4,9 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  // spring-y press feedback (active:scale) + smooth all-property transition; keeps focus-visible ring.
-  "group relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-all duration-200 ease-[cubic-bezier(0.2,0.7,0.2,1)] focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 active:scale-[0.97] cursor-pointer",
+  // spring-y press feedback (active:scale) + smooth all-property transition; explicit focus-visible ring
+  // (outline-none alone would silently kill keyboard-focus visibility on every primary CTA).
+  "group relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-all duration-200 ease-[cubic-bezier(0.2,0.7,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 active:scale-[0.97] cursor-pointer",
   {
     variants: {
       variant: {

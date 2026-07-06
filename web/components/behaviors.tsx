@@ -69,7 +69,7 @@ export function Behaviors() {
             const Icon = b.icon;
             return (
               <Reveal key={b.title} delay={i * 0.08}>
-                <TiltCard className={`h-full cursor-pointer rounded-2xl glass p-6 transition-colors ${a.hover}`}>
+                <TiltCard className={`h-full rounded-2xl glass p-6 transition-colors ${a.hover}`}>
                   <div data-lift style={{ transform: "translateZ(30px)" }}>
                     <div className={`mb-4 grid h-11 w-11 place-items-center rounded-xl border ${a.box}`}>
                       <Icon className="h-5 w-5" />

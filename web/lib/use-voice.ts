@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export function useVoice() {
   const [supported, setSupported] = useState({ stt: false, tts: false });
   const [listening, setListening] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const recRef = useRef<any>(null);
 
   useEffect(() => {
@@ -29,6 +30,7 @@ export function useVoice() {
   const listen = useCallback((onResult: (text: string) => void) => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) return;
+    setError(null);
     const rec = new SR();
     rec.lang = "en-US";
     rec.interimResults = false;
@@ -38,13 +40,24 @@ export function useVoice() {
       if (text) onResult(text);
     };
     rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
+    // Surface the failure (blocked permission is the most common) instead of silently going idle.
+    rec.onerror = (e: any) => {
+      setListening(false);
+      if (e?.error === "not-allowed" || e?.error === "service-not-allowed") {
+        setError("Mic access was blocked — allow the microphone in your browser, or just type instead.");
+      } else if (e?.error === "no-speech") {
+        setError("Didn't catch that — tap the mic and try again, or type instead.");
+      } else {
+        setError("Voice input failed — please type your request instead.");
+      }
+    };
     recRef.current = rec;
     setListening(true);
     try {
       rec.start();
     } catch {
       setListening(false);
+      setError("Voice input failed to start — please type your request instead.");
     }
   }, []);
 
@@ -66,5 +79,5 @@ export function useVoice() {
     window.speechSynthesis.speak(u);
   }, []);
 
-  return { supported, listening, listen, stopListening, speak };
+  return { supported, listening, error, listen, stopListening, speak };
 }

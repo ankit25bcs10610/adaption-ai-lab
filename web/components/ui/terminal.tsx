@@ -54,7 +54,8 @@ export function Terminal({ lines, title = "bash" }: { lines: TermLine[]; title?:
         <span className="h-3 w-3 rounded-full bg-run/80" />
         <span className="ml-2 text-xs text-muted-foreground">{title}</span>
       </div>
-      <div className="space-y-1 p-4">
+      {/* Reserve the final height up front so the line-by-line reveal doesn't shift content below (CLS). */}
+      <div className="space-y-1 p-4" style={{ minHeight: `calc(${lines.length} * 1.5rem + 2rem)` }}>
         {lines.slice(0, shown).map((l, i) => (
           <div key={i} className={COLOR[l.kind ?? "out"]}>
             {l.kind === "cmd" && <span className="select-none text-run">$ </span>}

@@ -81,7 +81,7 @@ export function Benchmarks() {
                   <li key={r.label} className="grid grid-cols-[1fr_auto] items-baseline gap-x-3 border-b border-border/40 pb-3 last:border-0">
                     <span className="text-sm font-medium">{r.label}</span>
                     <span className="font-mono text-sm tabular-nums">
-                      <span className="text-muted-foreground/70">{r.before}</span>
+                      <span className="text-muted-foreground/80">{r.before}</span>
                       <span className="mx-1 text-muted-foreground">→</span>
                       <span className="font-semibold text-run">{r.after}</span>
                     </span>
@@ -117,7 +117,7 @@ export function Benchmarks() {
                       {row.label} {row.lowerIsBetter && <span className="text-cyan">↓</span>}
                     </span>
                     <span className="font-mono text-muted-foreground">
-                      <span className="text-muted-foreground/60">{row.base}%</span> →{" "}
+                      <span className="text-muted-foreground/80">{row.base}%</span> →{" "}
                       <span className="text-run">{row.ft}%</span>
                     </span>
                   </div>
@@ -126,7 +126,7 @@ export function Benchmarks() {
               ))}
             </div>
             {projected && (
-              <p className="mt-6 text-xs text-muted-foreground/70">
+              <p className="mt-6 text-xs text-muted-foreground/80">
                 Illustrative targets — the model table becomes real after training on the improved dataset
                 (a GPU step). The one-command harness (<code className="text-muted-foreground">scripts/run_all.sh</code>){" "}
                 runs baseline → multi-seed eval → paired significance → gap decomposition → report.

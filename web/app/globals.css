@@ -51,7 +51,6 @@
   html {
     /* Anchor jumps clear the fixed navbar; smooth unless the user opts out (handled below). */
     scroll-behavior: smooth;
-    scroll-padding-top: 6rem;
     -webkit-text-size-adjust: 100%;
   }
   body {

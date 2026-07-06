@@ -76,15 +76,24 @@ export function DataViz() {
                 className="rounded-2xl glass p-3 transition-transform hover:-translate-y-1"
                 color={c.lang === "hi" ? "var(--violet)" : "var(--run)"}
               >
-                <Image
-                  src={c.src}
-                  alt={`${c.lang === "hi" ? "Hindi" : "English"} chart — ${c.cap}`}
-                  width={600}
-                  height={400}
-                  loading="lazy"
-                  sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 340px"
-                  className="h-auto w-full rounded-lg bg-white"
-                />
+                {/* Real link = the hover-lift affordance actually goes somewhere (full-size chart). */}
+                <a
+                  href={c.src}
+                  target="_blank"
+                  rel="noopener"
+                  aria-label={`Open full-size ${c.lang === "hi" ? "Hindi" : "English"} chart — ${c.cap}`}
+                  className="block cursor-pointer rounded-lg"
+                >
+                  <Image
+                    src={c.src}
+                    alt={`${c.lang === "hi" ? "Hindi" : "English"} chart — ${c.cap}`}
+                    width={600}
+                    height={400}
+                    loading="lazy"
+                    sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 340px"
+                    className="h-auto w-full rounded-lg bg-white"
+                  />
+                </a>
                 <div className="mt-2 flex items-center justify-between px-1">
                   <span className="text-xs text-muted-foreground">{c.cap}</span>
                   <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${LANG_COLOR[c.lang]}`}>

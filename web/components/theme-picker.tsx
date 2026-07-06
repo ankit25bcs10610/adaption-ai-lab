@@ -79,7 +79,7 @@ export function ThemePicker() {
             setOpen(true);
           }
         }}
-        className="grid h-9 w-9 cursor-pointer place-items-center rounded-lg glass transition-colors hover:border-run/50"
+        className="grid h-11 w-11 cursor-pointer place-items-center rounded-lg glass transition-colors hover:border-run/50 md:h-9 md:w-9"
       >
         {/* Render a stable placeholder until mounted to avoid a hydration mismatch (accent is
             only known client-side, from localStorage). */}

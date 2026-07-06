@@ -49,7 +49,7 @@ export function CopyInstall({
           type="button"
           onClick={copy}
           aria-label={copied ? "Copied" : "Copy install command"}
-          className="grid h-7 w-7 shrink-0 cursor-pointer place-items-center rounded-md border border-border/60 transition-colors hover:border-cyan/50"
+          className="relative grid h-7 w-7 shrink-0 cursor-pointer place-items-center rounded-md border border-border/60 transition-colors before:absolute before:-inset-2 before:content-[''] hover:border-cyan/50"
         >
           {copied ? <Check className="h-3.5 w-3.5 text-run" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground" />}
         </button>

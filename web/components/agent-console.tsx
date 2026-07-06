@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bot, Loader2, Mic, Send, Square, User, Volume2, VolumeX, Wrench } from "lucide-react";
+import { AlertTriangle, Bot, Loader2, Mic, Send, Square, User, Volume2, VolumeX, Wrench } from "lucide-react";
 import { runAgentTurnSim } from "@/lib/agent-sim";
 import { useVoice } from "@/lib/use-voice";
 import { cn } from "@/lib/utils";
 
-type Msg = { role: "user" | "agent" | "tool"; text: string; tag?: string };
+type Msg = { role: "user" | "agent" | "tool"; text: string; tag?: string; isError?: boolean };
 
 const SUGGESTIONS = [
   "What's the weather in Mumbai?",
@@ -16,7 +16,7 @@ const SUGGESTIONS = [
 ];
 
 const HELLO =
-  "Hi! Give me a goal — type it or tap the mic 🎤. I'll call the right tool, or **refuse** / **ask** " +
+  "Hi! Give me a goal — type it or tap the mic. I'll call the right tool, or refuse / ask " +
   "when I shouldn't guess. Try a suggestion below.";
 
 export function AgentConsole() {
@@ -25,7 +25,7 @@ export function AgentConsole() {
   const [busy, setBusy] = useState(false);
   const [speakOn, setSpeakOn] = useState(false);
   const [brain, setBrain] = useState<"loading" | "in-browser" | "claude">("loading");
-  const { supported, listening, listen, stopListening, speak } = useVoice();
+  const { supported, listening, error: voiceError, listen, stopListening, speak } = useVoice();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,11 +47,14 @@ export function AgentConsole() {
     setBusy(true);
     try {
       if (brain === "claude") {
-        const r = await fetch("/api/agent", {
+        const res = await fetch("/api/agent", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ message: q }),
-        }).then((res) => res.json());
+        });
+        // A 5xx returns HTML — parsing it as JSON would surface "Unexpected token <" to the user.
+        if (!res.ok) throw new Error("The live agent is unavailable right now — please try again.");
+        const r = await res.json();
         if (r?.error) throw new Error(r.error);
         const trace = (r.trace || []) as { tool: string; output: string }[];
         setMsgs((m) => [
@@ -70,7 +73,8 @@ export function AgentConsole() {
         if (speakOn) speak(r.reply);
       }
     } catch (e: any) {
-      setMsgs((m) => [...m, { role: "agent", text: `⚠️ ${e?.message || "something went wrong"}` }]);
+      setMsgs((m) => [...m, { role: "agent", text: e?.message || "Something went wrong — please try again.", isError: true }]);
+      setInput(q); // restore the typed text so a transient failure doesn't eat the user's input
     } finally {
       setBusy(false);
     }
@@ -104,7 +108,7 @@ export function AgentConsole() {
           onClick={() => setSpeakOn((v) => !v)}
           aria-pressed={speakOn}
           aria-label={speakOn ? "Turn voice replies off" : "Turn voice replies on"}
-          className={cn("grid h-8 w-8 cursor-pointer place-items-center rounded-lg border transition-colors",
+          className={cn("relative grid h-8 w-8 cursor-pointer place-items-center rounded-lg border transition-colors before:absolute before:-inset-2 before:content-['']",
             speakOn ? "border-run/50 bg-run/10 text-run" : "border-border/60 text-muted-foreground hover:text-foreground")}
           title={supported.tts ? "Spoken replies" : "Speech synthesis unavailable in this browser"}
           disabled={!supported.tts}
@@ -113,8 +117,9 @@ export function AgentConsole() {
         </button>
       </div>
 
-      {/* messages */}
-      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+      {/* messages — role=log + aria-live announces replies/tool traces; tabIndex makes it keyboard-scrollable */}
+      <div ref={scrollRef} role="log" aria-live="polite" aria-label="Conversation" tabIndex={0}
+           className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {msgs.map((m, i) => (
           <Bubble key={i} m={m} />
         ))}
@@ -133,12 +138,19 @@ export function AgentConsole() {
             type="button"
             onClick={() => send(s)}
             disabled={busy}
-            className="cursor-pointer rounded-full border border-border/60 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-cyan/50 hover:text-foreground disabled:opacity-50"
+            className="relative cursor-pointer rounded-full border border-border/60 px-2.5 py-1 text-xs text-muted-foreground transition-colors before:absolute before:-inset-1.5 before:content-[''] hover:border-cyan/50 hover:text-foreground disabled:opacity-50"
           >
             {s}
           </button>
         ))}
       </div>
+
+      {/* voice status (e.g. mic permission blocked) — announced politely, doesn't shift the layout much */}
+      {voiceError && (
+        <p role="status" className="px-4 pb-1 text-xs text-amber-400/90">
+          {voiceError}
+        </p>
+      )}
 
       {/* input */}
       <form
@@ -164,7 +176,7 @@ export function AgentConsole() {
           onChange={(e) => setInput(e.target.value)}
           placeholder={listening ? "Listening…" : "Ask the agent to do something…"}
           aria-label="Message the agent"
-          className="min-w-0 flex-1 rounded-xl border border-border/60 bg-black/10 px-3.5 py-2.5 text-sm text-foreground outline-none focus:border-cyan/50"
+          className="min-w-0 flex-1 rounded-xl border border-border/60 bg-black/10 px-3.5 py-2.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/70"
         />
         <button
           type="submit"
@@ -193,13 +205,15 @@ function Bubble({ m }: { m: Msg }) {
     <div className={cn("flex gap-2.5", isUser && "flex-row-reverse")}>
       <span
         className={cn("grid h-7 w-7 shrink-0 place-items-center rounded-lg border",
-          isUser ? "border-cyan/40 bg-cyan/10 text-cyan" : "border-run/40 bg-run/10 text-run")}
+          isUser ? "border-cyan/40 bg-cyan/10 text-cyan"
+            : m.isError ? "border-red-500/40 bg-red-500/10 text-red-400" : "border-run/40 bg-run/10 text-run")}
       >
-        {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+        {isUser ? <User className="h-4 w-4" aria-hidden /> : m.isError ? <AlertTriangle className="h-4 w-4" aria-hidden /> : <Bot className="h-4 w-4" aria-hidden />}
       </span>
       <div
         className={cn("max-w-[80%] rounded-2xl px-3.5 py-2 text-sm",
-          isUser ? "bg-cyan/10 text-foreground" : "inset-well text-foreground/90")}
+          isUser ? "bg-cyan/10 text-foreground"
+            : m.isError ? "border border-red-500/40 bg-red-500/10 text-foreground/90" : "inset-well text-foreground/90")}
       >
         <span className="whitespace-pre-wrap break-words">{m.text}</span>
         {m.tag && !isUser && (
