@@ -65,7 +65,13 @@ else
 fi
 
 echo "==> [8/9] HTML report + BFCL export"
-python3 -m autoscientist_toolcaller.eval_report --out "$RESULTS/report.html" || true
+# Predictions/errors (when a model ran) let the report render the confusion matrix + error explorer.
+if [ -f "$RESULTS/ft_42/predictions.jsonl" ]; then
+  python3 -m autoscientist_toolcaller.eval_report --predictions "$RESULTS/ft_42/predictions.jsonl" \
+    --errors "$RESULTS/ft_42/errors.jsonl" --out "$RESULTS/report.html" || true
+else
+  python3 -m autoscientist_toolcaller.eval_report --out "$RESULTS/report.html" || true
+fi
 python3 -m autoscientist_toolcaller.export_bfcl --data "$DATA/test.jsonl" --out-dir "$RESULTS/bfcl" || true
 
 echo "==> [9/9] Reproducibility manifest + release preflight"

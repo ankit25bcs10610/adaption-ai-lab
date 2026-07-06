@@ -4,6 +4,9 @@ task_categories:
   - text-generation
 language:
   - en
+  - es
+  - fr
+  - hi
 tags:
   - function-calling
   - tool-use
@@ -56,7 +59,8 @@ and *how* to call tools — including safe abstention.
 
 ## Limitations
 
-- English-only in this version.
+- Primarily English; a matched-twin multilingual slice (es/fr/hi/hi-rom, shared `pair_id` per twin
+  set) enables a cross-language Δaccuracy — coverage beyond these languages is future work.
 - Hard-negative query phrasing is template-derived (labels are guaranteed correct; wording is less varied
   than natural queries). Optionally paraphrase for fluency.
 

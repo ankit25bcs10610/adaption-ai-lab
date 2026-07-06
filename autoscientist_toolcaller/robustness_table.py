@@ -67,7 +67,9 @@ def _pct(x) -> str:
 
 
 def _dpp(x) -> str:
-    return f"−{x*100:.1f}pp" if isinstance(x, (int, float)) else "—"
+    # x is the accuracy DROP under shift (positive = degraded). Render signed so an improvement
+    # (negative drop) reads "+2.0pp" instead of the garbled "−-2.0pp".
+    return f"{-x*100:+.1f}pp" if isinstance(x, (int, float)) else "—"
 
 
 def to_markdown(r: Dict) -> str:

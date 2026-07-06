@@ -56,10 +56,18 @@ def render(base: Dict[str, Any], ft: Dict[str, Any], headline: str,
         _row("Clarify accuracy", base, ft, "clarify_accuracy"),
         _row("**Hallucination rate on hard negatives** ↓", base, ft, "hallucination_rate"),
     ]
-    # Weighted BFCL-v4 accuracy (if the BFCL eval ran for both models).
+    # Weighted BFCL-v4 accuracy. A side whose eval simply wasn't run renders "—" (not __PENDING__):
+    # only cells the pipeline is EXPECTED to fill may claim pending (finalize.sh writes both sides).
     wb, wf = bfcl_base.get("weighted_accuracy"), bfcl_ft.get("weighted_accuracy")
     if wb is not None or wf is not None:
-        lines.append(f"| Weighted BFCL-v4 accuracy | {_cell(wb)} | {_cell(wf)} | {_delta(wb, wf)} |")
+        cb = f"{wb:.3f}" if isinstance(wb, (int, float)) else "—"
+        cf = f"{wf:.3f}" if isinstance(wf, (int, float)) else "—"
+        d = _delta(wb, wf) if (isinstance(wb, (int, float)) and isinstance(wf, (int, float))) else "—"
+        lines.append(f"| Weighted BFCL-v4 accuracy | {cb} | {cf} | {d} |")
+    # Format-invariance spread (max−min accuracy across tool-doc renderings) — lower is better.
+    fd = bfcl_ft.get("format_delta")
+    if isinstance(fd, (int, float)):
+        lines.append(f"| Format-invariance Δ across doc formats ↓ | — | {fd:.3f} | — |")
     # Novel-tools holdout (generalization) — fine-tuned only unless a base novel eval exists.
     if novel:
         lines.append(f"| Novel-tools holdout accuracy | — | {_cell(novel.get('overall_accuracy'))} | — |")
