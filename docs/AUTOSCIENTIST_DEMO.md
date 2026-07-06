@@ -53,7 +53,8 @@ actual recorded run. Full platform write-up: [`AUTOSCIENTIST_USAGE.md`](AUTOSCIE
     dataset      rows  before  after      Δ%  grade / status
     a99c0c96      250       8    8.8     10%  B · completed
     c4923b7f     2440       7    8.1   15.7%  C→B · partial (1,000/2,440 under the free-tier cap)
-    d92279d3     2557       —      —       —  — · pending — full grade completes on the console run
+    bea4a581     5157       7    8.1   15.7%  C→B · completed FULL run (5,133/5,157 rows; completion quality +31.5%)
+    4e4178c7     7566       —      —       —  — · final published set — run launched; then AUTOSCIENTIST → Train
 
 Note: the grade above is Adaptive Data's *dataset-quality* improvement (the data-centric lever).
 The held-out *model* accuracy — the challenge's eligibility gate — is produced by the TRAIN step

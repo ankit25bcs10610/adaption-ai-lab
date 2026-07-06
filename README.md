@@ -72,14 +72,18 @@ The build pipeline was adversarially audited, then re-graded on the platform:
 
 | | Before | After |
 |---|---|---|
-| Adaptive Data grade — fixed set (`c4923b7f`, partial run¹) | C (7.0) | **B (8.1)** · **+15.7%** |
+| Adaptive Data grade — current-gen set (`bea4a581`, **completed full run**, 5,133/5,157 rows) | C (7.0) | **B (8.1)** · **+15.7%** |
+| Adaptive Data grade — older fixed set (`c4923b7f`, partial run¹) | C (7.0) | B (8.1) · +15.7% |
 | Adaptive Data grade — earlier 250-row set (`a99c0c96`, completed) | B− (8.0) | B (8.8) · +10.0% |
 | Refuse cases (`no_tool`) | 8 | **644** |
 | Clarify cases (`miss_param`) | 1 | **70** |
 | Disambiguate cases | 0 | **167** |
 | Schema-invalid gold calls | 36% | **0%** |
 
-> ¹ The **+15.7%** grade was returned on **1,000 of the 2,440** fixed-set rows — the free-tier processing cap — so it's a strong signal, not yet a completed full-set grade (that finishes with the console run). The **completed** 250-row run (+10%, grade B) corroborates the audit-driven gain.
+> ¹ The headline grade is now a **completed, uncapped run** on the current-generation set (`bea4a581`, 5,133/5,157 rows
+> processed, 2026-07-05): **C → B, +15.7%** — with **completion quality +31.5%** (6.92 → 9.1) and the dataset's quality
+> percentile rising **8.4 → 31.5**. The older capped `c4923b7f` run and the completed 250-row `a99c0c96` run (+10%, B)
+> independently corroborate the same gain. The held-out *model* number still comes from the console training run.
 
 The audit-count rows are the whole thesis: the "refuse / clarify / disambiguate" moat was being *generated and then silently discarded by dedup* until the audit caught it. Full before/after in [`docs/DATA_QUALITY_AUDIT.md`](docs/DATA_QUALITY_AUDIT.md).
 

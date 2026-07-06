@@ -23,8 +23,10 @@ _CANNED_RUNS: List[Dict[str, Any]] = [
      "improvement_percent": 10.0, "grade": "B", "status": "completed"},
     {"dataset_id": "c4923b7f", "rows": 2440, "before": 7.0, "after": 8.1,
      "improvement_percent": 15.7, "grade": "C→B", "status": "partial (1,000/2,440 under the free-tier cap)"},
-    {"dataset_id": "d92279d3", "rows": 2557, "before": None, "after": None,
-     "improvement_percent": None, "grade": None, "status": "pending — full grade completes on the console run"},
+    {"dataset_id": "bea4a581", "rows": 5157, "before": 7.0, "after": 8.1,
+     "improvement_percent": 15.7, "grade": "C→B", "status": "completed FULL run (5,133/5,157 rows; completion quality +31.5%)"},
+    {"dataset_id": "4e4178c7", "rows": 7566, "before": None, "after": None,
+     "improvement_percent": None, "grade": None, "status": "final published set — run launched; then AUTOSCIENTIST → Train"},
 ]
 
 _STEPS = [

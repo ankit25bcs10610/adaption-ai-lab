@@ -36,7 +36,9 @@ distinguishing feature is a large slice of **hard negatives** and reliability-fo
 correct behavior is *not* a plain tool call.
 
 > **Adaptive Data quality (real):** on the **fixed** set (`c4923b7f…`, graded on 1,000 of 2,440 rows
-> under the free-tier cap) the platform reports **7.0 → 8.1, +15.7%, grade C → B**; an earlier 250-row
+> under the free-tier cap) the platform reported **7.0 → 8.1, +15.7%, grade C → B** — now confirmed by a
+> **completed, uncapped run** on the current-generation set (`bea4a581…`, 5,133/5,157 rows, 2026-07-05):
+> **C → B, +15.7%**, completion quality **+31.5%**, percentile **8.4 → 31.5**; an earlier 250-row
 > run (`a99c0c96…`, **completed**) scored **8.0 → 8.8, +10.0%, grade B**. This is the platform's
 > dataset-quality grade — the data-centric "measurable improvement." Full dataset lineage (incl. the
 > cleaned `d92279d3…` set staged for submission) is in [`docs/AUTOSCIENTIST_USAGE.md`](docs/AUTOSCIENTIST_USAGE.md).
