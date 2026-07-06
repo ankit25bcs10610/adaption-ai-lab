@@ -33,12 +33,14 @@ with awards **per category**, so you have **two complete tracks → submit BOTH*
 ## Entry A — All Other Domains (function-calling)
 - **Which category:** `All Other Domains`
 - **Specify dataset ID:** `4e4178c7-adf1-4fdf-9c76-90ad29275047` (FINAL 7,566-row set = the published HF/Kaggle dataset, uploaded + estimated. Earlier graded snapshots: `bea4a581…` 6.5k, `c4923b7f…` +15.7% C→B)
-  *(cleaned + diversified; use once it shows **Job Completed** — fallback `a99c0c96-…` is completed at +10%)*
+  *(train on this ID; if it stalls, fallback `d92279d3-…` 2,557-row set. `a99c0c96-…` is an old graded snapshot, reference only)*
 - **Final dataset (HF):** `https://huggingface.co/datasets/pandeyankit84/autoscientist-toolcaller-dataset`
 - **Kaggle:** `https://www.kaggle.com/datasets/pandeyankit99/autoscientist-toolcaller-dataset`
 - **Hugging Face model:** `https://huggingface.co/pandeyankit84/autoscientist-toolcaller`
 - **Live demo:** `https://autoscientist-toolcaller.vercel.app` (+ HF Space)
-- ⏳ **Training Model ID / weights link / held-out %** — from the AutoScientist run (Step 4).
+- ⏳ **Training Model ID / held-out %** — from the AutoScientist run (Step 4).
+- ⏳ **Weights (HF):** `https://huggingface.co/pandeyankit84/autoscientist-toolcaller` (published on run-day)
+- ⏳ **Weights (Kaggle):** `https://www.kaggle.com/models/pandeyankit99/autoscientist-toolcaller` (published on run-day)
 
 ## Entry B — Data Visualization (chart-QA, en + hi)
 - **Which category:** `Data Visualization`
@@ -57,9 +59,9 @@ with awards **per category**, so you have **two complete tracks → submit BOTH*
 
 ## Before you submit (both entries)
 1. **Confirm multi-category eligibility** with the organizers (office hours / the challenge page).
-2. **AutoScientist training** — Entry A on `d92279d3`; Entry B on the chart-QA set (`docs/RUN_DAY.md`,
+2. **AutoScientist training** — Entry A on **`4e4178c7-adf1-4fdf-9c76-90ad29275047`** (the FINAL 7,566-row set); Entry B on the chart-QA set (`docs/RUN_DAY.md`,
    `docs/CONSOLE_STEPS.md`). Each gives weights + the held-out % (criterion #1 — the eligibility gate).
 3. `MODEL=<weights> bash scripts/finalize.sh` (Entry A) → fills MODEL_CARD + report with real numbers.
 4. Publish weights to HF + Kaggle for each entry (I can run `autoscientist_toolcaller/release.py`).
-5. Post on LinkedIn + X, tag @adaption_ai / Adaption — one post per entry (`docs/social_posts.md`).
+5. Post on LinkedIn + X, tagging **@adaption_ai and adaption-labs on both** — one post per entry (`docs/social_posts.md`).
 6. Paste each sheet into the Part 2 form.

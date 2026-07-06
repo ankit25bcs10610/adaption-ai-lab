@@ -25,3 +25,4 @@ web/.env.local
 # OS / editor
 .DS_Store
 *.log
+web/tsconfig.tsbuildinfo

@@ -30,6 +30,7 @@ form. A social post is a required submission item. Everything below is ready to 
 >
 > Adaptive Data quality **+15.7% (grade C→B)**. Live demo + open weights + dataset 👇
 >
+> Thanks @adaption_ai (Adaption Labs — tag adaption-labs too).
 > ▶️ Try it: https://autoscientist-toolcaller.vercel.app
 > 🤗 https://huggingface.co/pandeyankit84/autoscientist-toolcaller
 > 💻 https://github.com/ankit25bcs10610/adaption-ai-lab
@@ -103,6 +104,7 @@ Huge thanks to **@adaption_ai / Adaption Labs** for AutoScientist and Adaptive D
 > every answer computed from the underlying data, so labels are correct by construction — plus a
 > Devanagari/romanized slice with matched en/hi twins for a clean cross-language Δ.
 >
+> Thanks @adaption_ai (Adaption Labs — tag adaption-labs too).
 > 🤗 https://huggingface.co/datasets/pandeyankit84/autoscientist-chartqa-dataset
 > 💻 https://github.com/ankit25bcs10610/adaption-ai-lab
 > #AutoScientist #AI
@@ -113,6 +115,8 @@ Huge thanks to **@adaption_ai / Adaption Labs** for AutoScientist and Adaptive D
 > data-centric chart-understanding dataset: a self-verifying synthetic generator (9 chart types, ground
 > truth computed from the data), a Hindi/Devanagari + romanized slice with matched en/hi twins, and a
 > text-only Vega-Lite spec-reading modality. Open on Hugging Face + Kaggle.
+> Huge thanks to **@adaption_ai / Adaption Labs** for AutoScientist and Adaptive Data. *(Tag both
+> @adaption_ai and Adaption Labs when you post.)*
 > 🤗 https://huggingface.co/datasets/pandeyankit84/autoscientist-chartqa-dataset · 💻 https://github.com/ankit25bcs10610/adaption-ai-lab
 > #AutoScientist #OpenSource #AI #MachineLearning #DataVisualization
 
