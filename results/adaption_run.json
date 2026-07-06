@@ -1,0 +1,21 @@
+{
+  "dataset_id": "bea4a581-2ef4-44fa-b6ae-47ba5fcaf36f",
+  "dataset_name": "function_calling_dialogs",
+  "status": "succeeded",
+  "source": "live Adaption API (datasets.get_evaluation)",
+  "evaluation_summary": {
+    "grade_before": "C",
+    "grade_after": "B",
+    "improvement_percent": 15.7,
+    "score_before": 7.0,
+    "score_after": 8.1,
+    "percentile_after": 31.5
+  },
+  "raw_results_gains": {
+    "overall_percentage_gain": 18.51,
+    "message_quality_absolute_gain": 0.35,
+    "message_quality_percentage_gain": 5.2,
+    "completion_quality_absolute_gain": 2.18,
+    "completion_quality_percentage_gain": 31.5
+  }
+}
