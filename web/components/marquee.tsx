@@ -12,7 +12,7 @@ const items = [
 
 function Row({ hidden = false }: { hidden?: boolean }) {
   return (
-    <div className="flex items-center gap-10" aria-hidden={hidden}>
+    <div className="flex items-center gap-10 pr-10" aria-hidden={hidden}>
       {items.map(([label, color], i) => (
         <span key={i} className="flex items-center gap-10">
           {label}
@@ -30,7 +30,7 @@ export function Marquee() {
     <section className="relative z-10 overflow-hidden border-y border-border/40 py-8">
       {/* edge fade so the strip dissolves into the page instead of a hard cut */}
       <div
-        className="flex w-max animate-scrollx gap-10 font-display text-sm uppercase tracking-widest text-muted-foreground/70"
+        className="flex w-max animate-scrollx font-display text-sm uppercase tracking-widest text-muted-foreground/80"
         style={{
           maskImage: "linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent)",
           WebkitMaskImage: "linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent)",

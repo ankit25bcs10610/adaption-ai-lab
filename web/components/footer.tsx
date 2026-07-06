@@ -32,7 +32,7 @@ export function Footer() {
               A data-centric function-calling model + audited dataset. It refuses, clarifies, and calls —
               instead of hallucinating tools.
             </p>
-            <p className="mt-4 font-mono text-xs text-muted-foreground/70">refuse · clarify · call</p>
+            <p className="mt-4 font-mono text-xs text-muted-foreground/80">refuse · clarify · call</p>
           </div>
 
           {cols.map((col) => (

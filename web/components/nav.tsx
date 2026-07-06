@@ -60,7 +60,8 @@ export function Nav() {
             <Logo />
           </a>
 
-          <div className="hidden items-center gap-1 text-sm font-medium md:flex">
+          {/* xl breakpoint: 7 links + logo + theme picker + CTA ≈ 1080px wide — at md they wrap into the logo */}
+          <div className="hidden items-center gap-1 text-sm font-medium xl:flex">
             {links.map((l) => {
               const isActive = active === l.href.slice(1);
               return (
@@ -68,7 +69,7 @@ export function Nav() {
                   key={l.href}
                   href={l.href}
                   className={cn(
-                    "relative cursor-pointer rounded-full px-3 py-1.5 transition-colors",
+                    "relative cursor-pointer whitespace-nowrap rounded-full px-3 py-1.5 transition-colors",
                     isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
@@ -87,12 +88,12 @@ export function Nav() {
 
           <div className="flex items-center gap-2">
             <ThemePicker />
-            <Button asChild size="sm" className="hidden sm:inline-flex">
+            <Button asChild size="sm" className="hidden lg:inline-flex">
               <a href="#release">Get the model</a>
             </Button>
             <button
               type="button"
-              className="grid h-9 w-9 place-items-center rounded-lg border border-border/60 text-foreground transition-colors hover:bg-foreground/5 md:hidden"
+              className="grid h-11 w-11 place-items-center rounded-lg border border-border/60 text-foreground transition-colors hover:bg-foreground/5 xl:hidden"
               aria-label={open ? "Close menu" : "Open menu"}
               aria-expanded={open}
               aria-controls="mobile-menu"
@@ -105,7 +106,7 @@ export function Nav() {
 
         {/* Mobile menu */}
         {open && (
-          <div id="mobile-menu" className="mt-3 flex flex-col gap-1 border-t border-border/50 pt-3 md:hidden">
+          <div id="mobile-menu" className="mt-3 flex flex-col gap-1 border-t border-border/50 pt-3 xl:hidden">
             {links.map((l) => (
               <a
                 key={l.href}

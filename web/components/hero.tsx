@@ -69,12 +69,12 @@ export function Hero() {
             <CopyInstall />
           </div>
 
-          <dl className="mt-10 grid max-w-lg grid-cols-3 gap-4">
+          <dl className="mt-10 grid max-w-lg grid-cols-3 gap-2.5 sm:gap-4">
             {headlineStats.map((s) => {
               const p = parseStat(s.value);
               return (
-                <div key={s.label} className="rounded-xl glass p-4">
-                  <dt className={cn("font-display text-2xl font-bold", accentClass[s.accent])}>
+                <div key={s.label} className="rounded-xl glass p-3 sm:p-4">
+                  <dt className={cn("font-display text-xl font-bold sm:text-2xl", accentClass[s.accent])}>
                     {p.num === null ? (
                       s.value
                     ) : (
@@ -86,7 +86,7 @@ export function Hero() {
               );
             })}
           </dl>
-          <p className="mt-3 text-[11px] text-muted-foreground/70">
+          <p className="mt-3 text-[11px] text-muted-foreground/80">
             Measured — Adaptive Data quality grade (C→B) and the audited dataset composition.
           </p>
         </div>

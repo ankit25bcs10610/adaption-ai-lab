@@ -84,7 +84,7 @@ export function Playground() {
                   <button
                     key={s.label}
                     onClick={() => loadScenario(s.query)}
-                    className="cursor-pointer rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-cyan/50 hover:text-foreground"
+                    className="relative cursor-pointer rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground transition-colors before:absolute before:-inset-2 before:content-[''] hover:border-cyan/50 hover:text-foreground"
                   >
                     {s.label}
                   </button>
@@ -99,25 +99,28 @@ export function Playground() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 rows={2}
-                className="inset-well w-full resize-none p-3 font-mono text-sm text-foreground outline-none focus:border-cyan/50"
+                className="inset-well w-full resize-none p-3 font-mono text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/70"
               />
               <Button onClick={run} className="mt-3 w-full">
                 <Play className="h-4 w-4" /> Run
               </Button>
-              {enabledTools.length === 0 && (
-                <p className="mt-2 text-center text-xs text-muted-foreground">
-                  No tools enabled — the model should <span className="text-run">refuse</span>. Run it and see.
-                </p>
-              )}
+              {/* Reserved line (invisible when inactive) so toggling tools doesn't reflow the column. */}
+              <p
+                className={`mt-2 text-center text-xs text-muted-foreground ${enabledTools.length === 0 ? "" : "invisible"}`}
+                aria-hidden={enabledTools.length !== 0}
+              >
+                No tools enabled — the model should <span className="text-run">refuse</span>. Run it and see.
+              </p>
             </div>
 
-            {/* Output */}
-            <div className="rounded-2xl border-glow glass p-6">
+            {/* Output — aria-live so REFUSED / TOOL CALL / NEEDS INFO is announced to screen readers;
+                min-height reserves space so Run doesn't reflow the stacked mobile layout. */}
+            <div className="min-h-[340px] rounded-2xl border-glow glass p-6" aria-live="polite">
               <p className="mb-3 eyebrow">
                 Model output
               </p>
               {!result ? (
-                <div className="grid h-56 place-items-center text-center text-sm text-muted-foreground">
+                <div className="grid h-full min-h-56 place-items-center text-center text-sm text-muted-foreground">
                   Press <span className="mx-1 font-mono text-foreground">Run</span> to see the decision for{" "}
                   {enabledTools.length} enabled tool{enabledTools.length === 1 ? "" : "s"}.
                 </div>
@@ -126,7 +129,7 @@ export function Playground() {
               )}
             </div>
           </div>
-        <p className="mt-4 text-xs text-muted-foreground/70">
+        <p className="mt-4 text-xs text-muted-foreground/80">
           This playground runs a faithful, deterministic simulation of the model&apos;s decision logic in your
           browser (no download). The released weights produce the same JSON envelope.
         </p>
@@ -143,14 +146,14 @@ function Output({ result }: { result: SimResult }) {
       : { action: result.action, message: result.message };
   return (
     <div>
-      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${s.cls}`}>
-        <s.Icon className="h-3.5 w-3.5" /> {s.pill}
+      <span role="status" className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${s.cls}`}>
+        <s.Icon className="h-3.5 w-3.5" aria-hidden /> {s.pill}
       </span>
-      <pre className="inset-well mt-4 overflow-x-auto p-4 font-mono text-sm text-foreground/90">
+      <pre className="inset-well mt-4 max-h-52 overflow-auto p-4 font-mono text-sm text-foreground/90">
         {JSON.stringify(envelope, null, 2)}
       </pre>
       <p className="mt-3 text-xs text-muted-foreground">
-        <span className="text-muted-foreground/70">why:</span> {result.rationale}
+        <span className="text-muted-foreground/80">why:</span> {result.rationale}
       </p>
     </div>
   );

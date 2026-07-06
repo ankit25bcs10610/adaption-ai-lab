@@ -26,17 +26,20 @@ export function Pipeline() {
         seeded, and one command (<code className="font-mono text-sm text-muted-foreground/90">scripts/run_all.sh</code>).
       </SectionHeader>
 
+      {/* <li> must be a DIRECT child of <ol> (the Reveal wrapper inside keeps the animation). */}
       <ol className="grid gap-5 md:grid-cols-3">
         {steps.map((s, i) => (
-          <Reveal key={s.n} delay={i * 0.05}>
-            <li className="card-hover relative h-full rounded-2xl glass p-6 hover:border-run/30">
-              <span className={`absolute -top-3 left-6 rounded px-2 py-0.5 font-mono text-xs ${badge[s.c]}`}>
-                {s.n}
-              </span>
-              <h3 className="mt-3 font-display text-lg font-semibold">{s.title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{s.desc}</p>
-            </li>
-          </Reveal>
+          <li key={s.n} className="h-full">
+            <Reveal delay={i * 0.05} className="h-full">
+              <div className="card-hover relative h-full rounded-2xl glass p-6 hover:border-run/30">
+                <span className={`absolute -top-3 left-6 rounded px-2 py-0.5 font-mono text-xs ${badge[s.c]}`}>
+                  {s.n}
+                </span>
+                <h3 className="mt-3 font-display text-lg font-semibold">{s.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{s.desc}</p>
+              </div>
+            </Reveal>
+          </li>
         ))}
       </ol>
     </Section>
