@@ -38,7 +38,8 @@ are earlier / curated **snapshots** of it, not separate datasets.
 | Run (dataset_id) | rows | status | score before → after | Δ | grade |
 |---|---|---|---|---|---|
 | `a99c0c96-ff5b-490a-9aa9-372ea62d79d4` | 250 | ✅ **completed** | 8.0 → 8.8 | +10.0% | B |
-| `c4923b7f-3ee7-4691-bb1f-b47a85cf5097` (post-audit fix) | 2,440 | ⚠️ **partial** — graded on 1,000/2,440 (free-tier cap) | **7.0 → 8.1** | **+15.7%** | C → B |
+| `bea4a581-2ef4-44fa-b6ae-47ba5fcaf36f` (current-gen 6.5k) | 5,157 | ✅ **completed full run** (5,133/5,157, 2026-07-05) | **7.0 → 8.1** | **+15.7%** (completion +31.5%, pctile 8.4→31.5) | C → B |
+| `c4923b7f-3ee7-4691-bb1f-b47a85cf5097` (post-audit fix) | 2,440 | ⚠️ partial — graded on 1,000/2,440 (free-tier cap) | 7.0 → 8.1 | +15.7% | C → B |
 | `d92279d3-90c5-4da7-aef3-e506aa291cd6` (cleaned + diversified) | 2,557 | ⏳ **pending** — full grade completes on the console run | — | — | — |
 
 `improvement_percent` comes from `datasets.get_evaluation` (`score_before` / `score_after`, grade A–E).

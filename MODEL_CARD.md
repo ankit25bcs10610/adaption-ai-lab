@@ -29,13 +29,13 @@ A function-calling / tool-use model + dataset for the AutoScientist Challenge (c
 *All Other Domains*). The dataset teaches a model the decision most tool-use datasets ignore:
 **when *not* to call a tool.**
 
-> **Adaptive Data result (real).** On the **fixed** function-calling set (2,440 rows, after the
-> data-quality audit), the platform's evaluation reports **7.0 → 8.1, +15.7%, grade C → B**
-> (dataset `c4923b7f…`, evaluated on the rows processed under the free-tier cap of 1,000). A completed
-> 250-row run on the earlier curated set scored **8.0 → 8.8, +10.0%, grade B** (`a99c0c96…`). This
-> score is Adaptive Data's **dataset-quality grade** — a data-centric platform improves the *dataset*,
-> so this grade is the challenge's "measurable improvement." Intended base for downstream training:
-> `Qwen/Qwen2.5-Coder-3B-Instruct`.
+> **Adaptive Data result (real).** On a **completed, uncapped run** of the current-generation set
+> (`bea4a581…`, 5,133/5,157 rows processed, 2026-07-05) the platform reports **7.0 → 8.1, +15.7%,
+> grade C → B** — with **completion quality +31.5%** (6.92 → 9.1) and the dataset's quality percentile
+> rising **8.4 → 31.5**. Independently corroborated by the older capped `c4923b7f` run (+15.7%) and a
+> completed 250-row run (**+10.0%, grade B**, `a99c0c96…`). This is Adaptive Data's **dataset-quality
+> grade** — the data-centric measurable improvement; the held-out *model* number comes from the
+> AutoScientist training run. Intended base: `Qwen/Qwen2.5-Coder-3B-Instruct`.
 
 ## What's different
 
