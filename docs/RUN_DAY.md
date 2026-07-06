@@ -15,7 +15,11 @@ Run AutoScientist **2–3 times with different recipes** (e.g. `deduplication` o
 on/off, a `preference_pairs` objective) and note each run's held-out %. Tabulate them so a judge sees you
 drove the platform, not one click:
 ```bash
-python -m autoscientist_toolcaller.recipe_ablation --out results/recipe_ablation.md   # fill from the run grades
+# SAFE preview first (estimate=True per config — no credits consumed, reuses the uploaded dataset):
+python -m autoscientist_toolcaller.recipe_ablation --dataset-id 4e4178c7-adf1-4fdf-9c76-90ad29275047 \
+  --estimate --out results/recipe_ablation.json
+# Dropping --estimate LAUNCHES one LIVE Adaptive Data run PER grid config (~60-90 min + credits EACH) —
+# only do that deliberately. The .md table is written next to the .json.
 ```
 The winning recipe's weights go forward to step 1.
 

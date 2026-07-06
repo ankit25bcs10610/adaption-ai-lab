@@ -4,6 +4,7 @@ huggingface_hub==0.26.2
 transformers==4.46.3
 torch==2.4.1
 accelerate==1.1.1
+peft==0.13.2               # LoRA adapter loading (eval_harness --adapter, export_gguf merge)
 jsonschema==4.23.0
 datasketch==1.6.5            # MinHash / LSH near-dup detection
 model2vec==0.3.3            # fast static embeddings for semantic dedup

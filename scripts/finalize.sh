@@ -21,6 +21,8 @@ ADAPTER_ARG=""; [ -n "${ADAPTER:-}" ] && ADAPTER_ARG="--adapter ${ADAPTER}"
 echo "==> [1/7] Baseline (untuned $BASE_MODEL) — the honest 'before'"
 python3 -m autoscientist_toolcaller.baseline --config config.yaml --model "$BASE_MODEL" --out "$RESULTS/baseline.json"
 python3 -m autoscientist_toolcaller.error_analysis --model "$BASE_MODEL" --data "$DATA/test.jsonl" --out-dir "$RESULTS/base"
+# Base-model BFCL categories too, so RESULTS.md's weighted-BFCL row gets a real base cell.
+python3 -m autoscientist_toolcaller.eval_bfcl --model "$BASE_MODEL" --data "$DATA/test.jsonl" --out "$RESULTS/baseline_bfcl.json" || true
 
 echo "==> [2/7] Fine-tuned eval (multi-seed: $SEEDS)"
 PAIRS=""
@@ -55,13 +57,18 @@ echo "==> [5/7] Reliability probe"
 python3 -m autoscientist_toolcaller.reliability_probe --model "$MODEL" $ADAPTER_ARG --out "$RESULTS/reliability_probe.md" || true
 
 echo "==> [6/7] HTML report + auto-filled model card (real numbers)"
-python3 -m autoscientist_toolcaller.eval_report --out "$RESULTS/report.html"
+# Feed predictions + errors so the report renders the confusion matrix and error explorer (not just tables).
+python3 -m autoscientist_toolcaller.eval_report --predictions "$RESULTS/ft_$S1/predictions.jsonl" \
+  --errors "$RESULTS/ft_$S1/errors.jsonl" --out "$RESULTS/report.html"
 python3 -m autoscientist_toolcaller.fill_model_card --username pandeyankit84 --template model_card_template.md --out MODEL_CARD.md
 # One-glance base-vs-fine-tuned leaderboard (auto-filled from the eval JSONs).
 python3 -m autoscientist_toolcaller.results_table --results-dir "$RESULTS" --out RESULTS.md
 # The card that actually ships with the weights is data/hf_model/README.md — keep it identical to the
 # freshly-filled MODEL_CARD.md so the published model card carries the real numbers (not a stale copy).
+# (data/ is gitignored, so create the dir on a fresh clone; drop the pre-weights status stub.)
+mkdir -p data/hf_model
 cp MODEL_CARD.md data/hf_model/README.md
+rm -f data/hf_model/WEIGHTS_STATUS.md
 # Stage the dataset card into the HF dataset publish dir so the dataset repo doesn't render card-less.
 mkdir -p data/hf_dataset && cp DATASET_CARD.md data/hf_dataset/README.md
 # Kaggle README (no HF YAML frontmatter — Kaggle uses dataset-metadata.json).
@@ -76,7 +83,8 @@ echo "===================== HEADLINE ====================="
 cat "$RESULTS/HEADLINE.txt"
 echo "===================================================="
 echo "Filled: MODEL_CARD.md · $RESULTS/report.html · eval_decompose.json · robustness.md · eval_multilingual.json"
-echo "Publish weights next:"
-echo "  python -m autoscientist_toolcaller.release hf-model     --repo pandeyankit84/autoscientist-toolcaller --dir <weights>"
-echo "  python -m autoscientist_toolcaller.release kaggle-model --slug pandeyankit99/autoscientist-toolcaller --dir <weights>"
-echo "Then paste the HEADLINE line into README + the social posts, and re-push MODEL_CARD.md to HF."
+echo "Publish weights next — stage ONE dir with weights + the filled card, then push it to both hubs:"
+echo "  cp MODEL_CARD.md <weights-dir>/README.md          # the filled card ships WITH the weights"
+echo "  python -m autoscientist_toolcaller.release hf-model     --repo pandeyankit84/autoscientist-toolcaller --dir <weights-dir>"
+echo "  python -m autoscientist_toolcaller.release kaggle-model --slug pandeyankit99/autoscientist-toolcaller --dir <weights-dir>"
+echo "Then paste the HEADLINE line into README + the social posts."

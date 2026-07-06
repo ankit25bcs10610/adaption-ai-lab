@@ -4,6 +4,20 @@ task_categories:
   - text-generation
 language:
   - en
+  - es
+  - fr
+  - hi
+configs:
+  - config_name: default
+    data_files:
+      - split: train
+        path: train.jsonl
+      - split: validation
+        path: val.jsonl
+      - split: test
+        path: test.jsonl
+      - split: test_novel
+        path: test_novel.jsonl
 tags:
   - function-calling
   - tool-use
@@ -35,7 +49,7 @@ Each row is one example (canonical format in `autoscientist_toolcaller/format_ut
 {"tools": [ {"name","description","parameters"} ],
  "query": "...",
  "answer": {"type": "tool_call"|"refuse"|"clarify", "calls": [...], "content": "..."},
- "meta": {"source": "toolace|hard_negative|multiturn|schema_drift", "hn_kind": "...", "mt_kind": "...", "sd_kind": "..."}}
+ "meta": {"source": "toolace|hard_negative|multiturn|schema_drift|multilingual|format_twin|masked_twin|agentic|env", "hn_kind": "...", "mt_kind": "...", "sd_kind": "...", "lang": "en|es|fr|hi|hi-rom", "doc_format": "json|python|xml|compact", "pair_id": "..."}}
 ```
 
 Splits: `train` / `val` / `test`, plus `test_novel` (examples using tools **never seen in training** — a
@@ -99,7 +113,8 @@ Supervised fine-tuning (and preference tuning) of function-calling models that m
 
 ## Limitations
 
-- English-only in this version.
+- Primarily English; a matched-twin multilingual slice (~175 rows: es/fr/hi/hi-rom, shared `pair_id`
+  per twin set) enables a cross-language Δaccuracy — coverage beyond these languages is future work.
 - Synthetic hard-negative/multi-turn phrasing is template-derived (labels correct by construction;
   wording is less varied than fully natural queries).
 

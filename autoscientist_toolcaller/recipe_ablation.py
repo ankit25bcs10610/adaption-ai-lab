@@ -102,8 +102,13 @@ def main() -> None:
         ba = f"{g.get('grade_before','—')}→{g.get('grade_after','—')}" if g else "—"
         dp = f"+{g.get('improvement_percent')}%" if g.get("improvement_percent") is not None else "—"
         md.append(f"| {r['config']} | {rec} | {r.get('length','')} | {ba} | {dp} |")
-    open(args.out.replace(".json", ".md"), "w").write("\n".join(md) + "\n")
-    print(f"[recipe-abl] wrote {args.out} + .md")
+    # Derive the .md path safely: with a non-.json --out (e.g. results/recipe_ablation.md) the old
+    # `.replace(".json",".md")` was a no-op and the markdown CLOBBERED the JSON artifact just written.
+    md_path = args.out.rsplit(".", 1)[0] + ".md"
+    if md_path == args.out:
+        md_path = args.out + ".md"
+    open(md_path, "w").write("\n".join(md) + "\n")
+    print(f"[recipe-abl] wrote {args.out} + {md_path}")
 
 
 if __name__ == "__main__":

@@ -101,8 +101,14 @@ def hf_upload(repo: str, path: str, repo_type: str) -> None:
 
     api = HfApi(token=os.environ.get("HF_TOKEN"))
     api.create_repo(repo, repo_type=repo_type, exist_ok=True)
-    api.upload_folder(folder_path=path, repo_id=repo, repo_type=repo_type)
-    print(f"[release] uploaded {path} -> https://huggingface.co/{repo}")
+    # For DATASET pushes, purge stale auto-generated parquet shards (data/*.parquet from an old
+    # push_to_hub). If left behind they WIN split resolution over the fresh JSONLs, so the viewer and
+    # load_dataset() silently serve the previous snapshot — contradicting the card. delete_patterns
+    # removes hub files matching the pattern that are absent from the uploaded folder.
+    delete = ["data/*.parquet", "data/*/*.parquet"] if repo_type == "dataset" else None
+    api.upload_folder(folder_path=path, repo_id=repo, repo_type=repo_type, delete_patterns=delete)
+    print(f"[release] uploaded {path} -> https://huggingface.co/{repo}"
+          + (" (stale data/*.parquet purged)" if delete else ""))
 
 
 def kaggle_upload(

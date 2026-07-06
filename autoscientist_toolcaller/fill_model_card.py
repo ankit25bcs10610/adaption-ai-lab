@@ -46,7 +46,8 @@ def _row(label: str, base: Dict[str, Any], ft: Dict[str, Any], key: str, se_key:
 
 
 def build_metrics_block(base: Dict[str, Any], ft: Dict[str, Any], adaption: Dict[str, Any],
-                        agentic: Dict[str, Any] = None, multilingual: Dict[str, Any] = None) -> str:
+                        agentic: Dict[str, Any] = None, multilingual: Dict[str, Any] = None,
+                        bfcl_ft: Dict[str, Any] = None) -> str:
     lines = [
         "| Metric | Base | Fine-tuned |",
         "|---|---|---|",
@@ -66,6 +67,15 @@ def build_metrics_block(base: Dict[str, Any], ft: Dict[str, Any], adaption: Dict
     if multilingual and multilingual.get("matched_pair_delta_vs_en"):
         for lang, d in sorted(multilingual["matched_pair_delta_vs_en"].items()):
             lines.append(f"| Δacc({lang}−en) | — | {d['delta_vs_en']:+.3f} |")
+    # BFCL-v4 format sensitivity: weighted aggregate + the accuracy spread across tool-doc renderings.
+    # Surfacing format_delta here is what makes the 700+ format-invariance twins a visible claim.
+    if bfcl_ft:
+        wa = bfcl_ft.get("weighted_accuracy")
+        if isinstance(wa, (int, float)):
+            lines.append(f"| Weighted BFCL-v4 accuracy | — | {wa:.3f} |")
+        fd = bfcl_ft.get("format_delta")
+        if isinstance(fd, (int, float)):
+            lines.append(f"| Format-invariance Δ (max−min across doc formats) ↓ | — | {fd:.3f} |")
     summ = adaption.get("evaluation_summary") if adaption else None
     if isinstance(summ, dict):
         ip = summ.get("improvement_percent")
@@ -82,6 +92,7 @@ def main() -> None:
     ap.add_argument("--adaption", default="results/adaption_run.json")
     ap.add_argument("--agentic", default="results/eval_agentic.json")
     ap.add_argument("--multilingual", default="results/eval_multilingual.json")
+    ap.add_argument("--bfcl", default="results/eval_bfcl.json")
     ap.add_argument("--template", default="model_card_template.md")
     ap.add_argument("--out", default="MODEL_CARD.md")
     args = ap.parse_args()
@@ -92,7 +103,8 @@ def main() -> None:
 
     text = open(args.template, encoding="utf-8").read()
 
-    block = build_metrics_block(base, ft, adaption, _load(args.agentic), _load(args.multilingual))
+    block = build_metrics_block(base, ft, adaption, _load(args.agentic), _load(args.multilingual),
+                                bfcl_ft=_load(args.bfcl))
     text = re.sub(
         r"<!--METRICS_START-->.*?<!--METRICS_END-->",
         f"<!--METRICS_START-->\n{block}\n<!--METRICS_END-->",
