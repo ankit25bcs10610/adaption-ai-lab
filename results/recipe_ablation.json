@@ -1,0 +1,70 @@
+{
+  "dataset_id": "bea4a581-2ef4-44fa-b6ae-47ba5fcaf36f",
+  "grid": [
+    {
+      "config": "dedup_only",
+      "name": "dedup_only",
+      "recipes": {
+        "deduplication": true
+      },
+      "length": "concise",
+      "estimate": {
+        "estimated_minutes": 75.0,
+        "estimated_credits_consumed": 52.0
+      }
+    },
+    {
+      "config": "dedup+reasoning",
+      "name": "dedup+reasoning",
+      "recipes": {
+        "deduplication": true,
+        "reasoning_traces": true
+      },
+      "length": "concise",
+      "estimate": {
+        "estimated_minutes": 75.0,
+        "estimated_credits_consumed": 52.0
+      }
+    },
+    {
+      "config": "dedup+rephrase",
+      "name": "dedup+rephrase",
+      "recipes": {
+        "deduplication": true,
+        "prompt_rephrase": true
+      },
+      "length": "concise",
+      "estimate": {
+        "estimated_minutes": 75.0,
+        "estimated_credits_consumed": 52.0
+      }
+    },
+    {
+      "config": "dedup+halluc_mitig",
+      "name": "dedup+halluc_mitig",
+      "recipes": {
+        "deduplication": true,
+        "hallucination_mitigation": true
+      },
+      "length": "concise",
+      "estimate": {
+        "estimated_minutes": 75.0,
+        "estimated_credits_consumed": 52.0
+      }
+    },
+    {
+      "config": "all+detailed",
+      "name": "all+detailed",
+      "recipes": {
+        "deduplication": true,
+        "reasoning_traces": true,
+        "prompt_rephrase": true
+      },
+      "length": "detailed",
+      "estimate": {
+        "estimated_minutes": 75.0,
+        "estimated_credits_consumed": 52.0
+      }
+    }
+  ]
+}
